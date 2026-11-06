@@ -8,6 +8,35 @@ import * as NodePath from "node:path";
 import { expect, it, vi } from "vite-plus/test";
 import startRunHook from "./runHook.ts";
 
+// Setup tests own their repository config; forks need no maintainer cache endpoint.
+async function setupFixture() {
+  const root = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "task-cache-fixture-"));
+  try {
+    await NodeFSP.writeFile(NodePath.join(root, "package.json"), '{"type":"module"}');
+    await NodeFSP.writeFile(
+      NodePath.join(root, ".task-cache.json"),
+      JSON.stringify({ endpoint: "https://cache.invalid/projects/generated" }),
+    );
+    const base = NodePath.join(root, "infra/task-cache");
+    await NodeFSP.mkdir(base, { recursive: true });
+    for (const directory of ["scripts", "src"])
+      await NodeFSP.cp(
+        NodePath.join(import.meta.dirname, "..", directory),
+        NodePath.join(base, directory),
+        { recursive: true },
+      );
+    return {
+      script: (name: string) => NodePath.join(base, "scripts", name),
+      async [Symbol.asyncDispose]() {
+        await NodeFSP.rm(root, { recursive: true, force: true });
+      },
+    };
+  } catch (error) {
+    await NodeFSP.rm(root, { recursive: true, force: true });
+    throw error;
+  }
+}
+
 it("sends telemetry from a detached flusher that the task runner does not wait for", async () => {
   const root = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "task-cache-flusher-"));
   const reports: string[] = [];
@@ -76,6 +105,7 @@ it("sends telemetry from a detached flusher that the task runner does not wait f
 });
 
 it("rejects invalid setup credentials before installing anything and never prints the token", async () => {
+  await using fixture = await setupFixture();
   const home = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "task-cache-setup-"));
   const token = "private-credential-that-must-not-appear-in-output";
   const server = NodeHttp.createServer((_request, response) => response.writeHead(401).end());
@@ -86,7 +116,7 @@ it("rejects invalid setup credentials before installing anything and never print
     const result = await new Promise<{ code: number | null; output: string }>((resolve, reject) => {
       const child = NodeChildProcess.spawn(
         process.execPath,
-        [NodePath.join(import.meta.dirname, "../scripts/install.ts"), "--non-interactive"],
+        [fixture.script("install.ts"), "--non-interactive"],
         {
           env: {
             ...process.env,
@@ -162,6 +192,7 @@ it("does not start telemetry or create local state without cache credentials", a
 });
 
 it("installs without masking .profile and configures CI through bash", async () => {
+  await using fixture = await setupFixture();
   const home = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "task-cache-login-"));
   const server = NodeHttp.createServer((_request, response) => response.writeHead(204).end());
   const run = (args: string[], env: NodeJS.ProcessEnv) =>
@@ -190,24 +221,17 @@ it("installs without masking .profile and configures CI through bash", async () 
       NodePath.join(home, ".config/t3-task-cache/credentials.json"),
       "{partial",
     );
-    await run(
-      [
-        process.execPath,
-        NodePath.join(import.meta.dirname, "../scripts/install.ts"),
-        "--non-interactive",
-      ],
-      {
-        T3_CACHE_SETUP_URL: `http://127.0.0.1:${address.port}/projects/test`,
-        T3_CACHE_SETUP_NAME: "maria",
-        T3_CACHE_SETUP_TOKEN: "test-credential-for-isolated-http-server",
-      },
-    );
+    await run([process.execPath, fixture.script("install.ts"), "--non-interactive"], {
+      T3_CACHE_SETUP_URL: `http://127.0.0.1:${address.port}/projects/test`,
+      T3_CACHE_SETUP_NAME: "maria",
+      T3_CACHE_SETUP_TOKEN: "test-credential-for-isolated-http-server",
+    });
     expect(await NodeFSP.readdir(home)).not.toContain(".bash_profile");
     expect(await NodeFSP.readFile(NodePath.join(home, ".profile"), "utf8")).toContain(
       "EXISTING_PROFILE=preserved",
     );
     const githubEnv = NodePath.join(home, "github-env");
-    await run([process.execPath, NodePath.join(import.meta.dirname, "../scripts/install-ci.ts")], {
+    await run([process.execPath, fixture.script("install-ci.ts")], {
       T3_TASK_CACHE_READ_TOKEN: "read-only-fixture-token-01234567890123456789",
       GITHUB_REPOSITORY: "pingdotgg/t3code",
       GITHUB_ACTIONS: "true",
@@ -233,14 +257,7 @@ it("installs without masking .profile and configures CI through bash", async () 
       NodePath.join(home, ".bash_profile"),
       '. "$HOME/.config/t3-task-cache/env"\n',
     );
-    await run(
-      [
-        process.execPath,
-        NodePath.join(import.meta.dirname, "../scripts/install.ts"),
-        "--uninstall",
-      ],
-      {},
-    );
+    await run([process.execPath, fixture.script("install.ts"), "--uninstall"], {});
     expect(await NodeFSP.readdir(home)).not.toContain(".bash_profile");
     expect(await NodeFSP.readdir(NodePath.join(home, ".local/share/t3-task-cache"))).toEqual([
       "preload.mjs",
@@ -357,12 +374,13 @@ it("does not send an old endpoint's token after changing the URL interactively",
 });
 
 it("rejects non-loopback HTTP before transmitting a setup credential", async () => {
+  await using fixture = await setupFixture();
   const home = await NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "task-cache-http-"));
   try {
     const output = await new Promise<string>((resolve) => {
       NodeChildProcess.execFile(
         process.execPath,
-        [NodePath.join(import.meta.dirname, "../scripts/install.ts"), "--non-interactive"],
+        [fixture.script("install.ts"), "--non-interactive"],
         {
           env: {
             ...process.env,
