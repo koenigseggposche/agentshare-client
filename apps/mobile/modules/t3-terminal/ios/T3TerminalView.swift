@@ -353,8 +353,8 @@ public final class T3TerminalView: ExpoView, UITextFieldDelegate {
     inputField.enablesReturnKeyAutomatically = false
     inputField.translatesAutoresizingMaskIntoConstraints = false
     inputField.alpha = 0.02
-    inputField.isAccessibilityElement = false
-    inputField.accessibilityElementsHidden = true
+    inputField.isAccessibilityElement = true
+    inputField.accessibilityLabel = "Terminal input"
     inputField.addTarget(self, action: #selector(handleInputEditingDidBegin), for: .editingDidBegin)
     inputField.onDeleteBackward = { [weak self] in
       self?.emitInput("\u{7F}")
@@ -380,7 +380,7 @@ public final class T3TerminalView: ExpoView, UITextFieldDelegate {
       terminalViewport.bottomAnchor.constraint(equalTo: bottomAnchor),
 
       inputField.trailingAnchor.constraint(equalTo: trailingAnchor),
-      inputField.topAnchor.constraint(equalTo: bottomAnchor, constant: 8),
+      inputField.topAnchor.constraint(equalTo: topAnchor),
       inputField.widthAnchor.constraint(equalToConstant: 1),
       inputField.heightAnchor.constraint(equalToConstant: 1),
     ])
