@@ -93,7 +93,7 @@ function layer(baseDir: string) {
       Layer.mergeAll(
         NodeServices.layer,
         NodeCrypto.layer,
-        DesktopConfig.layerTest({ T3CODE_HOME: baseDir }),
+        DesktopConfig.layerTest({ AGENTSHARE_CLIENT_HOME: baseDir }),
       ),
     ),
   );

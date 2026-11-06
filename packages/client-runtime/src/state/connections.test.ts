@@ -2,6 +2,7 @@ import { describe, expect, it } from "@effect/vitest";
 import { EnvironmentId } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Fiber from "effect/Fiber";
 import * as Option from "effect/Option";
 import * as Stream from "effect/Stream";
 import * as SubscriptionRef from "effect/SubscriptionRef";
@@ -10,6 +11,7 @@ import { Atom, AtomRegistry } from "effect/reactivity";
 import {
   AVAILABLE_CONNECTION_STATE,
   ConnectionTransientError,
+  PrimaryConnectionTarget,
   type SupervisorConnectionState,
 } from "../connection/model.ts";
 import * as EnvironmentRegistry from "../connection/registry.ts";
@@ -74,6 +76,57 @@ const lastFailure = new ConnectionTransientError({ reason: "transport", detail: 
 const newSession = () => Option.some({} as RpcSession.RpcSession);
 
 describe("environment catalog atoms", () => {
+  it.effect("keeps the local catalog usable while saved connections load or fail", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const savedCatalogStatus = yield* SubscriptionRef.make<"loading" | "ready" | "failed">(
+          "loading",
+        );
+        const entries = yield* SubscriptionRef.make(
+          new Map([
+            [
+              ENVIRONMENT_ID,
+              {
+                target: new PrimaryConnectionTarget({
+                  environmentId: ENVIRONMENT_ID,
+                  label: "Local",
+                  httpBaseUrl: "http://127.0.0.1:1234",
+                  wsBaseUrl: "ws://127.0.0.1:1234",
+                }),
+                profile: Option.none(),
+                enabled: true,
+              },
+            ],
+          ]),
+        );
+        const service = {
+          entries,
+          savedCatalogStatus,
+        } as unknown as EnvironmentRegistry.EnvironmentRegistry["Service"];
+        const catalog = createEnvironmentCatalogAtoms(
+          Atom.runtime(Layer.succeed(EnvironmentRegistry.EnvironmentRegistry, service)),
+        );
+        const atoms = AtomRegistry.make();
+        yield* Effect.addFinalizer(() => Effect.sync(() => atoms.dispose()));
+        const readValue = (ready: boolean) =>
+          AtomRegistry.toStream(atoms, catalog.catalogValueAtom).pipe(
+            Stream.filter((value) => value.isReady === ready && value.entries.has(ENVIRONMENT_ID)),
+            Stream.runHead,
+          );
+        yield* readValue(true);
+        const status = yield* AtomRegistry.toStream(atoms, catalog.catalogStatusAtom).pipe(
+          Stream.filter((value) => value === "failed"),
+          Stream.runHead,
+          Effect.forkChild,
+        );
+        yield* SubscriptionRef.set(savedCatalogStatus, "failed");
+        yield* Fiber.join(status);
+        expect((yield* readValue(true))._tag).toBe("Some");
+        expect(atoms.get(catalog.catalogStatusAtom)).toBe("failed");
+      }),
+    ),
+  );
+
   it.effect("changes the session generation only when a new session comes up", () =>
     Effect.scoped(
       Effect.gen(function* () {

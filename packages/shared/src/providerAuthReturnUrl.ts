@@ -4,10 +4,11 @@ export function providerAuthReturnUrl(value: string | undefined): string | undef
   if (!value) return undefined;
   try {
     const url = new URL(value);
-    const desktop = ["t3code:", "t3code-dev:"].includes(url.protocol) && url.host === "app";
-    const web =
-      ["http:", "https:"].includes(url.protocol) &&
-      (isLoopbackHost(url.hostname) || url.origin === "https://app.t3.codes");
+    const desktop =
+      ["agentshare-client:", "agentshare-client-dev:", "agentshare-client-preview:"].includes(
+        url.protocol,
+      ) && url.host === "app";
+    const web = ["http:", "https:"].includes(url.protocol) && isLoopbackHost(url.hostname);
     if (
       url.username ||
       url.password ||

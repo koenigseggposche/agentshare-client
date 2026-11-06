@@ -17,6 +17,14 @@ afterEach(() => {
 describe("loadRepoEnv", () => {
   it("applies process, root local, and root precedence in that order", () => {
     const repoRoot = makeTemporaryDirectory();
+    NodeFS.copyFileSync(
+      new URL("../../.env.example", import.meta.url),
+      NodePath.join(repoRoot, ".env"),
+    );
+    const defaults = loadRepoEnv({ baseEnv: {}, repoRoot });
+    expect(defaults.VITE_CLERK_PUBLISHABLE_KEY).toBeUndefined();
+    expect(defaults.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY).toBeUndefined();
+    expect(defaults.VITE_T3CODE_RELAY_URL).toBeUndefined();
     NodeFS.writeFileSync(
       NodePath.join(repoRoot, ".env"),
       "T3CODE_CLERK_PUBLISHABLE_KEY=pk_root\nT3CODE_CLERK_JWT_TEMPLATE=template_root\nT3CODE_CLERK_CLI_OAUTH_CLIENT_ID=oauth_root\nT3CODE_RELAY_URL=https://root.example.test\n",
@@ -36,6 +44,7 @@ describe("loadRepoEnv", () => {
           T3CODE_CLERK_JWT_TEMPLATE: "template_ci",
           T3CODE_CLERK_CLI_OAUTH_CLIENT_ID: "oauth_ci",
           T3CODE_RELAY_URL: "https://ci.example.test",
+          T3CODE_HOSTED_APP_URL: "https://client.example.test",
         },
         repoRoot,
       }),
@@ -49,6 +58,9 @@ describe("loadRepoEnv", () => {
       EXPO_PUBLIC_CLERK_JWT_TEMPLATE: "template_ci",
       T3CODE_RELAY_URL: "https://ci.example.test",
       VITE_T3CODE_RELAY_URL: "https://ci.example.test",
+      T3CODE_HOSTED_APP_URL: "https://client.example.test",
+      VITE_HOSTED_APP_URL: "https://client.example.test",
+      EXPO_PUBLIC_HOSTED_APP_URL: "https://client.example.test",
     });
   });
 });

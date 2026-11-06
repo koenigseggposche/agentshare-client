@@ -79,7 +79,9 @@ describe("getProjectScopeSelectionTarget", () => {
 
 describe("resolveEnvironmentProjectMatch", () => {
   it("follows the same repository onto the target machine", () => {
-    const selected = makeProject("t3code", "mac", { repositoryKey: "github.com/t3tools/t3code" });
+    const selected = makeProject("t3code", "mac", {
+      repositoryKey: "github.com/t3tools/t3code",
+    });
     const target = [
       makeProject("other", "server", { repositoryKey: "github.com/t3tools/other" }),
       makeProject("t3code-clone", "server", { repositoryKey: "github.com/t3tools/t3code" }),

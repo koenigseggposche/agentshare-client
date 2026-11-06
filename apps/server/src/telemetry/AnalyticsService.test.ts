@@ -113,20 +113,20 @@ const recordTwentyEvents = Effect.gen(function* () {
   }
 });
 
-const analyticsLayerWith = (client: HttpClient.HttpClient, policy?: ManagedPolicyDocument) =>
+const analyticsLayerWith = (
+  client: HttpClient.HttpClient,
+  policy?: ManagedPolicyDocument,
+  config: Readonly<Record<string, unknown>> = {
+    T3CODE_TELEMETRY_ENABLED: true,
+    T3CODE_POSTHOG_KEY: "phc_test_key",
+    T3CODE_POSTHOG_HOST: "http://localhost",
+  },
+) =>
   AnalyticsService.layer.pipe(
     Layer.provideMerge(
       ServerConfig.ServerConfig.layerTest(process.cwd(), { prefix: "t3-telemetry-retry-" }),
     ),
-    Layer.provide(
-      ConfigProvider.layer(
-        ConfigProvider.fromUnknown({
-          T3CODE_TELEMETRY_ENABLED: true,
-          T3CODE_POSTHOG_KEY: "phc_test_key",
-          T3CODE_POSTHOG_HOST: "http://localhost",
-        }),
-      ),
-    ),
+    Layer.provide(ConfigProvider.layer(ConfigProvider.fromUnknown(config))),
     Layer.provide(
       Layer.mergeAll(
         Layer.succeed(HostProcess.Platform, "win32"),
@@ -177,6 +177,32 @@ const sendFor = (
   });
 
 it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("AnalyticsService test", (it) => {
+  it.effect.each([
+    { name: "default configuration", config: {} },
+    { name: "enabled without a receiver", config: { T3CODE_TELEMETRY_ENABLED: true } },
+    {
+      name: "configured receiver without opt-in",
+      config: {
+        T3CODE_POSTHOG_KEY: "generated-key",
+        T3CODE_POSTHOG_HOST: "https://collector.example.test",
+      },
+    },
+  ])("sends no product data with $name", ({ config }) =>
+    Effect.gen(function* () {
+      const requests: string[] = [];
+      const client = HttpClient.make((request) => {
+        requests.push(request.url);
+        return respondWithStatus(204)(request);
+      });
+      yield* Effect.gen(function* () {
+        const analytics = yield* AnalyticsService.AnalyticsService;
+        yield* analytics.record("test.generated");
+        yield* analytics.flush;
+      }).pipe(Effect.provide(analyticsLayerWith(client, undefined, config)));
+      assert.deepEqual(requests, []);
+    }),
+  );
+
   it.effect("waits for desktop shell consent and honors a late telemetry opt-out", () =>
     Effect.gen(function* () {
       const env: NodeJS.ProcessEnv = { T3CODE_DESKTOP_SHELL_DISCOVERY_PENDING: "1" };
@@ -392,7 +418,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("AnalyticsService
         ),
         true,
       );
-    }),
+    }).pipe(TestClock.withLive),
   );
 
   it.effect("does not send batch requests when telemetry is disabled", () =>

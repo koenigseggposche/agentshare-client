@@ -45,12 +45,27 @@ module.exports = async ({ appOutDir, electronPlatformName, arch, packager }) => 
   );
   const env = { ...process.env, ELECTRON_RUN_AS_NODE: "1" };
   for (const name of Object.keys(env)) {
-    if (name.startsWith("NODE_") || name.startsWith("T3CODE_")) delete env[name];
+    if (
+      name.startsWith("NODE_") ||
+      name.startsWith("T3CODE_") ||
+      name.startsWith("AGENTSHARE_CLIENT_")
+    )
+      delete env[name];
   }
   const state = fs.mkdtempSync(path.join(os.tmpdir(), "t3-release-cache-"));
-  env.T3CODE_HOME = state;
+  env.AGENTSHARE_CLIENT_HOME = state;
+  const cacheExecutable =
+    electronPlatformName === "win32"
+      ? path.join(appOutDir, ".server-compile-cache.exe")
+      : executable;
+  let copiedEngine = false;
   let result;
   try {
+    if (cacheExecutable !== executable) {
+      // Windows must edit the release EXE after this hook; executing a sibling avoids an image lock.
+      fs.copyFileSync(executable, cacheExecutable, fs.constants.COPYFILE_EXCL);
+      copiedEngine = true;
+    }
     // Run a script file, not -e: -e defines a global __filename of "[eval]", which
     // @effect/platform-node passes to createRequire and fails on.
     const runner = path.join(state, "prepare-server-compile-cache-runner.cjs");
@@ -58,9 +73,19 @@ module.exports = async ({ appOutDir, electronPlatformName, arch, packager }) => 
       runner,
       `require(${JSON.stringify(helper)}).generatePreparedServerCache(${JSON.stringify(resources)}).then(()=>process.exit(0),e=>{console.error(e);process.exit(1)})`,
     );
-    result = spawnSync(executable, [runner], { env, encoding: "utf8", timeout: 120000 });
+    result = spawnSync(cacheExecutable, [runner], { env, encoding: "utf8", timeout: 120000 });
   } finally {
-    fs.rmSync(state, { recursive: true, force: true });
+    try {
+      if (copiedEngine)
+        fs.rmSync(cacheExecutable, {
+          recursive: true,
+          force: true,
+          maxRetries: 20,
+          retryDelay: 100,
+        });
+    } finally {
+      fs.rmSync(state, { recursive: true, force: true });
+    }
   }
   if (result.status !== 0)
     throw new Error(`Server compile cache generation failed: ${result.error || result.stderr}`);

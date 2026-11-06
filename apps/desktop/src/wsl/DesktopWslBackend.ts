@@ -128,7 +128,7 @@ export const layer = Layer.effect(
                 Ref.set(
                   preflightErrorRef,
                   Option.some(
-                    "Another T3 Code server is using this distro's T3 home, or an older background service is set up for it. Stop that server or pair with it, or try `t3 update` in the distro. If the older launcher cannot update, run `t3 service uninstall` and optionally reinstall with `t3 service install` from a current CLI in the distro. Use `npx t3@latest` if `t3` is missing or outdated, and pass `--base-dir` with the service's T3 home to each command.",
+                    "Another AgentShare Client workbench is using this distro's data directory. Connect to that workbench, or stop it before reopening this app. Inspect its service inside the distro with `agentshare-client service status --base-dir <directory>`. Use a separate AGENTSHARE_CLIENT_HOME for an independent workbench.",
                   ),
                 ),
               ),

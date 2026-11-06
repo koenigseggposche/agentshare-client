@@ -19,6 +19,7 @@ import { fromYaml } from "@t3tools/shared/schemaYaml";
 import { resolveSpawnCommand } from "@t3tools/shared/shell";
 import rootPackageJson from "../package.json" with { type: "json" };
 import serverPackageJson from "../apps/server/package.json" with { type: "json" };
+import { loadCoreArtifact, stageCoreArtifact } from "./lib/agentshare-core-artifact.ts";
 
 import {
   createStagePatchedDependencies,
@@ -477,10 +478,21 @@ const buildCliArchive = Effect.fn("buildCliArchive")(function* (input: {
   readonly version: string;
   readonly outputDir: string;
   readonly resourceMonitorDir: Option.Option<string>;
+  readonly coreManifest: Option.Option<string>;
 }) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const repoRoot = yield* RepoRoot;
+  const configuredCoreManifest = yield* Config.String("AGENTSHARE_CORE_MANIFEST").pipe(
+    Config.option,
+  );
+  const coreArtifact = yield* loadCoreArtifact({
+    manifestPath: Option.getOrElse(input.coreManifest, () =>
+      Option.getOrUndefined(configuredCoreManifest),
+    ),
+    platform: input.platform,
+    arch: input.arch,
+  });
   const serverDir = path.join(repoRoot, "apps/server");
   const executableName = input.platform === "win" ? "t3.exe" : "t3";
   // tsdown suffixes cross-built executables; prefer the exact target over the plain host build.
@@ -520,6 +532,7 @@ const buildCliArchive = Effect.fn("buildCliArchive")(function* (input: {
 
   yield* Effect.log(`[cli-archive] Staging ${stem}...`);
   yield* fs.copyFile(builtExecutable, path.join(contentDir, executableName));
+  yield* stageCoreArtifact(coreArtifact, path.join(contentDir, "agentshare-core"));
   yield* stageWebClient(webClient, path.join(contentDir, "client"));
   yield* fs.copy(resourceMonitorDir, path.join(contentDir, "resource-monitor"));
   yield* stageRuntimeExternals({
@@ -597,6 +610,12 @@ const command = Command.make(
       Flag.withDescription("Release version for the archive name."),
     ),
     outputDir: Flag.String("output-dir").pipe(Flag.withDefault("release-cli")),
+    coreManifest: Flag.String("core-manifest").pipe(
+      Flag.withDescription(
+        "Verified AgentShare Core manifest for this target (env: AGENTSHARE_CORE_MANIFEST).",
+      ),
+      Flag.optional,
+    ),
     resourceMonitorDir: Flag.String("resource-monitor-dir").pipe(
       Flag.withDescription(
         "Directory laid out like dist/resource-monitor (defaults to apps/server/dist/resource-monitor).",

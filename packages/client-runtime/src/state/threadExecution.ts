@@ -285,6 +285,7 @@ export function deriveThreadStructureRuntime(
     ...threadErrorSummary(
       latestRootProviderFailure(latestRunProjection, projection.turnItems),
       providerSession?.lastError ?? null,
+      latestRunProjection?.status ?? null,
     ),
   };
 }

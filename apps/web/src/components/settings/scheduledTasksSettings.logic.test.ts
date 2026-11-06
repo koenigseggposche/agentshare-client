@@ -90,7 +90,10 @@ describe("scheduled task settings scope", () => {
     { search: { machine: laptopId }, expected: ["task-0", "task-1"] },
     { search: { project: "t3code" }, expected: ["task-0", "task-1", "task-2"] },
     { search: { project: "t3code", machine: serverId }, expected: ["task-2"] },
-    { search: { project: "t3code", checkout: second.physicalProjectKey }, expected: ["task-1"] },
+    {
+      search: { project: "t3code", checkout: second.physicalProjectKey },
+      expected: ["task-1"],
+    },
     { search: { project: "missing" }, expected: [] },
     { search: { machine: "removed" }, expected: [] },
     { search: { project: "t3code", checkout: "removed" }, expected: [] },

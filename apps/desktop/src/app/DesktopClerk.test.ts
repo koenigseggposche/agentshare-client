@@ -56,6 +56,7 @@ const layerDesktopClerk = (
   events: string[] = [],
   platform: NodeJS.Platform = "darwin",
   fileSystemLayer: Layer.Layer<FileSystem.FileSystem> = FileSystem.layerNoop({
+    makeDirectory: () => Effect.void,
     exists: () => Effect.succeed(false),
   }),
   shell: ElectronShell.ElectronShell["Service"] = {
@@ -117,34 +118,39 @@ describe("DesktopClerk", () => {
     storageMock.mockReset();
   });
 
-  it.each([
-    {
-      name: "packaged macOS",
-      isDevelopment: false,
-      platform: "darwin" as const,
-      userData: "/tmp/app-data/t3code-v2",
-    },
-    {
-      name: "packaged Linux",
-      isDevelopment: false,
-      platform: "linux" as const,
-      userData: "/tmp/app-data/t3code-v2",
-    },
-    {
-      name: "packaged Windows",
-      isDevelopment: false,
-      platform: "win32" as const,
-      userData: "/tmp/app-data/t3code-v2",
-    },
-    {
-      name: "development",
-      isDevelopment: true,
-      platform: "win32" as const,
-      userData: "/tmp/app-data/t3code-dev",
-    },
-  ])(
-    "creates the bridge before startup can yield to the event loop ($name)",
-    ({ isDevelopment, platform, userData }) => {
+  it.each(
+    [
+      {
+        name: "packaged macOS",
+        isDevelopment: false,
+        platform: "darwin" as const,
+        userData: "/tmp/app-data/agentshare-client",
+      },
+      {
+        name: "packaged Linux",
+        isDevelopment: false,
+        platform: "linux" as const,
+        userData: "/tmp/app-data/agentshare-client",
+      },
+      {
+        name: "packaged Windows",
+        isDevelopment: false,
+        platform: "win32" as const,
+        userData: "/tmp/app-data/agentshare-client",
+      },
+      {
+        name: "development",
+        isDevelopment: true,
+        platform: "win32" as const,
+        userData: "/tmp/app-data/agentshare-client-dev",
+      },
+    ].flatMap((entry) => [
+      { ...entry, bridgeEnabled: true },
+      { ...entry, bridgeEnabled: false },
+    ]),
+  )(
+    "opens only configured auth storage before startup yields ($name, bridge enabled: $bridgeEnabled)",
+    ({ isDevelopment, platform, userData, bridgeEnabled }) => {
       const events: string[] = [];
       storageMock.mockReturnValue(storageAdapter);
       createClerkBridgeMock.mockImplementation(() => {
@@ -157,7 +163,7 @@ describe("DesktopClerk", () => {
           Layer.build(
             layerDesktopClerk(isDevelopment, events, platform, DesktopPreReadyFileSystem.layer),
           ),
-        ),
+        ).pipe(Effect.provideService(DesktopClerk.ClerkBridgeEnabled, bridgeEnabled)),
       );
 
       assert.deepEqual(events, [
@@ -165,12 +171,14 @@ describe("DesktopClerk", () => {
         "requestSingleInstanceLock",
         "on:second-instance",
         "on:open-url",
-        "createClerkBridge",
+        ...(bridgeEnabled ? ["createClerkBridge"] : []),
       ]);
-      assert.deepEqual(storageMock.mock.calls, [
-        [{ path: NodePath.join(NodePath.resolve(clerkStateDir), "clerk") }],
-      ]);
-      assert.notStrictEqual(createClerkBridgeMock.mock.calls[0]?.[0]?.storage, storageAdapter);
+      assert.deepEqual(
+        storageMock.mock.calls,
+        bridgeEnabled ? [[{ path: NodePath.join(NodePath.resolve(clerkStateDir), "clerk") }]] : [],
+      );
+      if (bridgeEnabled)
+        assert.notStrictEqual(createClerkBridgeMock.mock.calls[0]?.[0]?.storage, storageAdapter);
     },
   );
 
@@ -218,10 +226,11 @@ describe("DesktopClerk", () => {
     createClerkBridgeMock.mockReturnValue({ cleanup: vi.fn(), isPrimaryInstance: true });
     const listeners = new Map<string, (...args: unknown[]) => void>();
     const received: string[] = [];
-    const first = "t3code://new?prompt=first";
-    const second = "t3code://threads/env-1/thread-1";
-    const later = "t3code://new?prompt=later";
-    const launchPair = "t3code://pair?pairingUrl=https%3A%2F%2Fvps.example.com%2F%23token%3Dabc";
+    const first = "agentshare-client://new?prompt=first";
+    const second = "agentshare-client://threads/env-1/thread-1";
+    const later = "agentshare-client://new?prompt=later";
+    const launchPair =
+      "agentshare-client://pair?pairingUrl=https%3A%2F%2Fvps.example.com%2F%23token%3Dabc";
     const delivered = Promise.withResolvers<void>();
     const electronApp = {
       on: (name: string, listener: (...args: unknown[]) => void) =>
@@ -284,7 +293,7 @@ describe("DesktopClerk", () => {
 
         assert.isTrue(Exit.hasInterrupts(exit));
         assert.deepEqual(events, [
-          "setPath:userData:/tmp/app-data/t3code-v2",
+          "setPath:userData:/tmp/app-data/agentshare-client",
           "requestSingleInstanceLock",
           "quit",
         ]);
@@ -317,19 +326,22 @@ it.effect(
       const clerk = yield* DesktopClerk.DesktopClerk;
       yield* clerk.configure;
       const event = { preventDefault: vi.fn() };
-      listeners.get("open-url")!(event, "t3code-dev://app/auth/callback?code=clerk-code");
-      listeners.get("open-url")!(event, "t3code://app/welcome");
+      listeners.get("open-url")!(
+        event,
+        "agentshare-client-dev://app/auth/callback?code=clerk-code",
+      );
+      listeners.get("open-url")!(event, "agentshare-client://app/welcome");
       assert.equal(loadURL.mock.calls.length, 0);
       assert.equal(event.preventDefault.mock.calls.length, 0);
       listeners.get("second-instance")!({}, [
         "t3",
-        "t3code-dev://app/settings/providers?instanceId=work&code=never-forward",
+        "agentshare-client-dev://app/settings/providers?instanceId=work&code=never-forward",
       ]);
       yield* Effect.promise(() => revealed.promise);
       assert.deepEqual(loadURL.mock.calls, [
-        ["t3code-dev://app/settings/providers?instanceId=work"],
+        ["agentshare-client-dev://app/settings/providers?instanceId=work"],
       ]);
-      listeners.get("open-url")!(event, "t3code-dev://app/welcome#agents:machine-id");
+      listeners.get("open-url")!(event, "agentshare-client-dev://app/welcome#agents:machine-id");
       assert.equal(event.preventDefault.mock.calls.length, 1);
     }).pipe(
       Effect.scoped,
@@ -342,7 +354,7 @@ it.effect(
 );
 
 it.effect.each(["startup", "open-url", "early-second-instance"] as const)(
-  "receives hosted web sign-in through the desktop %s handler",
+  "receives local web sign-in through the desktop %s handler",
   (entry) =>
     Effect.gen(function* () {
       storageMock.mockReturnValue(storageAdapter);
@@ -366,7 +378,7 @@ it.effect.each(["startup", "open-url", "early-second-instance"] as const)(
       }).toString();
       const request = {
         authorizationUrl: authorize.toString(),
-        returnUrl: "https://app.t3.codes/welcome#agents:remote-one",
+        returnUrl: "http://127.0.0.1:4173/welcome#agents:remote-one",
         environmentId: EnvironmentId.make("remote-one"),
         instanceId: ProviderInstanceId.make("work"),
         flowId: "flow-one",
@@ -440,7 +452,8 @@ it.effect("hands web and app links to the renderer and leaves other links alone"
         }),
     } as unknown as ElectronApp.ElectronApp["Service"];
     const received: Array<string> = [];
-    const pairLink = "t3code://pair?pairingUrl=https%3A%2F%2Fvps.example.com%2F%23token%3Dabc";
+    const pairLink =
+      "agentshare-client://pair?pairingUrl=https%3A%2F%2Fvps.example.com%2F%23token%3Dabc";
     yield* Effect.gen(function* () {
       const clerk = yield* DesktopClerk.DesktopClerk;
       yield* clerk.configure;
@@ -451,18 +464,18 @@ it.effect("hands web and app links to the renderer and leaves other links alone"
       };
       assert.strictEqual(open("https://example.com/page"), 1);
       assert.strictEqual(open("http://localhost:3000/"), 1);
-      assert.strictEqual(open("t3code://new?prompt=hi"), 1);
-      assert.strictEqual(open("t3code://threads/env-1/thread-1"), 1);
+      assert.strictEqual(open("agentshare-client://new?prompt=hi"), 1);
+      assert.strictEqual(open("agentshare-client://threads/env-1/thread-1"), 1);
       assert.strictEqual(open(pairLink), 1);
-      assert.strictEqual(open("t3code://pair"), 0);
+      assert.strictEqual(open("agentshare-client://pair"), 0);
       assert.strictEqual(open("mailto:hello@example.com"), 0);
-      assert.strictEqual(open("t3code://somewhere-else"), 0);
+      assert.strictEqual(open("agentshare-client://somewhere-else"), 0);
       yield* Effect.yieldNow;
       assert.deepStrictEqual(received, [
         "https://example.com/page",
         "http://localhost:3000/",
-        "t3code://new?prompt=hi",
-        "t3code://threads/env-1/thread-1",
+        "agentshare-client://new?prompt=hi",
+        "agentshare-client://threads/env-1/thread-1",
         pairLink,
       ]);
     }).pipe(

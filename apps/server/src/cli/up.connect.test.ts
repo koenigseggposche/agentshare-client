@@ -75,12 +75,12 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
         link.mode = input.prior ?? "managed";
         const fs = yield* FileSystem.FileSystem;
         const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-up-connect-test-" });
-        yield* fs.writeFileString(`${baseDir}/service.env`, "T3CODE_LAN=false\n");
+        yield* fs.writeFileString(`${baseDir}/service.env`, "AGENTSHARE_CLIENT_LAN=false\n");
         const status = {
           supported: true,
           installed: true,
           current: true,
-          unitPath: "/home/me/.config/systemd/user/t3code.service",
+          unitPath: "/home/me/.config/systemd/user/agentshare-client.service",
           logPath: "/home/me/.t3/userdata/logs/boot-service.log",
         };
         vi.spyOn(BootService, "layer").mockReturnValue(
@@ -123,7 +123,9 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
             ? { desired: false, mode: "managed" }
             : { desired: true, mode: input.prior },
         );
-        expect(yield* fs.readFileString(`${baseDir}/service.env`)).toBe("T3CODE_LAN=false\n");
+        expect(yield* fs.readFileString(`${baseDir}/service.env`)).toBe(
+          "AGENTSHARE_CLIENT_LAN=false\n",
+        );
       }),
     );
   },

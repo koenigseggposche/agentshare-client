@@ -1,4 +1,6 @@
 import {
+  AuthAccessWriteScope,
+  AuthFundsWriteScope,
   AuthEnvironmentMaintainScope,
   AuthDiagnosticsReadScope,
   AuthFilesystemReadScope,
@@ -92,7 +94,13 @@ it("requires operate permission for tool updates even alongside a read-only chec
 });
 
 describe("RPC scope middleware", () => {
-  const tested = [WS_METHODS.serverProbe, WS_METHODS.serverRetryResourceTelemetry] as const;
+  const tested = [
+    WS_METHODS.serverProbe,
+    WS_METHODS.serverRetryResourceTelemetry,
+    WS_METHODS.agentShareCommand,
+    WS_METHODS.agentShareWalletRead,
+    WS_METHODS.agentShareWalletCommand,
+  ] as const;
   const group = WsRpcGroup.omit(
     ...[...WsRpcGroup.requests.keys()].filter(
       (tag): tag is Exclude<keyof typeof RPC_REQUIRED_SCOPES, (typeof tested)[number]> =>
@@ -116,6 +124,18 @@ describe("RPC scope middleware", () => {
             group.toLayerHandler(WS_METHODS.serverRetryResourceTelemetry, () =>
               Effect.sync(() => handled.push("retry")).pipe(Effect.andThen(Effect.never)),
             ),
+            group.toLayerHandler(WS_METHODS.agentShareCommand, () =>
+              Effect.sync(() => {
+                handled.push("account-command");
+                return {};
+              }),
+            ),
+            group.toLayerHandler(WS_METHODS.agentShareWalletRead, () =>
+              Effect.sync(() => handled.push("wallet-read")).pipe(Effect.andThen(Effect.never)),
+            ),
+            group.toLayerHandler(WS_METHODS.agentShareWalletCommand, () =>
+              Effect.sync(() => handled.push("wallet-command")).pipe(Effect.andThen(Effect.never)),
+            ),
             RpcAuthorization.layer(scopes),
           ),
         ),
@@ -123,10 +143,36 @@ describe("RPC scope middleware", () => {
 
       expect(yield* client[WS_METHODS.serverProbe]({})).toEqual({});
       expect(
+        yield* client[WS_METHODS.agentShareCommand]({ operation: "signOut" }).pipe(Effect.flip),
+      ).toMatchObject({
+        _tag: "EnvironmentAuthorizationError",
+        requiredPermission: AuthAccessWriteScope,
+      });
+      expect(
         yield* client[WS_METHODS.serverRetryResourceTelemetry]({}).pipe(Effect.flip),
       ).toMatchObject({
         _tag: "EnvironmentAuthorizationError",
         requiredPermission: missing,
+      });
+      expect(
+        yield* client[WS_METHODS.agentShareWalletRead]({
+          action: "overview",
+          owner: "account:fixture",
+        }).pipe(Effect.flip),
+      ).toMatchObject({
+        _tag: "EnvironmentAuthorizationError",
+        requiredPermission: AuthAccessWriteScope,
+      });
+      expect(
+        yield* client[WS_METHODS.agentShareWalletCommand]({
+          action: "paymentPreference",
+          owner: "account:fixture",
+          currency: "USD",
+          earnings_first: true,
+        }).pipe(Effect.flip),
+      ).toMatchObject({
+        _tag: "EnvironmentAuthorizationError",
+        requiredPermission: AuthAccessWriteScope,
       });
       expect(handled).toEqual([]);
     }).pipe(Effect.scoped),
@@ -399,5 +445,41 @@ it.effect("denies manual cleanup before the handler without settings permission"
       requiredPermission: AuthSettingsWriteScope,
     });
     expect(handled).toBe(false);
+  }).pipe(Effect.scoped),
+);
+
+it.effect("requires an explicit funds grant even when a client manages access", () =>
+  Effect.gen(function* () {
+    const method = WS_METHODS.agentShareFundsCommand;
+    const group = WsRpcGroup.omit(
+      ...[...WsRpcGroup.requests.keys()].filter(
+        (tag): tag is Exclude<keyof typeof RPC_REQUIRED_SCOPES, typeof method> => tag !== method,
+      ),
+    );
+    let calls = 0;
+    const handler = group.toLayerHandler(method, (input) =>
+      Effect.sync(() => {
+        calls++;
+        return { owner: input.owner, operation: null };
+      }),
+    );
+    const denied = yield* RpcTest.makeClient(group).pipe(
+      Effect.provide(Layer.merge(handler, RpcAuthorization.layer([AuthAccessWriteScope]))),
+    );
+    expect(
+      yield* denied[method]({ owner: "account:fixture", action: "payoutStatus" }).pipe(Effect.flip),
+    ).toMatchObject({
+      _tag: "EnvironmentAuthorizationError",
+      requiredPermission: AuthFundsWriteScope,
+    });
+    expect(calls).toBe(0);
+    const allowed = yield* RpcTest.makeClient(group).pipe(
+      Effect.provide(Layer.merge(handler, RpcAuthorization.layer([AuthFundsWriteScope]))),
+    );
+    expect(yield* allowed[method]({ owner: "account:fixture", action: "payoutStatus" })).toEqual({
+      owner: "account:fixture",
+      operation: null,
+    });
+    expect(calls).toBe(1);
   }).pipe(Effect.scoped),
 );

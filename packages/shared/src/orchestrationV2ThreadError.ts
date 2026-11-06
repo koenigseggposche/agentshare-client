@@ -40,13 +40,15 @@ export function latestRootProviderFailure(
 export function threadErrorSummary(
   failure: OrchestrationV2ProviderFailure | null,
   sessionError: string | null,
+  runStatus: OrchestrationV2Run["status"] | "idle" | null,
 ) {
+  const currentSessionError = runStatus === "completed" ? null : sessionError;
   const currentFailure =
-    sessionError !== null && sessionError !== failure?.message ? null : failure;
+    currentSessionError !== null && currentSessionError !== failure?.message ? null : failure;
   return {
     usageLimitResetAt:
       currentFailure?.class === "usage_limit" ? (currentFailure.resetAt ?? null) : null,
-    lastError: sessionError ?? failure?.message ?? null,
+    lastError: currentSessionError ?? failure?.message ?? null,
     lastErrorClass: currentFailure?.class ?? null,
     lastErrorCode: currentFailure?.code ?? null,
   };
@@ -83,7 +85,11 @@ export function usageLimitBlockedRun(
 ): OrchestrationV2Run | null {
   const executed = latestExecutedRun(runs);
   if (executed?.status !== "failed") return null;
-  const summary = threadErrorSummary(latestRootProviderFailure(executed, turnItems), sessionError);
+  const summary = threadErrorSummary(
+    latestRootProviderFailure(executed, turnItems),
+    sessionError,
+    executed.status,
+  );
   return summary.lastErrorClass === "usage_limit" ? executed : null;
 }
 

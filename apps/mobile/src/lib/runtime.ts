@@ -6,6 +6,7 @@ import * as Socket from "effect/socket/Socket";
 import { layerRemoteHttpClient } from "@t3tools/client-runtime/rpc";
 
 import * as Dpop from "../features/cloud/dpop";
+import * as AgentShareAccount from "../features/agentshare/accountLayer";
 import * as ManagedRelayLayer from "../features/cloud/managedRelayLayer";
 import { resolveCloudPublicConfig } from "../features/cloud/publicConfig";
 import * as Tracing from "../features/observability/tracing";
@@ -27,11 +28,13 @@ type RuntimeLayerSource =
   | typeof Dpop.layer
   | typeof layerHttpClient
   | typeof Persistence.layer
+  | typeof AgentShareAccount.layer
   | typeof Tracing.layer;
 
-const layerRuntime = Layer.merge(
+const layerRuntime = Layer.mergeAll(
   ManagedRelayLayer.layer(configuredRelayUrl()),
   Socket.layerWebSocketConstructorGlobal,
+  AgentShareAccount.layer,
 ).pipe(
   Layer.provideMerge(Dpop.layer),
   Layer.provideMerge(layerHttpClient),

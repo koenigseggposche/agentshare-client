@@ -1,4 +1,16 @@
 import {
+  AgentShareFundsReadInput,
+  AgentShareFundsCommandInput,
+  AgentShareFundsResult,
+} from "./agentShareFunds.ts";
+import {
+  AgentShareAccountError,
+  AgentShareWalletReadInput,
+  AgentShareWalletReadResult,
+  AgentShareWalletCommandInput,
+  AgentShareWalletCommandResult,
+} from "./agentShareWallet.ts";
+import {
   OrchestrationV2SearchThreadError,
   OrchestrationV2SearchThreadInput,
   OrchestrationV2SearchThreadResult,
@@ -6,6 +18,16 @@ import {
   OrchestrationV2SearchThreadsResult,
 } from "./orchestrationV2.ts";
 import { OrchestrationDispatchCommandError } from "./orchestrationDispatch.ts";
+import {
+  AgentShareCoreError,
+  AgentShareConfigureModelInput,
+  AgentShareConfigureModelResult,
+  AgentSharePrepareTerminalInput,
+  AgentSharePrepareTerminalResult,
+  AgentShareReadInput,
+  AgentShareCommandInput,
+  AgentShareWorkbenchState,
+} from "./agentShare.ts";
 import {
   McpAppCallToolInput,
   McpAppCallToolResult,
@@ -406,6 +428,15 @@ import { VcsError } from "./vcs.ts";
 import { Project, ProjectMutation, ProjectMutationError } from "./project.ts";
 
 export const WS_METHODS = {
+  agentShareGetState: "agentshare.getState",
+  agentShareFundsRead: "agentshare.fundsRead",
+  agentShareFundsCommand: "agentshare.fundsCommand",
+  agentShareWalletRead: "agentshare.walletRead",
+  agentShareWalletCommand: "agentshare.walletCommand",
+  agentShareRead: "agentshare.read",
+  agentShareCommand: "agentshare.command",
+  agentShareConfigureModel: "agentshare.configureModel",
+  agentSharePrepareTerminal: "agentshare.prepareTerminal",
   projectsListEntries: "projects.listEntries",
   projectsListIgnoredFiles: "projects.listIgnoredFiles",
   projectsReadFile: "projects.readFile",
@@ -630,6 +661,57 @@ const WsServerProbeRpc = Rpc.make(WS_METHODS.serverProbe, {
   payload: Schema.Struct({}),
   success: Schema.Struct({}),
   error: EnvironmentAuthorizationError,
+});
+
+const AgentShareRpcError = Schema.Union([AgentShareCoreError, EnvironmentAuthorizationError]);
+const WsAgentShareGetStateRpc = Rpc.make(WS_METHODS.agentShareGetState, {
+  payload: Schema.Struct({}),
+  success: AgentShareWorkbenchState,
+  error: AgentShareRpcError,
+});
+const WsAgentShareReadRpc = Rpc.make(WS_METHODS.agentShareRead, {
+  payload: AgentShareReadInput,
+  success: Schema.Json,
+  error: AgentShareRpcError,
+});
+const WsAgentShareCommandRpc = Rpc.make(WS_METHODS.agentShareCommand, {
+  payload: AgentShareCommandInput,
+  success: Schema.Json,
+  error: AgentShareRpcError,
+});
+
+const WsAgentShareConfigureModelRpc = Rpc.make(WS_METHODS.agentShareConfigureModel, {
+  payload: AgentShareConfigureModelInput,
+  success: AgentShareConfigureModelResult,
+  error: AgentShareRpcError,
+});
+
+const WsAgentSharePrepareTerminalRpc = Rpc.make(WS_METHODS.agentSharePrepareTerminal, {
+  payload: AgentSharePrepareTerminalInput,
+  success: AgentSharePrepareTerminalResult,
+  error: AgentShareRpcError,
+});
+
+const WsAgentShareFundsReadRpc = Rpc.make(WS_METHODS.agentShareFundsRead, {
+  payload: AgentShareFundsReadInput,
+  success: AgentShareFundsResult,
+  error: Schema.Union([AgentShareAccountError, EnvironmentAuthorizationError]),
+});
+const WsAgentShareFundsCommandRpc = Rpc.make(WS_METHODS.agentShareFundsCommand, {
+  payload: AgentShareFundsCommandInput,
+  success: AgentShareFundsResult,
+  error: Schema.Union([AgentShareAccountError, EnvironmentAuthorizationError]),
+});
+
+const WsAgentShareWalletReadRpc = Rpc.make(WS_METHODS.agentShareWalletRead, {
+  payload: AgentShareWalletReadInput,
+  success: AgentShareWalletReadResult,
+  error: Schema.Union([AgentShareAccountError, EnvironmentAuthorizationError]),
+});
+const WsAgentShareWalletCommandRpc = Rpc.make(WS_METHODS.agentShareWalletCommand, {
+  payload: AgentShareWalletCommandInput,
+  success: AgentShareWalletCommandResult,
+  error: Schema.Union([AgentShareAccountError, EnvironmentAuthorizationError]),
 });
 
 const WsServerGetConfigRpc = Rpc.make(WS_METHODS.serverGetConfig, {
@@ -1988,6 +2070,15 @@ export class RpcScopeAuthorization extends RpcMiddleware.Service<RpcScopeAuthori
 ) {}
 
 export const WsRpcGroup = RpcGroup.make(
+  WsAgentShareGetStateRpc,
+  WsAgentShareFundsReadRpc,
+  WsAgentShareFundsCommandRpc,
+  WsAgentShareWalletReadRpc,
+  WsAgentShareWalletCommandRpc,
+  WsAgentShareReadRpc,
+  WsAgentShareCommandRpc,
+  WsAgentShareConfigureModelRpc,
+  WsAgentSharePrepareTerminalRpc,
   WsGuestShareCreateRpc,
   WsServerProbeRpc,
   WsServerGetConfigRpc,

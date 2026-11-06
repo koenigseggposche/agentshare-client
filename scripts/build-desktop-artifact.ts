@@ -37,6 +37,11 @@ import {
 } from "./lib/brand-assets.ts";
 import { getDefaultBuildArch } from "./lib/build-target-arch.ts";
 import {
+  loadCoreArtifact,
+  stageCoreArtifact,
+  verifyPackagedCore,
+} from "./lib/agentshare-core-artifact.ts";
+import {
   findInlinedExternalPackages,
   selectCliRuntimeExternalDependencies,
 } from "./lib/cli-external-packages.ts";
@@ -62,7 +67,7 @@ import { Command, Flag } from "effect/cli";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 const LINUX_ICON_SIZES = [16, 22, 24, 32, 48, 64, 128, 256, 512] as const;
-const DESKTOP_APP_ID = "com.t3tools.t3code";
+const DESKTOP_APP_ID = "app.agentshare.client";
 const APPLE_TEAM_ID_PATTERN = /^[A-Z0-9]{10}$/u;
 
 const BuildPlatform = Schema.Literals(["mac", "linux", "win"]);
@@ -188,6 +193,7 @@ interface BuildCliInput {
   readonly mockUpdates: Option.Option<boolean>;
   readonly mockUpdateServerPort: Option.Option<number>;
   readonly wslRuntime: Option.Option<string>;
+  readonly coreManifest: Option.Option<string>;
 }
 
 function detectHostBuildPlatform(hostPlatform: string): typeof BuildPlatform.Type | undefined {
@@ -611,6 +617,15 @@ if (!result.ok) throw new Error(result.error);
 result.value.destroy();
 `;
 
+export class UnstagedBundleImportError extends Schema.TaggedError<UnstagedBundleImportError>()(
+  "UnstagedBundleImportError",
+  { imports: Schema.Array(Schema.String) },
+) {
+  override get message(): string {
+    return `The server bundle imports packages outside its staged runtime dependencies: ${this.imports.join(", ")}. Install the locked workspace dependencies and rebuild the server bundle.`;
+  }
+}
+
 export class ExternalizedBundleError extends Schema.TaggedError<ExternalizedBundleError>()(
   "ExternalizedBundleError",
   { sentinel: Schema.String, inlinedPackageCount: Schema.Number },
@@ -950,6 +965,7 @@ interface ResolvedBuildOptions {
   readonly mockUpdates: boolean;
   readonly mockUpdateServerPort: number | undefined;
   readonly wslRuntime: string | undefined;
+  readonly coreManifest: string | undefined;
 }
 
 interface StagePackageJson {
@@ -1081,6 +1097,7 @@ export const WSL_RUNTIME_EXTRA_RESOURCES = [
   WSL_RUNTIME_ARCHIVE_HASH_EXTRA_RESOURCE,
 ] as const;
 export const DESKTOP_EXTRA_RESOURCES = [
+  { from: "apps/desktop/prod-resources/agentshare-core", to: "agentshare-core" },
   {
     from: "apps/desktop/prod-resources/cursor-sdk",
     to: "node_modules/@cursor",
@@ -1643,6 +1660,7 @@ const BuildEnvConfig = Config.all({
   mockUpdates: Config.Boolean("T3CODE_DESKTOP_MOCK_UPDATES").pipe(Config.withDefault(false)),
   mockUpdateServerPort: Config.String("T3CODE_DESKTOP_MOCK_UPDATE_SERVER_PORT").pipe(Config.option),
   wslRuntime: Config.String("T3CODE_DESKTOP_WSL_RUNTIME").pipe(Config.option),
+  coreManifest: Config.String("AGENTSHARE_CORE_MANIFEST").pipe(Config.option),
 });
 
 const MockUpdateServerPortSchema = Schema.NumberFromString.check(
@@ -1749,6 +1767,8 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
     mockUpdates,
     mockUpdateServerPort,
     wslRuntime,
+    coreManifest:
+      Option.getOrUndefined(input.coreManifest) ?? Option.getOrUndefined(env.coreManifest),
   } satisfies ResolvedBuildOptions;
 });
 
@@ -2750,8 +2770,8 @@ export function resolvePackageManagerUserAgent(packageManager: string): string {
 
 export function resolveDesktopProductName(version: string): string {
   return resolveDesktopUpdateChannel(version) === "nightly"
-    ? "T3 Code (Nightly)"
-    : (desktopPackageJson.productName ?? "T3 Code");
+    ? "AgentShare Client (Nightly)"
+    : (desktopPackageJson.productName ?? "AgentShare Client");
 }
 
 export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
@@ -2774,7 +2794,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     afterPack: (yield* Path.Path).join(yield* RepoRoot, "scripts/prepare-server-compile-cache.cjs"),
     appId: DESKTOP_APP_ID,
     productName: resolveDesktopProductName(version),
-    artifactName: "T3-Code-${version}-${arch}.${ext}",
+    artifactName: "AgentShare-Client-${version}-${arch}.${ext}",
     electronLanguages: [...DESKTOP_ELECTRON_LANGUAGES],
     files: [
       ...DESKTOP_FILE_EXCLUSIONS,
@@ -2822,18 +2842,20 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     buildConfig.mac = {
       target: target === "dmg" ? [target, "zip"] : [target],
       icon: "icon.icns",
+      // Core must retain the exact bytes verified by its release manifest.
+      signIgnore: ["/agentshare-core/"],
       category: "public.app-category.developer-tools",
       extendInfo: {
         // macOS 26 offers Messages/Mail codes in every text field unless opted out.
         NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac: true,
         NSLocalNetworkUsageDescription:
-          "T3 Code connects to devices on your local network for remote environments and commands run by terminals and coding agents.",
+          "AgentShare Client connects to devices on your local network for remote environments and commands run by terminals and coding agents.",
         NSScreenCaptureUsageDescription:
-          "T3 Code captures the active window when you use the window capture shortcut.",
+          "AgentShare Client captures the active window when you use the window capture shortcut.",
         NSCameraUsageDescription:
-          "T3 Code lets commands run by terminals and coding agents use the camera.",
+          "AgentShare Client lets commands run by terminals and coding agents use the camera.",
         NSMicrophoneUsageDescription:
-          "T3 Code lets commands run by terminals and coding agents use the microphone.",
+          "AgentShare Client lets commands run by terminals and coding agents use the microphone.",
         // macOS lists an app under Default web browser only when it opens web
         // pages as documents as well as http and https links (see protocols).
         CFBundleDocumentTypes: [
@@ -2847,8 +2869,8 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       },
       protocols: [
         {
-          name: "T3 Code",
-          schemes: ["t3code", "t3code-dev"],
+          name: "AgentShare Client",
+          schemes: ["agentshare-client", "agentshare-client-dev"],
         },
         {
           name: "Web site URL",
@@ -2856,7 +2878,9 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
           role: "Viewer",
         },
       ],
-      ...(signed ? { sign: path.join(repoRoot, "scripts/sign-macos.ts") } : {}),
+      ...(signed
+        ? { sign: path.join(repoRoot, "scripts/sign-macos.ts") }
+        : { identity: "-", hardenedRuntime: false, notarize: false }),
       ...(macPasskeySigning
         ? {
             entitlements: macPasskeySigning.entitlementsPath,
@@ -2893,28 +2917,28 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     buildConfig.afterPack = path.join(repoRoot, "scripts/linux-after-pack.ts");
     buildConfig.linux = {
       target: target === "AppImage" ? [target, "deb"] : [target],
-      executableName: "t3code",
+      executableName: "agentshare-client",
       icon: "icons",
       category: "Development",
       synopsis: "Desktop GUI for coding agents",
-      maintainer: "T3 Tools <hello@t3.codes>",
+      maintainer: "AgentShare",
       protocols: [
         {
-          name: "T3 Code",
-          schemes: ["t3code", "t3code-dev"],
+          name: "AgentShare Client",
+          schemes: ["agentshare-client", "agentshare-client-dev"],
         },
       ],
       desktop: {
         entry: {
-          StartupWMClass: "t3code",
+          StartupWMClass: "agentshare-client",
         },
       },
     };
     buildConfig.deb = {
       // FPM runs outside the staged app directory, so source paths must be absolute.
       fpm: [
-        `${path.join(repoRoot, "apps/desktop/resources/linux/com.t3tools.t3code.metainfo.xml")}=/usr/share/metainfo/com.t3tools.t3code.metainfo.xml`,
-        `${path.join(repoRoot, "LICENSE")}=/usr/share/doc/t3code/copyright`,
+        `${path.join(repoRoot, "apps/desktop/resources/linux/app.agentshare.client.metainfo.xml")}=/usr/share/metainfo/app.agentshare.client.metainfo.xml`,
+        `${path.join(repoRoot, "LICENSE")}=/usr/share/doc/agentshare-client/copyright`,
       ],
       // Debian 13 and Ubuntu 24.04 use 64-bit-time names; retain old-name fallbacks.
       depends: [
@@ -3533,7 +3557,11 @@ export class MacPackagedAppMissingError extends Schema.TaggedError<MacPackagedAp
 }
 
 export const validateMacPackagedPayload = Effect.fn("desktopArtifact.validateMacPackagedPayload")(
-  function* (input: { readonly stageDistDir: string; readonly verbose?: boolean }) {
+  function* (input: {
+    readonly stageDistDir: string;
+    readonly verbose?: boolean;
+    readonly verifySignature?: boolean;
+  }) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const asarPaths: string[] = [];
@@ -3552,6 +3580,13 @@ export const validateMacPackagedPayload = Effect.fn("desktopArtifact.validateMac
     }
     for (const asarPath of asarPaths) {
       yield* verifyPackagedBundleIsSelfContained({ asarPath, verbose: input.verbose ?? false });
+      if (input.verifySignature) {
+        const appPath = path.resolve(asarPath, "../../..");
+        yield* runCommand(
+          ChildProcess.make("codesign", ["--verify", "--deep", "--strict", appPath]),
+          { label: `Verify macOS app signature: ${appPath}`, verbose: input.verbose ?? false },
+        );
+      }
     }
     yield* Effect.log(
       `[desktop-artifact] Validated macOS payload (${String(asarPaths.length)} app bundle(s)).`,
@@ -3566,6 +3601,11 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
   const path = yield* Path.Path;
   const fs = yield* FileSystem.FileSystem;
   const hostPlatform = yield* HostProcess.Platform;
+  const coreArtifact = yield* loadCoreArtifact({
+    manifestPath: options.coreManifest,
+    platform: options.platform,
+    arch: options.arch,
+  });
   if (hostPlatform === "linux" && options.platform === "linux") {
     yield* preflightLinuxDesktopBuild(options.arch);
   }
@@ -3673,19 +3713,23 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
 
   // Inlined native loaders resolve relative to the bundle and can silently fall back to slower JS; reject them.
   {
-    const chunkNames = (yield* fs.readDirectory(distDirs.serverDist)).filter((entry) =>
-      entry.endsWith(".mjs"),
+    const chunkNames = (yield* fs.readDirectory(distDirs.serverDist)).filter(
+      (entry) => entry.endsWith(".mjs") || entry.endsWith(".js"),
     );
     let totalRegions = 0;
     const inlined = new Set<string>();
     const inlinedPackages = new Set<string>();
+    const unstagedImports = new Set<string>();
     for (const chunkName of chunkNames) {
       const source = yield* fs.readFileString(path.join(distDirs.serverDist, chunkName));
       const scan = findInlinedExternalPackages(source);
       totalRegions += scan.regionCount;
       for (const name of scan.inlined) inlined.add(name);
       for (const name of scan.inlinedPackages) inlinedPackages.add(name);
+      for (const name of scan.unstagedImports) unstagedImports.add(name);
     }
+    if (unstagedImports.size > 0)
+      return yield* new UnstagedBundleImportError({ imports: [...unstagedImports].sort() });
     if (inlined.size > 0) {
       return yield* new InlinedExternalPackageError({
         packages: [...inlined].sort(),
@@ -3736,6 +3780,7 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
   yield* Effect.log("[desktop-artifact] Staging release app...");
   yield* fs.copy(distDirs.desktopDist, path.join(stageAppDir, "apps/desktop/dist-electron"));
   yield* fs.copy(distDirs.desktopResources, stageResourcesDir);
+  yield* stageCoreArtifact(coreArtifact, path.join(stageResourcesDir, "agentshare-core"));
   if (options.platform === "linux") {
     const extensionDir = path.join(stageAppDir, "apps/desktop/gnome-extension");
     yield* fs.makeDirectory(extensionDir, { recursive: true });
@@ -3854,7 +3899,7 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
       ? path.join(stageAppDir, WINDOWS_SERVER_RESOURCE_SOURCE_DIR, WINDOWS_SERVER_ASAR_RESOURCE)
       : undefined;
   const stagePackageJson: StagePackageJson = {
-    name: "t3code",
+    name: "agentshare-client",
     version: appVersion,
     buildVersion: appVersion,
     t3codeCommitHash: commitHash,
@@ -3863,10 +3908,10 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
     private: true,
     packageManager: rootPackageJson.packageManager,
     description:
-      "T3 Code is an open-source desktop app for coding agents. Work with your existing agent subscriptions, review code changes, and run commands in your projects. Connect from desktop, web, or mobile to continue working remotely.",
+      "AgentShare Client is an open-source client for coding agents, shared models, and account management. Review changes and run tasks on your execution hosts from desktop, web, or mobile.",
     license: "MIT",
-    homepage: "https://t3.codes",
-    author: "T3 Tools",
+    homepage: "https://github.com/koenigseggposche/agentshare-client",
+    author: "AgentShare",
     main: "apps/desktop/dist-electron/boot.cjs",
     build: yield* createBuildConfig(
       options.platform,
@@ -4041,6 +4086,13 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
     });
   }
 
+  yield* verifyPackagedCore({
+    distribution: stageDistDir,
+    platform: options.platform,
+    arch: options.arch,
+    expected: coreArtifact.manifest,
+  });
+
   if (options.platform === "win") {
     yield* validateWindowsPackagedPayload({
       stageDistDir,
@@ -4056,7 +4108,11 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
   }
   // x64 builds on arm64 runners; the arm64 check covers the shared JS bundle.
   if (options.platform === "mac" && options.arch === "arm64" && hostPlatform === "darwin") {
-    yield* validateMacPackagedPayload({ stageDistDir, verbose: options.verbose });
+    yield* validateMacPackagedPayload({
+      stageDistDir,
+      verbose: options.verbose,
+      verifySignature: true,
+    });
   }
 
   const copiedArtifacts = yield* copyDesktopBuildArtifacts(
@@ -4145,6 +4201,12 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
     Flag.withDescription("Output directory for artifacts (env: T3CODE_DESKTOP_OUTPUT_DIR)."),
     Flag.optional,
   ),
+  coreManifest: Flag.String("core-manifest").pipe(
+    Flag.withDescription(
+      "Verified AgentShare Core release manifest for this target (env: AGENTSHARE_CORE_MANIFEST).",
+    ),
+    Flag.optional,
+  ),
   skipBuild: Flag.Boolean("skip-build").pipe(
     Flag.withDescription(
       "Skip `vp run build:desktop` and use existing dist artifacts (env: T3CODE_DESKTOP_SKIP_BUILD).",
@@ -4181,7 +4243,7 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
     Flag.optional,
   ),
 }).pipe(
-  Command.withDescription("Build a desktop artifact for T3 Code."),
+  Command.withDescription("Build a desktop artifact for AgentShare Client."),
   Command.withHandler((input) => Effect.flatMap(resolveBuildOptions(input), buildDesktopArtifact)),
 );
 

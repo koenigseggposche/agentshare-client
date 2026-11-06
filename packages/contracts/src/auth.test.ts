@@ -76,6 +76,12 @@ describe("authorization grants", () => {
 
   it.each([
     {
+      label: "no funds permission from a legacy access grant",
+      session: { authenticated: true, scopes: ["access:write"], auth: {} },
+      scope: "funds:write",
+      expected: false,
+    },
+    {
       label: "exact permissions over the legacy presentation",
       session: {
         authenticated: true,

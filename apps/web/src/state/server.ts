@@ -5,7 +5,6 @@ import {
   type EnvironmentTheme,
   type ServerConfig,
   type ServerConfigStreamEvent,
-  type ServerLifecycleLegacyThreadMigrationPayload,
   type ServerLifecycleWelcomePayload,
   type ServerProvider,
   type ServerSettings,
@@ -92,19 +91,6 @@ export const primaryServerConfigEventAtom = Atom.make(
 export const primaryServerWelcomeAtom = Atom.make(
   (get): ServerLifecycleWelcomePayload | null => get(primaryServerStateAtom).welcome,
 ).pipe(Atom.withLabel("web-primary-server-welcome"));
-
-export const primaryServerLegacyThreadMigrationAtom = Atom.make(
-  (get): ServerLifecycleLegacyThreadMigrationPayload | null => {
-    const environmentId = get(primaryEnvironmentIdAtom);
-    if (environmentId === null) {
-      return null;
-    }
-    return AsyncResult.getOrElse(
-      get(serverEnvironment.legacyThreadMigration({ environmentId, input: {} })),
-      () => null,
-    );
-  },
-).pipe(Atom.withLabel("web-primary-server-legacy-thread-migration"));
 
 export const primaryServerSettingsAtom = Atom.make(
   (get): ServerSettings => get(primaryServerConfigAtom)?.settings ?? DEFAULT_SERVER_SETTINGS,

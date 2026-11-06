@@ -134,13 +134,11 @@ repeating the call's outcome and duration, so event counts are not call counts.
 
 ## Delivery
 
-The server sends batches to the ingest endpoint at `ingest.t3.codes`, which archives
-every event and forwards some of them to PostHog. A send can fail after the endpoint
-has stored the batch, so every retry is a copy.
-[Delivery](../../apps/server/src/telemetry/AnalyticsService.ts) gives each event a
-uuid when it is recorded (the endpoint rejects events without one), backs off after
-a failed send, and drops a batch after a few tries. Without these limits, one stuck
-batch was sent every second for days.
+Product analytics requires an explicit receiver URL, key and opt-in. The distribution
+contains neither a default recipient nor a shared key. [Delivery](../../apps/server/src/telemetry/AnalyticsService.ts)
+assigns each event a UUID, preserves it across retries, bounds the queue and drops
+batches after the retry deadline. A configured receiver must deduplicate UUIDs because
+a failed send may already have reached it.
 
 ## Collection boundary
 
@@ -151,4 +149,4 @@ must not reject a connection. PostHog person profiles remain disabled.
 
 Dev-runner servers and the CI archive smoke test turn telemetry off, which also
 stops relay tracing, because each would count as a new install. Set
-`T3CODE_TELEMETRY_ENABLED=true` to test analytics or relay tracing from a dev server.
+`T3CODE_TELEMETRY_ENABLED=true` and explicitly configure a receiver and key to test analytics from a dev server.

@@ -117,7 +117,7 @@ it("captures only the dev runner and preserves its exit status", () => {
     const output = NodePath.join(directory, "capture");
     const stdout = NodeChildProcess.execFileSync(
       process.execPath,
-      [NodePath.join(import.meta.dirname, "profile-startup.mjs"), "--no-seed"],
+      [NodePath.join(import.meta.dirname, "profile-startup.mjs"), "--no-browser"],
       {
         cwd: directory,
         env: { ...process.env, NODE_OPTIONS: "", T3CODE_STARTUP_PROFILE_DIR: output },
@@ -125,7 +125,7 @@ it("captures only the dev runner and preserves its exit status", () => {
       },
     );
     const runner = decodeRunner(stdout.trim().split("\n").at(-1));
-    expect(runner.args).toEqual(["dev", "--no-seed"]);
+    expect(runner.args).toEqual(["dev", "--no-browser"]);
     expect(NodeFS.readdirSync(output).sort()).toEqual(
       ["cpuprofile", "modules.json", "process.json"].map((suffix) => `${runner.pid}-0.${suffix}`),
     );

@@ -1,3 +1,5 @@
+import * as CoreClient from "@agentshare/core-client/CoreClient";
+import { makeAgentShareNativeProvider } from "../../agentshare/NativeProvider.ts";
 import { CodexSettings, ProviderDriverKind } from "@t3tools/contracts";
 import * as Digest from "effect/crypto/Digest";
 import * as SecureRandom from "effect/crypto/SecureRandom";
@@ -95,6 +97,7 @@ function makeCodexMaintenanceResolver(sharedHomePath: string) {
 }
 
 export type CodexDriverEnv =
+  | CoreClient.CoreClient
   | CodexAdapterV2DriverEnv
   | ProviderHost.ProviderHost
   | ChildProcessSpawner.ChildProcessSpawner
@@ -134,6 +137,26 @@ export const CodexDriver: ProviderDriver<
     enabled,
     config,
   }) {
+    if (config.agentShareModel !== undefined)
+      return yield* makeAgentShareNativeProvider(
+        {
+          instanceId,
+          displayName,
+          accentColor,
+          environment,
+          enabled,
+          config,
+        },
+        "codex",
+        createCodexAdapterV2({
+          instanceId,
+          displayName,
+          accentColor,
+          environment,
+          enabled,
+          config,
+        }),
+      );
     if (config.setupMode === "managed")
       return yield* makeManagedCodexProvider({
         instanceId,

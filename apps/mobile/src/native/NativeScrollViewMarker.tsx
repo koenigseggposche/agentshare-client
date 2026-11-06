@@ -48,3 +48,8 @@ export function NativeScrollView(props: ComponentProps<typeof ScrollView>) {
     scrollView
   );
 }
+
+// VirtualizedList calls this directly; React must mount the compiled component itself.
+export function renderNativeScrollView(props: ComponentProps<typeof ScrollView>) {
+  return <NativeScrollView {...props} />;
+}

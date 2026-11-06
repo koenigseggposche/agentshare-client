@@ -130,7 +130,7 @@ const NOTICE_TEXT_EXTENSIONS = new Set([
   ".txt",
   ".unlicense",
 ]);
-const FIRST_PARTY_PACKAGE_PREFIX = "@t3tools/";
+const FIRST_PARTY_PACKAGE_PREFIXES = ["@t3tools/", "@agentshare/"];
 
 function isNoticeTextFile(fileName: string): boolean {
   return (
@@ -601,7 +601,7 @@ async function collectProductionDependencyPackages(
         typeof resolved.packageJson.name === "string" ? resolved.packageJson.name : dependencyName;
       // Type-only packages ship nothing, but what they depend on may, so the walk goes on below.
       if (
-        !name.startsWith(FIRST_PARTY_PACKAGE_PREFIX) &&
+        !FIRST_PARTY_PACKAGE_PREFIXES.some((prefix) => name.startsWith(prefix)) &&
         !(await isTypeOnlyPackage(resolved.packageJson, resolved.packageRoot))
       ) {
         const identity = packageIdentity(resolved.packageJson, resolved.packageRoot);
@@ -659,7 +659,8 @@ async function addBundledModulePackages(
       throw error;
     }
     if (!found || typeof found.packageJson.name !== "string") continue;
-    if (found.packageJson.name.startsWith(FIRST_PARTY_PACKAGE_PREFIX)) continue;
+    const packageName = found.packageJson.name;
+    if (FIRST_PARTY_PACKAGE_PREFIXES.some((prefix) => packageName.startsWith(prefix))) continue;
     const identity = packageIdentity(found.packageJson, found.packageRoot);
     const existing = collection.byIdentity.get(identity);
     if (existing) {

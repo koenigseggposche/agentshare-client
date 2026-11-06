@@ -1,3 +1,5 @@
+import * as AgentShareFunds from "@agentshare/account-client/FundsClient";
+import * as AgentShareWallet from "@agentshare/account-client/WalletClient";
 import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretResolver";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -116,6 +118,7 @@ import * as ServerSecretStore from "./auth/ServerSecretStore.ts";
 import * as ServerConfigModule from "./config.ts";
 import * as Keybindings from "./keybindings.ts";
 import * as ServerSettings from "./serverSettings.ts";
+import * as AgentShare from "./agentshare/AgentShare.ts";
 import * as ManagedPolicy from "./policy/ManagedPolicy.ts";
 
 import * as ThreadManagement from "./orchestration-v2/ThreadManagementService.ts";
@@ -318,7 +321,6 @@ it.live.each(["thread", "shell"] as const)(
       });
       const items = yield* subscription.pipe(
         Effect.provideService(ThreadManagement.ThreadManagementService, {
-          ensureLegacyTranscript: () => Effect.void,
           getShellSnapshot: () => Effect.die("shell resume must not load a full snapshot"),
           listActiveSubagentThreadIds: () => Effect.succeed([]),
           streamStoredEventsFrom: (
@@ -398,7 +400,6 @@ it.effect("coalesces streaming replay before synchronization and the live tail",
     }).pipe(
       Effect.flatMap(Stream.runCollect),
       Effect.provideService(ThreadManagement.ThreadManagementService, {
-        ensureLegacyTranscript: () => Effect.void,
         streamStoredEventsFrom: () =>
           Stream.unwrap(
             insert(4, "Next", false).pipe(
@@ -655,6 +656,9 @@ it.effect("shell snapshots omit idle children and older settled threads only on 
 
 // Build the production RPC layer; unrelated capabilities fail if this test calls them.
 const layerUnusedConfigRpcServices = Layer.mergeAll(
+  Layer.mock(AgentShare.AgentShare)({}),
+  Layer.mock(AgentShareWallet.WalletClient)({}),
+  Layer.mock(AgentShareFunds.FundsClient)({}),
   Layer.mock(DocumentText.DocumentText)({}),
   Layer.mock(ServerSecretStore.ServerSecretStore)({}),
   Layer.mock(WorkspacePaths.WorkspacePaths)({}),
@@ -1200,7 +1204,6 @@ it.effect.each(["thread", "shell"] as const)(
       });
       const exit = yield* subscription.pipe(
         Effect.provideService(ThreadManagement.ThreadManagementService, {
-          ensureLegacyTranscript: () => Effect.void,
           getThreadSnapshot: () => Effect.die("snapshot"),
           listActiveShellIndex: () => Effect.die("snapshot"),
           readShellSnapshot: () => Effect.die("snapshot"),
@@ -1268,7 +1271,6 @@ it.effect.each(["thread", "shell"] as const)(
       }).pipe(
         Effect.provideService(Statement.CurrentTransformer, gateReplayRead),
         Effect.provideService(ThreadManagement.ThreadManagementService, {
-          ensureLegacyTranscript: () => Effect.void,
           getThreadSnapshot: () => Effect.die("snapshot"),
           listActiveShellIndex: () => Effect.die("snapshot"),
           readShellSnapshot: () => Effect.die("snapshot"),
@@ -1328,7 +1330,6 @@ it.effect("thread resume at its own high-water below the pruned boundary skips t
       afterSequence: last!.sequence,
     }).pipe(
       Effect.provideService(ThreadManagement.ThreadManagementService, {
-        ensureLegacyTranscript: () => Effect.void,
         getThreadSnapshot: () => Effect.die("snapshot"),
         streamStoredEventsFrom: () => Stream.empty,
       } as unknown as ThreadManagement.ThreadManagementService["Service"]),

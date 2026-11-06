@@ -22,6 +22,14 @@ it.effect("rejects an insecure runtime relay URL override", () =>
 
 it.effect("rejects malformed or insecure hosted app URLs", () =>
   Effect.gen(function* () {
+    const missing = yield* hostedAppUrlConfig.pipe(provideEnv({}), Effect.result);
+    assert.isTrue(Result.isFailure(missing));
+    assert.equal(
+      yield* hostedAppUrlConfig.pipe(
+        provideEnv({ T3CODE_HOSTED_APP_URL: "https://client.example.test" }),
+      ),
+      "https://client.example.test",
+    );
     for (const value of [
       "app.t3.codes",
       "http://app.t3.codes",

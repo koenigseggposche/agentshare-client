@@ -1,0 +1,23 @@
+{
+  "fill": {
+    "solid": "display-p3:0.11373,0.11373,0.12157,1.00000"
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "mark.svg",
+          "name": "AgentShare",
+          "position": {
+            "scale": 8,
+            "translation-in-points": [0, 0]
+          }
+        }
+      ]
+    }
+  ],
+  "supported-platforms": {
+    "circles": ["watchOS"],
+    "squares": "shared"
+  }
+}

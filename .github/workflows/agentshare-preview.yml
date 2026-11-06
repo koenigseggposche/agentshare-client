@@ -1,0 +1,191 @@
+name: AgentShare preview builds
+
+on:
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: "Full agentshare Core source commit"
+        required: true
+        type: string
+      core_version:
+        description: "Core preview version, for example 0.6.30-preview.20261107.1"
+        required: true
+        type: string
+      version:
+        description: "Client preview version; empty generates one from the run number"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agentshare-preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    if: github.repository == 'koenigseggposche/agentshare-client' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      core_ref: ${{ steps.plan.outputs.core_ref }}
+      core_version: ${{ steps.plan.outputs.core_version }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout: apps/desktop/package.json
+          sparse-checkout-cone-mode: false
+      - name: Validate preview inputs
+        id: plan
+        env:
+          CORE_REF: ${{ inputs.core_ref }}
+          CORE_VERSION: ${{ inputs.core_version }}
+          CLIENT_VERSION: ${{ inputs.version }}
+          CORE_READ_KEY_CONFIGURED: ${{ secrets.AGENTSHARE_CORE_READ_KEY != '' }}
+        run: |
+          python3 - <<'PY'
+          import datetime, json, os, pathlib, re
+          if os.environ['CORE_READ_KEY_CONFIGURED'] != 'true':
+              raise SystemExit('Configure AGENTSHARE_CORE_READ_KEY with a read-only deploy key for koenigseggposche/agentshare.')
+          if not re.fullmatch(r'[0-9a-f]{40}', os.environ['CORE_REF']):
+              raise SystemExit('core_ref must be a complete source commit.')
+          base = json.loads(pathlib.Path('apps/desktop/package.json').read_text())['version']
+          date = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
+          version = os.environ['CLIENT_VERSION'] or f"{base}-preview.{date}.{os.environ['GITHUB_RUN_NUMBER']}"
+          preview = r'(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)-preview\.[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*'
+          if not all(re.fullmatch(preview, v) for v in [version, os.environ['CORE_VERSION']]):
+              raise SystemExit('Both versions must use the preview channel.')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              for key, value in [('version', version), ('core_ref', os.environ['CORE_REF']), ('core_version', os.environ['CORE_VERSION'])]:
+                  output.write(f'{key}={value}\n')
+          PY
+
+  desktop:
+    needs: plan
+    name: Preview ${{ matrix.core_target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            platform: mac
+            arch: arm64
+            target: dmg
+            core_target: darwin-arm64
+          - runner: windows-2025
+            platform: win
+            arch: x64
+            target: nsis
+            core_target: win32-x64
+          - runner: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+            target: AppImage
+            core_target: linux-arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      CLIENT_VERSION: ${{ needs.plan.outputs.version }}
+      CORE_VERSION: ${{ needs.plan.outputs.core_version }}
+      CORE_REF: ${{ needs.plan.outputs.core_ref }}
+      CORE_TARGET: ${{ matrix.core_target }}
+      DESKTOP_PLATFORM: ${{ matrix.platform }}
+      DESKTOP_ARCH: ${{ matrix.arch }}
+      DESKTOP_TARGET: ${{ matrix.target }}
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      CARGO_BUILD_JOBS: "2"
+    steps:
+      - name: Checkout client source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            /*
+            !/.repos/
+          sparse-checkout-cone-mode: false
+      - name: Checkout pinned Core source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: koenigseggposche/agentshare
+          ref: ${{ needs.plan.outputs.core_ref }}
+          path: .core-source
+          ssh-key: ${{ secrets.AGENTSHARE_CORE_READ_KEY }}
+          persist-credentials: false
+      - name: Isolate Core source from client packaging
+        run: mv .core-source "$RUNNER_TEMP/core-source"
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "1.27.3"
+          cache: false
+      - name: Build verified Core artifact
+        run: |
+          python3 "$RUNNER_TEMP/core-source/scripts/build_core_artifact.py" \
+            --target "$CORE_TARGET" --version "$CORE_VERSION" \
+            --expected-revision "$CORE_REF" --output "$RUNNER_TEMP/core-artifact"
+      - name: Setup client dependencies
+        uses: ./.github/actions/setup-ci-deps
+      - name: Select Rust toolchain
+        run: |
+          rustup toolchain install 1.99.1 --profile minimal
+          echo 'RUSTUP_TOOLCHAIN=1.99.1' >> "$GITHUB_ENV"
+      - name: Install Linux native build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsecret-1-dev pkg-config patchelf
+      - name: Check target architecture
+        run: |
+          node --input-type=module - <<'JS'
+          if (process.arch !== process.env.DESKTOP_ARCH) throw new Error('Runner architecture differs from the artifact target.');
+          JS
+      - name: Build desktop preview
+        run: |
+          node scripts/build-desktop-artifact.ts \
+            --platform "$DESKTOP_PLATFORM" --arch "$DESKTOP_ARCH" --target "$DESKTOP_TARGET" \
+            --build-version "$CLIENT_VERSION" --output-dir "$RUNNER_TEMP/client-artifacts" \
+            --core-manifest "$RUNNER_TEMP/core-artifact/manifest.json"
+      - name: Record artifact hashes and source commits
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, shutil
+          root = pathlib.Path(os.environ['RUNNER_TEMP']) / 'client-artifacts'
+          files = []
+          for path in sorted(root.iterdir()):
+              if path.suffix not in ['.dmg', '.zip', '.exe', '.deb', '.AppImage']:
+                  continue
+              with path.open('rb') as stream:
+                  sha = hashlib.file_digest(stream, 'sha256').hexdigest()
+              files.append(dict(name=path.name, size=path.stat().st_size, sha256=sha))
+          if not files:
+              raise SystemExit('No installable artifacts were produced.')
+          core = json.loads((pathlib.Path(os.environ['RUNNER_TEMP']) / 'core-artifact/manifest.json').read_text())
+          if core.get('source_dirty') is not False or core['revision'] != os.environ['CORE_REF']:
+              raise SystemExit('Core artifact is not bound to the requested clean source.')
+          shutil.copyfile(pathlib.Path(os.environ['RUNNER_TEMP']) / 'core-artifact/manifest.json', root / 'core-manifest.json')
+          (root / 'SHA256SUMS').write_text(''.join(f"{x['sha256']}  {x['name']}\n" for x in files))
+          (root / 'build.json').write_text(json.dumps(dict(
+              client_version=os.environ['CLIENT_VERSION'], client_revision=os.environ['GITHUB_SHA'],
+              core_version=os.environ['CORE_VERSION'], core_revision=os.environ['CORE_REF'],
+              target=os.environ['CORE_TARGET'], distribution_signing=False, files=files), indent=2) + '\n')
+          PY
+      - name: Upload preview artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: agentshare-preview-${{ matrix.core_target }}
+          path: |
+            ${{ runner.temp }}/client-artifacts/*.dmg
+            ${{ runner.temp }}/client-artifacts/*.zip
+            ${{ runner.temp }}/client-artifacts/*.exe
+            ${{ runner.temp }}/client-artifacts/*.deb
+            ${{ runner.temp }}/client-artifacts/*.AppImage
+            ${{ runner.temp }}/client-artifacts/SHA256SUMS
+            ${{ runner.temp }}/client-artifacts/build.json
+            ${{ runner.temp }}/client-artifacts/core-manifest.json
+          if-no-files-found: error
+          retention-days: 14

@@ -181,7 +181,11 @@ describe("scoreThreadSearch", () => {
     ).toBe("T3 Connect Tunnel Lifecycle Review");
     expect(
       rankTitles("t3code", [
-        thread("Fix sidebar lag", { ...busy, projectTitle: "t3code", branch: "t3code/sidebar" }),
+        thread("Fix sidebar lag", {
+          ...busy,
+          projectTitle: "t3code",
+          branch: "t3code/sidebar",
+        }),
         thread("T3 Code vs Gemini Token Volume", { projectTitle: "slophouse" }),
       ])[0],
     ).toBe("T3 Code vs Gemini Token Volume");

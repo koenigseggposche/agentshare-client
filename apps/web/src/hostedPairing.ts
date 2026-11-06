@@ -1,5 +1,3 @@
-import { DEFAULT_HOSTED_APP_URL } from "@t3tools/shared/connectAuth";
-
 import { getPairingTokenFromUrl, setPairingTokenOnUrl } from "@t3tools/shared/remote";
 
 export interface HostedPairingRequest {
@@ -11,7 +9,7 @@ export interface HostedPairingRequest {
 export type HostedAppChannel = "latest" | "nightly";
 
 export function configuredHostedAppUrl(): string {
-  return import.meta.env.VITE_HOSTED_APP_URL?.trim() || DEFAULT_HOSTED_APP_URL;
+  return import.meta.env.VITE_HOSTED_APP_URL?.trim() || "";
 }
 
 function configuredBackendUrl(): string {
@@ -73,7 +71,8 @@ export function buildHostedPairingUrl(input: {
   readonly token: string;
   readonly label?: string | null;
 }): string {
-  const url = new URL("/pair", configuredHostedAppUrl());
+  const host = /^[a-z][a-z0-9+.-]*:\/\//i.test(input.host) ? input.host : `https://${input.host}`;
+  const url = new URL("/pair", configuredHostedAppUrl() || host);
   url.searchParams.set("host", input.host);
 
   const label = input.label?.trim();

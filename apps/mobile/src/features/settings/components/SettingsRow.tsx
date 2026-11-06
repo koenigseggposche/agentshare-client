@@ -6,7 +6,7 @@ import { ListRow } from "../../../components/ui/ListRow";
 import { ListRowLayout } from "../../../components/ui/ListRowLayout";
 import { RowPressable } from "../../../components/ui/RowPressable";
 import { cn } from "../../../lib/cn";
-import type { SettingsLegalDocumentTarget, SettingsPageTarget } from "./settings-page-targets";
+import type { SettingsDataUseTarget, SettingsPageTarget } from "./settings-page-targets";
 import { SettingsSidebarContext } from "./SettingsSection";
 import { openSettings } from "../settings-navigation";
 
@@ -17,7 +17,7 @@ export function SettingsRow(props: {
   readonly value?: string;
   readonly valuePosition?: "below" | "trailing";
   readonly target?: SettingsPageTarget;
-  readonly fullScreenTarget?: SettingsLegalDocumentTarget;
+  readonly fullScreenTarget?: SettingsDataUseTarget;
   readonly onPress?: () => void;
 }) {
   const navigation = useNavigation();

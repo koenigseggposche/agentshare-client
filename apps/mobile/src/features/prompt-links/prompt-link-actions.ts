@@ -1,3 +1,4 @@
+import { nativeAppLinkOrigin } from "../../lib/appLinkOrigin";
 import * as Dialog from "../../components/ui/Dialog";
 import { buildNewThreadLink, type LinkedPrompt } from "@t3tools/shared/promptLinks";
 
@@ -37,7 +38,11 @@ export async function applyLinkedPromptToThreadDraft(
 }
 
 export async function copyPromptLink(prompt: string): Promise<void> {
-  if (!(await tryCopyTextWithHaptic(buildNewThreadLink({ prompt }), { target: "prompt link" }))) {
+  if (
+    !(await tryCopyTextWithHaptic(buildNewThreadLink({ prompt, origin: nativeAppLinkOrigin() }), {
+      target: "prompt link",
+    }))
+  ) {
     Dialog.alert("Could not copy", "Try again.");
   }
 }

@@ -1,4 +1,6 @@
 export * from "./baseSchemas.ts";
+export * from "./agentShare.ts";
+export * from "./agentShareFunds.ts";
 export * from "./assistantCitations.ts";
 export * from "./composerContext.ts";
 export * from "./composerContextClipboard.ts";
@@ -72,3 +74,6 @@ export * from "./secretRequest.ts";
 export * from "./secretReference.ts";
 export * from "./settingsSecretValue.ts";
 export * from "./clientRpcPermissions.ts";
+
+export * from "./agentShareWallet.ts";
+export * from "./agentShareModelManager.ts";

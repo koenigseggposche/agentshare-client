@@ -26,7 +26,6 @@ export interface ProjectionMaintenanceV2Shape {
   readonly pruneEventStore: (betweenPages?: Effect.Effect<void>) => Effect.Effect<
     {
       readonly deletedEventCount: number;
-      readonly deletedReceiptCount: number;
       readonly reclaimableBytes: number;
     },
     ProjectionMaintenanceError
@@ -123,7 +122,7 @@ export const layer: Layer.Layer<ProjectionMaintenanceV2, never, SqlClient.SqlCli
             event.sequence,
             CASE
               WHEN event.application_event_version = 1 THEN 0
-              -- The legacy importer treats a thread without thread.created as not yet imported.
+              -- Preserve the creation anchor used by projection replay.
               WHEN event.event_type = 'thread.created' THEN 0
               -- Codex usage history reads the selection a run attempt started with.
               WHEN event.event_type = 'run.updated'
@@ -183,75 +182,6 @@ export const layer: Layer.Layer<ProjectionMaintenanceV2, never, SqlClient.SqlCli
       return deleted;
     });
 
-    // Imported legacy threads are served from v2 rows; their v1 events and receipts have no reader.
-    const pruneImportedLegacyHistory = Effect.fnUntraced(function* (
-      throughSequence: number,
-      throughReceiptRowId: number,
-      betweenPages: Effect.Effect<void>,
-    ) {
-      let deletedEventCount = 0;
-      let deletedReceiptCount = 0;
-      for (let cursor = 0; ;) {
-        const rows = yield* sql<{ readonly sequence: number; readonly imported: number }>`
-          SELECT
-            event.sequence,
-            event.aggregate_kind = 'thread' AND EXISTS (
-              SELECT 1 FROM orchestration_v2_legacy_imports AS legacy_import
-              WHERE legacy_import.thread_id = event.stream_id
-                AND legacy_import.transcript_imported_at IS NOT NULL
-            ) AS imported
-          FROM orchestration_events AS event
-            INDEXED BY idx_orchestration_events_application_sequence
-          WHERE event.application_event_version = 1
-            AND event.sequence > ${cursor}
-            AND event.sequence <= ${throughSequence}
-          ORDER BY event.sequence ASC
-          LIMIT ${PAGE_SIZE}
-        `.pipe(NodeSqliteClient.readOnly);
-        const obsolete = rows.filter((row) => row.imported === 1).map((row) => row.sequence);
-        yield* Effect.yieldNow;
-        if (obsolete.length > 0) {
-          yield* sql`DELETE FROM orchestration_events WHERE sequence IN ${sql.in(obsolete)}`;
-          deletedEventCount += obsolete.length;
-          yield* Effect.yieldNow;
-        }
-        yield* betweenPages;
-        if (rows.length < PAGE_SIZE) break;
-        cursor = rows.at(-1)?.sequence ?? cursor;
-      }
-      for (let cursor = 0; ;) {
-        const rows = yield* sql<{
-          readonly row_id: number;
-          readonly command_id: string;
-          readonly imported: number;
-        }>`
-          SELECT
-            receipt.rowid AS row_id,
-            receipt.command_id,
-            receipt.command_type = 'legacy' AND receipt.aggregate_kind = 'thread' AND EXISTS (
-              SELECT 1 FROM orchestration_v2_legacy_imports AS legacy_import
-              WHERE legacy_import.thread_id = receipt.aggregate_id
-                AND legacy_import.transcript_imported_at IS NOT NULL
-            ) AS imported
-          FROM orchestration_command_receipts AS receipt
-          WHERE receipt.rowid > ${cursor} AND receipt.rowid <= ${throughReceiptRowId}
-          ORDER BY receipt.rowid ASC
-          LIMIT ${PAGE_SIZE}
-        `.pipe(NodeSqliteClient.readOnly);
-        const obsolete = rows.filter((row) => row.imported === 1).map((row) => row.command_id);
-        yield* Effect.yieldNow;
-        if (obsolete.length > 0) {
-          yield* sql`DELETE FROM orchestration_command_receipts WHERE command_id IN ${sql.in(obsolete)}`;
-          deletedReceiptCount += obsolete.length;
-          yield* Effect.yieldNow;
-        }
-        yield* betweenPages;
-        if (rows.length < PAGE_SIZE) break;
-        cursor = rows.at(-1)?.row_id ?? cursor;
-      }
-      return { deletedEventCount, deletedReceiptCount };
-    });
-
     // A pass prunes through the mark the previous pass left once that mark is a day old, so
     // at least RETAINED_EVENT_HISTORY of events always remains. Receipts stay for idempotency.
     const pruneEventStore = Effect.fn("ProjectionMaintenance.pruneEventStore")(
@@ -269,10 +199,9 @@ export const layer: Layer.Layer<ProjectionMaintenanceV2, never, SqlClient.SqlCli
         const mark = read(EVENT_LOG_PRUNE_MARK);
         const prunedThrough = read(EVENT_LOG_PRUNED_THROUGH)?.last_sequence ?? 0;
         // Fixed bounds: foreground commits during the pass wait for the next one.
-        const bounds = yield* sql<{ readonly sequence: number; readonly receipt_row_id: number }>`
+        const bounds = yield* sql<{ readonly sequence: number }>`
           SELECT
-            COALESCE((SELECT MAX(sequence) FROM orchestration_events), 0) AS sequence,
-            COALESCE((SELECT MAX(rowid) FROM orchestration_command_receipts), 0) AS receipt_row_id
+            COALESCE((SELECT MAX(sequence) FROM orchestration_events), 0) AS sequence
         `.pipe(NodeSqliteClient.readOnly);
         const head = bounds[0]?.sequence ?? 0;
 
@@ -291,13 +220,6 @@ export const layer: Layer.Layer<ProjectionMaintenanceV2, never, SqlClient.SqlCli
         }
         if (mark === undefined || markIsDue) yield* writeMetadata(EVENT_LOG_PRUNE_MARK, head, now);
 
-        const legacy = yield* pruneImportedLegacyHistory(
-          head,
-          bounds[0]?.receipt_row_id ?? 0,
-          betweenPages,
-        );
-        deletedEventCount += legacy.deletedEventCount;
-
         const freelistRows = yield* sql<{ readonly freelist_count: number }>`PRAGMA freelist_count`;
         const pageSizeRows = yield* sql<{ readonly page_size: number }>`PRAGMA page_size`;
         const reclaimableBytes =
@@ -305,7 +227,6 @@ export const layer: Layer.Layer<ProjectionMaintenanceV2, never, SqlClient.SqlCli
 
         return {
           deletedEventCount,
-          deletedReceiptCount: legacy.deletedReceiptCount,
           reclaimableBytes,
         };
       },

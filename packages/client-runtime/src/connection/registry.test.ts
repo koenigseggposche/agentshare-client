@@ -150,6 +150,7 @@ const makeHarness = Effect.fn("TestEnvironmentRegistry.makeHarness")(function* (
   initialProfiles: ReadonlyArray<ConnectionProfile> = [],
   initialCredentials: ReadonlyArray<readonly [string, ConnectionCredential]> = [],
   options?: {
+    readonly beforeCatalogRead?: Effect.Effect<void, Persistence.ConnectionPersistenceError>;
     readonly prepareError?: ConnectionBlockedError;
     readonly beforeSessionConnect?: (environmentId: EnvironmentId) => Effect.Effect<void>;
     readonly beforeRegistrationRegister?: (
@@ -206,7 +207,7 @@ const makeHarness = Effect.fn("TestEnvironmentRegistry.makeHarness")(function* (
     new Set(options?.initialDisabled ?? []),
   );
   const targetStore = Persistence.ConnectionTargetStore.of({
-    list: Ref.get(storedTargets),
+    list: (options?.beforeCatalogRead ?? Effect.void).pipe(Effect.andThen(Ref.get(storedTargets))),
     listDisabled: Ref.get(storedDisabled).pipe(Effect.map((ids) => [...ids])),
   });
   const registrationStore = Persistence.ConnectionRegistrationStore.of({
@@ -548,6 +549,122 @@ function awaitConnectionState(
 }
 
 describe("EnvironmentRegistry", () => {
+  it.effect("connects the primary workbench while saved connections await unlock", () =>
+    Effect.gen(function* () {
+      const unlock = yield* Deferred.make<void>();
+      const readStarted = yield* Deferred.make<void>();
+      const shadow = new RelayConnectionTarget({
+        environmentId: TARGET.environmentId,
+        label: "Saved shadow",
+      });
+      const harness = yield* makeHarness([RELAY_TARGET, shadow], [], [], {
+        initialDisabled: [RELAY_TARGET.environmentId],
+        beforeCatalogRead: Deferred.succeed(readStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(unlock)),
+        ),
+      });
+      yield* Effect.gen(function* () {
+        const registry = yield* EnvironmentRegistry.EnvironmentRegistry;
+        yield* Deferred.await(readStarted);
+        yield* registry.reconcilePlatform([new PrimaryConnectionRegistration({ target: TARGET })]);
+        yield* awaitConnectionState(
+          registry,
+          TARGET.environmentId,
+          (state) => state.phase === "connected",
+        );
+        expect(yield* Ref.get(harness.storedTargets)).toEqual([RELAY_TARGET, shadow]);
+        yield* Deferred.succeed(unlock, undefined);
+        yield* registry.start;
+        expect((yield* SubscriptionRef.get(registry.entries)).has(RELAY_TARGET.environmentId)).toBe(
+          true,
+        );
+        expect(
+          (yield* SubscriptionRef.get(registry.entries)).get(TARGET.environmentId)?.target,
+        ).toEqual(TARGET);
+        expect(
+          (yield* SubscriptionRef.get(registry.entries)).get(RELAY_TARGET.environmentId)?.enabled,
+        ).toBe(false);
+        expect(yield* Ref.get(harness.storedTargets)).toEqual([RELAY_TARGET]);
+      }).pipe(Effect.provide(harness.layer), Effect.scoped, Effect.timeout("1 second"));
+    }),
+  );
+
+  it.effect("waits for saved address bindings before accepting a paired route", () =>
+    Effect.gen(function* () {
+      const unlock = yield* Deferred.make<void>();
+      const harness = yield* makeHarness(
+        [BEARER_TARGET],
+        [BEARER_PROFILE],
+        [[BEARER_TARGET.connectionId, BEARER_CREDENTIAL]],
+        {
+          beforeCatalogRead: Deferred.await(unlock),
+        },
+      );
+      yield* Effect.gen(function* () {
+        const registry = yield* EnvironmentRegistry.EnvironmentRegistry;
+        const replacement = new BearerConnectionRegistration({
+          target: BEARER_TARGET,
+          profile: new BearerConnectionProfile({
+            ...BEARER_PROFILE,
+            httpBaseUrl: "https://different.example.test",
+            wsBaseUrl: "wss://different.example.test",
+          }),
+          credential: BEARER_CREDENTIAL,
+        });
+        const pairing = yield* registry
+          .register(replacement, { knownAddressOnly: true })
+          .pipe(Effect.result, Effect.forkChild({ startImmediately: true }));
+        expect(pairing.pollUnsafe()).toBeUndefined();
+        expect(yield* Ref.get(harness.storedProfiles)).toEqual(
+          new Map([[BEARER_TARGET.connectionId, BEARER_PROFILE]]),
+        );
+        yield* Deferred.succeed(unlock, undefined);
+        const result = yield* Fiber.join(pairing);
+        expect(Result.isFailure(result)).toBe(true);
+        if (Result.isFailure(result)) expect(result.failure._tag).toBe("ConnectionBlockedError");
+        expect(yield* Ref.get(harness.storedProfiles)).toEqual(
+          new Map([[BEARER_TARGET.connectionId, BEARER_PROFILE]]),
+        );
+      }).pipe(Effect.provide(harness.layer), Effect.scoped);
+    }),
+  );
+
+  it.effect(
+    "keeps the primary usable and refuses saved connection writes after a read failure",
+    () =>
+      Effect.gen(function* () {
+        const unlock = yield* Deferred.make<void, Persistence.ConnectionPersistenceError>();
+        const harness = yield* makeHarness([RELAY_TARGET], [], [], {
+          beforeCatalogRead: Deferred.await(unlock),
+        });
+        yield* Effect.gen(function* () {
+          const registry = yield* EnvironmentRegistry.EnvironmentRegistry;
+          yield* registry.reconcilePlatform([
+            new PrimaryConnectionRegistration({ target: TARGET }),
+          ]);
+          yield* Deferred.fail(
+            unlock,
+            new Persistence.ConnectionPersistenceError({
+              operation: "list-targets",
+              message: "Protected storage unavailable",
+            }),
+          );
+          yield* registry.start;
+          expect(yield* SubscriptionRef.get(registry.savedCatalogStatus)).toBe("failed");
+          const result = yield* registry
+            .register(new RelayConnectionRegistration({ target: SECOND_RELAY_TARGET }))
+            .pipe(Effect.result);
+          expect(Result.isFailure(result)).toBe(true);
+          expect(yield* Ref.get(harness.storedTargets)).toEqual([RELAY_TARGET]);
+          yield* awaitConnectionState(
+            registry,
+            TARGET.environmentId,
+            (state) => state.phase === "connected",
+          );
+        }).pipe(Effect.provide(harness.layer), Effect.scoped);
+      }),
+  );
+
   it.effect("replays connected state when arming a desktop commit observer", () =>
     Effect.gen(function* () {
       const harness = yield* makeHarness([TARGET]);

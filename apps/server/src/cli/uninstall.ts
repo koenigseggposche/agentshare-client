@@ -62,7 +62,7 @@ export const findOwnedLauncher = Effect.fn("cli.uninstall.find_launcher")(functi
 });
 
 // cmd.exe needs verbatim quoting and a literal path, with delayed expansion disabled.
-export function spawnWindowsRemoval(comspec: string, dir: string) {
+export function spawnWindowsRemoval(comspec: string, dir: string, launcher?: string) {
   return NodeChildProcess.spawn(
     comspec,
     [
@@ -70,10 +70,14 @@ export function spawnWindowsRemoval(comspec: string, dir: string) {
       "/v:off",
       "/s",
       "/c",
-      '"ping -n 3 127.0.0.1 >nul & rmdir /s /q "%T3_UNINSTALL_RUNTIME%""',
+      `"ping -n 3 127.0.0.1 >nul${launcher === undefined ? "" : ' & del /q "%T3_UNINSTALL_LAUNCHER%"'} & rmdir /s /q "%T3_UNINSTALL_RUNTIME%""`,
     ],
     {
-      env: { ...process.env, T3_UNINSTALL_RUNTIME: dir },
+      env: {
+        ...process.env,
+        T3_UNINSTALL_RUNTIME: dir,
+        ...(launcher === undefined ? {} : { T3_UNINSTALL_LAUNCHER: launcher }),
+      },
       windowsVerbatimArguments: true,
       detached: true,
       stdio: "ignore",
@@ -117,7 +121,7 @@ export const uninstallCommand = Command.make("uninstall", {
   ),
 }).pipe(
   Command.withDescription(
-    "Remove t3 from this machine: the background service, the launcher, and every downloaded version. Your projects and threads are kept.",
+    "Remove AgentShare Client from this machine: the background service, the launcher, and every downloaded version. Your projects and threads are kept.",
   ),
   Command.withHandler((flags) =>
     Effect.gen(function* () {
@@ -141,10 +145,12 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
   const plan = yield* planUninstall({ baseDir: input.baseDir });
 
   if (!plan.service && plan.launcher === undefined && plan.runtimeDir === undefined) {
-    yield* Console.log(`Nothing to remove: t3 is not installed for ${input.baseDir}.`);
+    yield* Console.log(
+      `Nothing to remove: AgentShare Client is not installed for ${input.baseDir}.`,
+    );
     if (!(yield* HostProcess.IsExecutable)) {
       yield* Console.log(
-        "  This t3 runs from a Node script, so it was installed by npm or built from source. Remove it the same way (`npm uninstall -g t3`, or delete the checkout).",
+        "  This client runs through its desktop app or a source checkout. Remove it through its original installation method.",
       );
     }
     return;
@@ -168,7 +174,7 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
       });
     }
     const confirmed = yield* Prompt.run(
-      Prompt.Confirm({ message: "Remove t3 from this machine?", initial: false }),
+      Prompt.Confirm({ message: "Remove AgentShare Client from this machine?", initial: false }),
     ).pipe(Effect.catchTags({ QuitError: () => Effect.succeed(false) }));
     if (!confirmed) {
       yield* Console.log("Left as is.");
@@ -180,7 +186,9 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
     yield* service.uninstall;
     yield* Console.log("Removed the background service.");
   }
-  if (plan.launcher !== undefined) {
+  const deferredLauncher =
+    platform === "win32" && plan.runtimeDir !== undefined ? plan.launcher : undefined;
+  if (plan.launcher !== undefined && plan.launcher !== deferredLauncher) {
     yield* fs
       .remove(plan.launcher, { force: true })
       .pipe(
@@ -192,18 +200,18 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
     yield* Console.log(`Removed ${plan.launcher}.`);
   }
   if (plan.runtimeDir !== undefined) {
-    // Windows refuses to unlink this running executable; a detached shell removes it after exit.
+    // Both the executable and its executing batch shim must survive until this command exits.
     if (platform === "win32") {
       const runtimeDir = plan.runtimeDir;
       const comspec = environment["ComSpec"] ?? environment["COMSPEC"] ?? "cmd.exe";
       yield* Effect.try({
-        try: () => spawnWindowsRemoval(comspec, runtimeDir).unref(),
+        try: () => spawnWindowsRemoval(comspec, runtimeDir, deferredLauncher).unref(),
         catch: () =>
           new CliUninstallError({
             reason: `Could not schedule removal of ${runtimeDir}. Delete it yourself once this window is closed.`,
           }),
       });
-      yield* Console.log(`${runtimeDir} will be removed once t3 exits.`);
+      yield* Console.log(`${runtimeDir} will be removed once agentshare-client exits.`);
     } else {
       yield* fs
         .remove(plan.runtimeDir, { recursive: true, force: true })
@@ -216,5 +224,5 @@ const runUninstall = Effect.fn("cli.uninstall.run")(function* (input: {
     }
   }
   yield* Console.log("");
-  yield* Console.log("t3 is uninstalled. Thanks for trying T3 Code.");
+  yield* Console.log("AgentShare Client is uninstalled.");
 });

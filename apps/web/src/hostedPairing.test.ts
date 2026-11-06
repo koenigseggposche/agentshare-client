@@ -39,5 +39,14 @@ describe("hostedPairing", () => {
     expect(url.searchParams.get("label")).toBe("Workstation");
     expect(url.searchParams.has("token")).toBe(false);
     expect(url.hash).toBe("#token=pairing-token");
+    vi.stubEnv("VITE_HOSTED_APP_URL", "");
+    const direct = new URL(
+      buildHostedPairingUrl({
+        host: "https://backend.example.com:3773",
+        token: "pairing-token",
+      }),
+    );
+    expect(direct.origin).toBe("https://backend.example.com:3773");
+    expect(direct.hash).toBe("#token=pairing-token");
   });
 });

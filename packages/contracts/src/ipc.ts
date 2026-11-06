@@ -1022,6 +1022,13 @@ export type DesktopMediaRead = typeof DesktopMediaReadSchema.Type;
 export const SystemSettingsPaneSchema = Schema.Literals(["full-disk-access"]);
 export type SystemSettingsPane = typeof SystemSettingsPaneSchema.Type;
 
+export const DesktopStartupStateSchema = Schema.Struct({
+  supported: Schema.Boolean,
+  enabled: Schema.Boolean,
+  blocked: Schema.Boolean,
+});
+export type DesktopStartupState = typeof DesktopStartupStateSchema.Type;
+
 export interface DesktopBridge {
   getAppBranding: () => DesktopAppBranding | null;
   getRelayTelemetryEnabled: () => boolean;
@@ -1046,6 +1053,8 @@ export interface DesktopBridge {
   getLocalEnvironmentBootstraps: () => readonly DesktopEnvironmentBootstrap[];
   getLocalEnvironmentEnabled: () => boolean;
   setLocalEnvironmentEnabled: (enabled: boolean) => Promise<void>;
+  getStartupState: () => Promise<DesktopStartupState>;
+  setStartupEnabled: (enabled: boolean) => Promise<DesktopStartupState>;
   getLocalEnvironmentBearerToken: () => Promise<string>;
   getClientSettings: () => Promise<ClientSettings | null>;
   setClientSettings: (settings: ClientSettings) => Promise<void>;

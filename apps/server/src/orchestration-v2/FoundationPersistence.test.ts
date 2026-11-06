@@ -155,9 +155,6 @@ function threadCreatedEvent(input: {
 
 const seedCompaction = Effect.fnUntraced(function* () {
   const sql = yield* SqlClient.SqlClient;
-  yield* sql`INSERT INTO orchestration_v2_legacy_imports (
-    thread_id, source_updated_at, shell_imported_at, transcript_imported_at, imported_message_count
-  ) VALUES ('imported', '2026-10-17', '2026-10-17', '2026-10-17', 0)`;
   yield* sql`WITH RECURSIVE history(n) AS (
     SELECT 1 UNION ALL SELECT n + 1 FROM history WHERE n < 151
   ) INSERT INTO orchestration_events (
@@ -173,11 +170,6 @@ const seedCompaction = Effect.fnUntraced(function* () {
     ('event-log-prune-mark', 2, 151, '1969-12-30T00:00:00.000Z'),
     ('thread-projections', 2, 151, '1969-12-30T00:00:00.000Z')
   ON CONFLICT(projection_name) DO UPDATE SET last_sequence = excluded.last_sequence`;
-  yield* sql`WITH RECURSIVE history(n) AS (
-    SELECT 1 UNION ALL SELECT n + 1 FROM history WHERE n < 100
-  ) INSERT INTO orchestration_command_receipts (
-    rowid, command_id, aggregate_kind, aggregate_id, accepted_at, result_sequence, status, command_type
-  ) SELECT n * 2, 'command-' || n, 'thread', 'imported', '2026-10-17', 0, 'accepted', 'legacy' FROM history`;
 });
 
 it.effect("discovers on the reader worker and deletes on the writer", () =>
@@ -219,14 +211,12 @@ it.effect("discovers on the reader worker and deletes on the writer", () =>
       const maintenance = yield* ProjectionMaintenance.ProjectionMaintenanceV2;
       const result = yield* maintenance.pruneEventStore();
       assert.equal(result.deletedEventCount, 150);
-      assert.equal(result.deletedReceiptCount, 100);
       // Only the in-transaction check for rows appended during the pass reads on the writer.
       assert.deepEqual(
         reads.filter((query) => /\bSELECT\b/.test(query) && !query.includes("AS prompt_sequence")),
         [],
       );
       assert(writes.some((query) => query.includes("DELETE FROM orchestration_events")));
-      assert(writes.some((query) => query.includes("DELETE FROM orchestration_command_receipts")));
     }).pipe(
       Effect.provide(
         ProjectionMaintenance.layer.pipe(
@@ -259,7 +249,7 @@ it.effect("paces scheduled compaction while preserving retention state and fixed
           if (typeof query !== "string" || !query.includes("LIMIT")) return;
           if (query.includes("FROM orchestration_events AS event")) {
             eventPages++;
-          } else if (!query.includes("FROM orchestration_command_receipts AS receipt")) return;
+          } else return;
           // Model a page exceeding the active budget, without wall-clock sleeps.
           activeNanos += 30_000_000n;
         };
@@ -282,9 +272,6 @@ it.effect("paces scheduled compaction while preserving retention state and fixed
           event_id, aggregate_kind, stream_id, stream_version, event_type,
           occurred_at, actor_kind, payload_json, metadata_json, application_event_version
         ) VALUES ('after-start', 'thread', 'thread', 152, 'thread.visited', '2026-10-17', 'server', '{}', '{}', 2)`;
-      yield* sql`INSERT INTO orchestration_command_receipts (
-          command_id, aggregate_kind, aggregate_id, accepted_at, result_sequence, status, command_type
-        ) VALUES ('after-start', 'thread', 'imported', '2026-10-17', 0, 'accepted', 'legacy')`;
       yield* TestClock.adjust("10 seconds");
       yield* Deferred.await(completed);
     }).pipe(
@@ -310,7 +297,7 @@ it.effect("paces scheduled compaction while preserving retention state and fixed
         },
       }),
     );
-    assert.deepEqual(pauses, Array(8).fill(270));
+    assert.deepEqual(pauses, Array(4).fill(270));
     assert.deepEqual(
       compactionSpans.map((span) => span.status._tag),
       ["Ended"],
@@ -318,9 +305,6 @@ it.effect("paces scheduled compaction while preserving retention state and fixed
     // 151 stopped being the stream head when 152 committed mid-pass; 152 is past the bound.
     assert.deepEqual(yield* sql`SELECT sequence FROM orchestration_events ORDER BY sequence`, [
       { sequence: 152 },
-    ]);
-    assert.deepEqual(yield* sql`SELECT command_id FROM orchestration_command_receipts`, [
-      { command_id: "after-start" },
     ]);
   }).pipe(Effect.scoped, Effect.provide(layerTest)),
 );
@@ -760,14 +744,13 @@ it.layer(layerTest)("orchestration V2 foundation persistence", (it) => {
     }),
   );
 
-  it.effect("prunes covered history, imported v1 events, and legacy receipts", () =>
+  it.effect("prunes covered history while preserving current projections", () =>
     Effect.gen(function* () {
       const eventSink = yield* EventSink.EventSinkV2;
       const maintenance = yield* ProjectionMaintenance.ProjectionMaintenanceV2;
       const sql = yield* SqlClient.SqlClient;
       const projections = yield* ProjectionStore.ProjectionStoreV2;
       const now = yield* DateTime.now;
-      const nowIso = DateTime.formatIso(now);
       const threadId = ThreadId.make("thread:foundation-compact");
       const thread = makeThread(threadId, now);
       const messageId = MessageId.make("message:foundation-compact");
@@ -879,47 +862,11 @@ it.layer(layerTest)("orchestration V2 foundation persistence", (it) => {
       });
       const beforeCompaction = yield* projections.getThreadProjection(threadId);
 
-      const importedV1ThreadId = "thread:foundation-compact-v1-imported";
-      const pendingV1ThreadId = "thread:foundation-compact-v1-pending";
-      const insertV1Event = (threadIdValue: string, version: number) => sql`
-        INSERT INTO orchestration_events (
-          event_id, aggregate_kind, stream_id, stream_version, event_type,
-          occurred_at, actor_kind, payload_json, metadata_json, application_event_version
-        )
-        VALUES (
-          ${`event:v1:${threadIdValue}:${version}`}, 'thread', ${threadIdValue}, ${version},
-          'thread.message-appended', ${nowIso}, 'user', '{}', '{}', 1
-        )
-      `;
-      yield* insertV1Event(importedV1ThreadId, 1);
-      yield* insertV1Event(importedV1ThreadId, 2);
-      yield* insertV1Event(pendingV1ThreadId, 1);
-      yield* sql`
-        INSERT INTO orchestration_v2_legacy_imports (
-          thread_id, source_updated_at, shell_imported_at, transcript_imported_at,
-          imported_message_count, last_error
-        )
-        VALUES
-          (${importedV1ThreadId}, ${nowIso}, ${nowIso}, ${nowIso}, 2, NULL),
-          (${pendingV1ThreadId}, ${nowIso}, ${nowIso}, NULL, 0, NULL)
-        ON CONFLICT(thread_id) DO NOTHING
-      `;
-      yield* sql`
-        INSERT INTO orchestration_command_receipts (
-          command_id, aggregate_kind, aggregate_id, accepted_at, result_sequence, status, command_type
-        )
-        VALUES
-          ('command:foundation-compact:legacy', 'thread', ${importedV1ThreadId}, ${nowIso}, 1, 'accepted', 'legacy'),
-          ('command:foundation-compact:pending', 'thread', ${pendingV1ThreadId}, ${nowIso}, 1, 'accepted', 'legacy')
-        ON CONFLICT(command_id) DO NOTHING
-      `;
-
-      // The first pass only marks the head and drops imported legacy rows.
-      const marked = yield* maintenance.pruneEventStore();
+      // The first pass records the retention boundary.
+      yield* maintenance.pruneEventStore();
       yield* TestClock.adjust("1 day");
       const summary = yield* maintenance.pruneEventStore();
       assert.isAtLeast(summary.deletedEventCount, 504);
-      assert.equal(marked.deletedReceiptCount + summary.deletedReceiptCount, 1);
 
       const remaining = yield* sql<{ readonly event_id: string }>`
         SELECT event_id
@@ -931,27 +878,6 @@ it.layer(layerTest)("orchestration V2 foundation persistence", (it) => {
       assert.deepEqual(
         remaining.map((row) => row.event_id),
         ["event:foundation-compact:create", "event:foundation-compact:tags-2"],
-      );
-
-      const remainingV1 = yield* sql<{ readonly stream_id: string }>`
-        SELECT stream_id
-        FROM orchestration_events
-        WHERE application_event_version = 1
-          AND stream_id IN (${importedV1ThreadId}, ${pendingV1ThreadId})
-      `;
-      assert.deepEqual(
-        remainingV1.map((row) => row.stream_id),
-        [pendingV1ThreadId],
-      );
-
-      const remainingReceipts = yield* sql<{ readonly command_id: string }>`
-        SELECT command_id
-        FROM orchestration_command_receipts
-        WHERE command_id IN ('command:foundation-compact:legacy', 'command:foundation-compact:pending')
-      `;
-      assert.deepEqual(
-        remainingReceipts.map((row) => row.command_id),
-        ["command:foundation-compact:pending"],
       );
 
       assert.deepEqual(yield* projections.getThreadProjection(threadId), beforeCompaction);
@@ -3297,111 +3223,63 @@ it.effect("publishes live events in commit order across concurrent writers", () 
   }).pipe(Effect.provide(layerDatabase)),
 );
 
-it.effect.each(["events", "receipts"] as const)(
-  "allows writes while compaction waits for the reader to discover obsolete %s",
-  (kind) =>
-    Effect.gen(function* () {
-      const fs = yield* FileSystem.FileSystem;
-      const path = yield* Path.Path;
-      const directory = yield* fs.makeTempDirectoryScoped({ prefix: "compaction-reader-" });
-      const database = SqlitePersistence.layerFromPath(path.join(directory, "statev2.sqlite"));
-      const maintenanceLayer = ProjectionMaintenance.layer.pipe(Layer.provideMerge(database));
-      yield* Effect.gen(function* () {
-        const sql = yield* SqlClient.SqlClient;
-        const maintenance = yield* ProjectionMaintenance.ProjectionMaintenanceV2;
-        const now = DateTime.formatIso(yield* DateTime.now);
-        yield* sql`
-          INSERT INTO orchestration_v2_legacy_imports (
-            thread_id, source_updated_at, shell_imported_at, transcript_imported_at,
-            imported_message_count, last_error
-          ) VALUES ('imported', ${now}, ${now}, ${now}, 1, NULL)
-        `;
-        for (const threadId of ["imported", "pending"]) {
-          if (kind === "events") {
-            yield* sql`
-              INSERT INTO orchestration_events (
-                event_id, aggregate_kind, stream_id, stream_version, event_type,
-                occurred_at, actor_kind, payload_json, metadata_json, application_event_version
-              ) VALUES (
-                ${threadId}, 'thread', ${threadId}, 1, 'thread.message-appended',
-                ${now}, 'user', '{}', '{}', 1
-              )
-            `;
-          } else {
-            yield* sql`
-              INSERT INTO orchestration_command_receipts (
-                command_id, aggregate_kind, aggregate_id, accepted_at, result_sequence,
-                status, command_type
-              ) VALUES (${threadId}, 'thread', ${threadId}, ${now}, 1, 'accepted', 'legacy')
-            `;
-          }
-        }
-        yield* sql`CREATE TABLE concurrent_writes (value TEXT)`;
-        const readerHeld = yield* Deferred.make<void>();
-        const releaseReader = yield* Deferred.make<void>();
-        const discoveryStarted = yield* Deferred.make<Tracer.Span>();
-        const observeDiscovery: Statement.Transformer = (statement, _sql, _fiber, span) => {
-          const [query] = statement.compile();
-          const pageQuery =
-            kind === "events" ? /^\s*SELECT\s+event\.sequence/ : /^\s*SELECT\s+receipt\.rowid/;
-          return pageQuery.test(query)
-            ? Deferred.succeed(discoveryStarted, span).pipe(
-                Effect.andThen(Deferred.await(readerHeld)),
-                Effect.as(statement),
-              )
-            : Effect.succeed(statement);
-        };
-        const compacted = yield* Deferred.make<void>();
-        const compaction = yield* maintenance.pruneEventStore().pipe(
-          Effect.provideService(Statement.CurrentTransformer, observeDiscovery),
-          Effect.provideService(Statement.SpanPropagationEnabled, true),
-          Effect.tap(() => Deferred.succeed(compacted, undefined)),
-          Effect.forkChild,
-        );
-        const discoverySpan = yield* Deferred.await(discoveryStarted);
-        // Let the initial bounds read finish before holding the reader for this page.
-        const reader = yield* sql
-          .withTransaction(
-            Deferred.succeed(readerHeld, undefined).pipe(
-              Effect.andThen(Deferred.await(releaseReader)),
-            ),
-          )
-          .pipe(NodeSqliteClient.readOnly, Effect.forkChild);
-        yield* Deferred.await(readerHeld);
-        yield* sql`INSERT INTO concurrent_writes VALUES ('committed')`;
-        assert.isFalse(yield* Deferred.isDone(compacted));
-        assert.deepEqual(yield* sql`SELECT value FROM concurrent_writes`, [{ value: "committed" }]);
-        if (kind === "events") {
-          yield* sql`
-            INSERT INTO orchestration_events (
-              event_id, aggregate_kind, stream_id, stream_version, event_type,
-              occurred_at, actor_kind, payload_json, metadata_json, application_event_version
-            ) VALUES (
-              'after-bound', 'thread', 'imported', 2, 'thread.message-appended',
-              ${now}, 'user', '{}', '{}', 1
+it.effect("allows writes while compaction waits for the reader to discover obsolete events", () =>
+  Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem;
+    const path = yield* Path.Path;
+    const directory = yield* fs.makeTempDirectoryScoped({ prefix: "compaction-reader-" });
+    const database = SqlitePersistence.layerFromPath(path.join(directory, "statev2.sqlite"));
+    yield* Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const maintenance = yield* ProjectionMaintenance.ProjectionMaintenanceV2;
+      yield* seedCompaction();
+      yield* sql`CREATE TABLE concurrent_writes (value TEXT)`;
+      const readerHeld = yield* Deferred.make<void>();
+      const releaseReader = yield* Deferred.make<void>();
+      const discoveryStarted = yield* Deferred.make<Tracer.Span>();
+      const observeDiscovery: Statement.Transformer = (statement, _sql, _fiber, span) => {
+        const [query] = statement.compile();
+        return /^\s*SELECT\s+event\.sequence/.test(query)
+          ? Deferred.succeed(discoveryStarted, span).pipe(
+              Effect.andThen(Deferred.await(readerHeld)),
+              Effect.as(statement),
             )
-          `;
-        } else {
-          yield* sql`
-            INSERT INTO orchestration_command_receipts (
-              command_id, aggregate_kind, aggregate_id, accepted_at, result_sequence,
-              status, command_type
-            ) VALUES ('after-bound', 'thread', 'imported', ${now}, 1, 'accepted', 'legacy')
-          `;
-        }
-        yield* Deferred.succeed(releaseReader, undefined);
-        yield* Fiber.join(reader);
-        const result = yield* Fiber.join(compaction);
-        assert.equal(discoverySpan.attributes.get("db.connection"), "reader");
-        assert.equal(result.deletedEventCount, kind === "events" ? 1 : 0);
-        assert.equal(result.deletedReceiptCount, kind === "receipts" ? 1 : 0);
-        const retained =
-          kind === "events"
-            ? yield* sql`SELECT event_id AS id FROM orchestration_events ORDER BY sequence`
-            : yield* sql`SELECT command_id AS id FROM orchestration_command_receipts ORDER BY rowid`;
-        assert.deepEqual(retained, [{ id: "pending" }, { id: "after-bound" }]);
-      }).pipe(Effect.provide(maintenanceLayer));
-    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+          : Effect.succeed(statement);
+      };
+      const compacted = yield* Deferred.make<void>();
+      const compaction = yield* maintenance.pruneEventStore().pipe(
+        Effect.provideService(Statement.CurrentTransformer, observeDiscovery),
+        Effect.provideService(Statement.SpanPropagationEnabled, true),
+        Effect.tap(() => Deferred.succeed(compacted, undefined)),
+        Effect.forkChild,
+      );
+      const discoverySpan = yield* Deferred.await(discoveryStarted);
+      const reader = yield* sql
+        .withTransaction(
+          Deferred.succeed(readerHeld, undefined).pipe(
+            Effect.andThen(Deferred.await(releaseReader)),
+          ),
+        )
+        .pipe(NodeSqliteClient.readOnly, Effect.forkChild);
+      yield* Deferred.await(readerHeld);
+      yield* sql`INSERT INTO concurrent_writes VALUES ('committed')`;
+      assert.isFalse(yield* Deferred.isDone(compacted));
+      assert.deepEqual(yield* sql`SELECT value FROM concurrent_writes`, [{ value: "committed" }]);
+      yield* sql`INSERT INTO orchestration_events (
+        event_id, aggregate_kind, stream_id, stream_version, event_type,
+        occurred_at, actor_kind, payload_json, metadata_json, application_event_version
+      ) VALUES ('after-bound', 'thread', 'thread', 152, 'thread.visited', '2026-10-17', 'server', '{}', '{}', 2)`;
+      yield* Deferred.succeed(releaseReader, undefined);
+      yield* Fiber.join(reader);
+      const result = yield* Fiber.join(compaction);
+      assert.equal(discoverySpan.attributes.get("db.connection"), "reader");
+      assert.equal(result.deletedEventCount, 151);
+      assert.deepEqual(
+        yield* sql`SELECT event_id AS id FROM orchestration_events ORDER BY sequence`,
+        [{ id: "after-bound" }],
+      );
+    }).pipe(Effect.provide(ProjectionMaintenance.layer.pipe(Layer.provideMerge(database))));
+  }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );
 
 it.effect("routes projection node lookups to the reader connection", () =>

@@ -1,4 +1,8 @@
-import { AuthStandardClientScopes } from "@t3tools/contracts";
+import {
+  AuthStandardClientScopes,
+  AuthOwnerClientScopes,
+  AuthFundsWriteScope,
+} from "@t3tools/contracts";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
@@ -56,6 +60,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("PairingGrantStor
 
       expect(first.method).toBe("one-time-token");
       expect(first.scopes).toEqual(AuthStandardClientScopes);
+      expect(first.scopes).not.toContain(AuthFundsWriteScope);
       expect(first.subject).toBe("one-time-token");
       expect(first.label).toBe("Julius iPhone");
       expect(issued.label).toBe("Julius iPhone");
@@ -139,6 +144,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("PairingGrantStor
       const otherCase = yield* Effect.flip(bootstrapCredentials.consume("ABCDEFGHJKMN"));
 
       expect(exact.method).toBe("desktop-bootstrap");
+      expect(exact.scopes).toEqual(AuthOwnerClientScopes);
       expect(otherCase._tag).toBe("UnknownBootstrapCredentialError");
     }).pipe(
       Effect.provide(
@@ -185,6 +191,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("PairingGrantStor
         currentDesktopBootstrapToken("desktop-secret", now),
       );
       expect(current.method).toBe("desktop-bootstrap");
+      expect(current.scopes).toEqual(AuthOwnerClientScopes);
 
       const stale = yield* Effect.flip(
         bootstrapCredentials.consume(

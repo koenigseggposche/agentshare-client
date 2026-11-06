@@ -1,7 +1,6 @@
-# T3 Code Mobile
+# AgentShare Mobile
 
-> [!NOTE]
-> To install the released app from the App Store or Google Play, see [Mobile app](../../docs/user/install.md#mobile-app). This guide covers building it from source.
+This guide covers building the native AgentShare client from source.
 
 ## Quickstart
 
@@ -10,9 +9,9 @@
 
 This app has three variants:
 
-- `development`: Expo dev client, installable side-by-side as `T3 Code Dev`
-- `preview`: persistent internal preview build, installable side-by-side as `T3 Code Preview`
-- `production`: store/release build as `T3 Code`
+- `development`: Expo dev client, installable side-by-side as `AgentShare Dev`
+- `preview`: persistent internal preview build, installable side-by-side as `AgentShare Preview`
+- `production`: release build as `AgentShare`
 
 Run commands from `apps/mobile`.
 
@@ -80,12 +79,12 @@ project. pnpm gives each patch hash a new package path; Pods can otherwise keep 
 previous directory.
 
 If your Xcode account only has a Personal Team, use a bundle identifier you control and opt into the
-reduced-capability local build. Personal Team builds omit the widget and share extensions, push
-entitlement, and native Sign in with Apple entitlement; builds without this opt-in are unchanged.
+reduced-capability local build. It uses its own keychain group and omits widgets, the share extension,
+remote push, universal links and native Sign in with Apple.
 
 ```bash
 T3CODE_IOS_PERSONAL_TEAM=1 \
-T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID=com.example.t3code.dev \
+T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID=com.example.agentshare.dev \
 vp run ios:dev
 ```
 
@@ -99,9 +98,35 @@ The Personal Team equivalent also needs a unique bundle identifier:
 
 ```bash
 T3CODE_IOS_PERSONAL_TEAM=1 \
-T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID=com.example.t3code \
+T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID=com.example.agentshare \
 vp run ios:release
 ```
+
+For a self-contained development variant connected to the Dev account service:
+
+```bash
+EXPO_PUBLIC_AGENTSHARE_CONSOLE_URL=https://as.taofanke.fun/console \
+T3CODE_IOS_PERSONAL_TEAM=1 \
+T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID=com.example.agentshare.dev \
+vp run ios:dev:release
+```
+
+Keep simulator signing enabled so Xcode embeds the simulated app identifier and keychain access
+group. Secure credential storage needs these entitlements on the simulator too.
+
+For a self-contained Android development APK, keep the same account service in both steps:
+
+```bash
+export APP_VARIANT=development
+export EXPO_PUBLIC_AGENTSHARE_CONSOLE_URL=https://as.taofanke.fun/console
+vp exec expo prebuild --platform android --no-install
+(cd android && ./gradlew :app:assembleRelease)
+```
+
+The Android bundle task tracks the account service and app variant as cache inputs. Changing
+either rebuilds the embedded JavaScript. The package name alone does not choose an account
+service: omitting the URL uses the production service. Use separate app identities for Dev and
+production so their stored credentials stay separate. These Release builds run without Metro.
 
 Build and run the local iOS preview app:
 

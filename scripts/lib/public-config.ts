@@ -9,6 +9,7 @@ export interface T3CodePublicConfig {
   readonly clerkJwtTemplate: string | undefined;
   readonly clerkCliOAuthClientId: string | undefined;
   readonly relayUrl: string | undefined;
+  readonly hostedAppUrl: string | undefined;
   readonly mobileOtlpTracesUrl: string | undefined;
   readonly mobileOtlpTracesDataset: string | undefined;
   readonly mobileOtlpTracesToken: string | undefined;
@@ -54,6 +55,13 @@ export function loadRepoEnv({
       ? {
           T3CODE_CLERK_CLI_OAUTH_CLIENT_ID: config.clerkCliOAuthClientId,
           VITE_CLERK_CLI_OAUTH_CLIENT_ID: config.clerkCliOAuthClientId,
+        }
+      : {}),
+    ...(config.hostedAppUrl
+      ? {
+          T3CODE_HOSTED_APP_URL: config.hostedAppUrl,
+          VITE_HOSTED_APP_URL: config.hostedAppUrl,
+          EXPO_PUBLIC_HOSTED_APP_URL: config.hostedAppUrl,
         }
       : {}),
     ...(config.relayUrl
@@ -121,6 +129,12 @@ function resolvePublicConfig(...sources: readonly Environment[]): T3CodePublicCo
       "VITE_CLERK_CLI_OAUTH_CLIENT_ID",
     ),
     relayUrl: firstNonEmpty(sources, "T3CODE_RELAY_URL", "VITE_T3CODE_RELAY_URL"),
+    hostedAppUrl: firstNonEmpty(
+      sources,
+      "T3CODE_HOSTED_APP_URL",
+      "VITE_HOSTED_APP_URL",
+      "EXPO_PUBLIC_HOSTED_APP_URL",
+    ),
     mobileOtlpTracesUrl: firstNonEmpty(
       sources,
       "T3CODE_MOBILE_OTLP_TRACES_URL",

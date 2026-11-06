@@ -86,6 +86,52 @@ it("prepares macOS x64 cache on an ARM64 build host", async () => {
   }
 });
 
+it("keeps the Windows release executable free for resource editing while preparing bytecode", async () => {
+  const { spawnSync } = await import("node:child_process");
+  const root = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "generated-cache-"));
+  try {
+    const executable = NodePath.join(root, "Fixture.exe");
+    NodeFS.writeFileSync(executable, "generated engine");
+    const hook = NodeURL.fileURLToPath(
+      new URL("../prepare-server-compile-cache.cjs", import.meta.url),
+    );
+    const result = spawnSync(
+      process.execPath,
+      [
+        "-e",
+        `const assert = require("node:assert/strict");
+         const fs = require("node:fs");
+         const path = require("node:path");
+         const original = ${JSON.stringify(executable)};
+         require("node:os").tmpdir = () => ${JSON.stringify(root)};
+         let generatedWith;
+         require("node:child_process").spawnSync = (engine, args, options) => {
+           assert.notEqual(engine, original);
+           assert.equal(path.dirname(engine), path.dirname(original));
+           assert.deepEqual(fs.readFileSync(engine), fs.readFileSync(original));
+           assert.equal(options.env.ELECTRON_RUN_AS_NODE, "1");
+           generatedWith = engine;
+           return { status: 0 };
+         };
+         Object.defineProperty(process, "platform", { value: "win32" });
+         Object.defineProperty(process, "arch", { value: "x64" });
+         require(${JSON.stringify(hook)})({
+           appOutDir: ${JSON.stringify(root)}, electronPlatformName: "win32", arch: 1,
+           packager: { appInfo: { productFilename: "Fixture" } }
+         }).then(() => {
+           assert.ok(generatedWith);
+           assert.equal(fs.existsSync(generatedWith), false);
+           assert.equal(fs.readFileSync(original, "utf8"), "generated engine");
+         }).catch(error => { console.error(error); process.exitCode = 1; });`,
+      ],
+      { encoding: "utf8" },
+    );
+    expect(result.status, result.stderr).toBe(0);
+  } finally {
+    NodeFS.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 it("seeds relocated cache entries without allowing writes into shipped resources", () => {
   const root = NodeFS.realpathSync(
     NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-prepared-test-")),

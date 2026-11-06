@@ -1,3 +1,8 @@
+import * as AgentShareFundsClient from "@agentshare/account-client/FundsClient";
+import * as AgentShareFundsJournal from "@agentshare/account-client/FundsJournal";
+import * as AgentShareFundsStorage from "./agentshare/FundsJournalStorage.ts";
+import * as AgentShareWallet from "@agentshare/account-client/WalletClient";
+import * as AgentShareAccountConnection from "./agentshare/AccountConnection.ts";
 import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
 import type { RelayManagedEndpointRuntimeConfig } from "@t3tools/contracts/relay";
 import * as Random from "effect/Random";
@@ -96,6 +101,7 @@ import * as ServerOwnership from "./serverOwnership.ts";
 import * as AgentAwarenessRelay from "./relay/AgentAwarenessRelay.ts";
 import { hasCloudPublicConfig } from "./cloud/publicConfig.ts";
 import * as ServerSettings from "./serverSettings.ts";
+import * as AgentShare from "./agentshare/AgentShare.ts";
 import * as ManagedLimits from "./policy/managedLimits.ts";
 import * as ManagedPolicy from "./policy/ManagedPolicy.ts";
 import * as ProjectEnrichmentService from "./project/ProjectEnrichmentService.ts";
@@ -623,6 +629,15 @@ const layerProviderInstallationRefresh = Layer.effectDiscard(
 );
 
 const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
+  AgentShare.layerLocal,
+  AgentShareFundsClient.layer.pipe(
+    Layer.provideMerge(
+      AgentShareFundsJournal.layer.pipe(Layer.provide(AgentShareFundsStorage.layer)),
+    ),
+    Layer.provideMerge(
+      AgentShareWallet.layer.pipe(Layer.provide(AgentShareAccountConnection.layerCore)),
+    ),
+  ),
   AgentAwarenessRelay.layer,
   HeldHooksWaker.layer,
   layerThreadSettlementWorker,

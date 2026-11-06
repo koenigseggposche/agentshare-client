@@ -1,3 +1,4 @@
+import { nativeAppLinkOrigin } from "../../lib/appLinkOrigin";
 import * as Dialog from "../../components/ui/Dialog";
 import type { ThreadRowProviderInstance } from "./thread-provider-instance";
 import {
@@ -992,6 +993,7 @@ export const ThreadListV2Row = memo(function ThreadListV2Row(props: {
         const target = threadChipCopyTarget(
           { environmentId: thread.environmentId, threadId: thread.id },
           thread.title,
+          nativeAppLinkOrigin(),
         );
         void copyThreadReference(target).then((didCopy) => {
           if (!didCopy) Dialog.alert(target.failureTitle, "Try copying this thread again.");

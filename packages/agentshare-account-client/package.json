@@ -1,0 +1,47 @@
+{
+  "name": "@agentshare/account-client",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "./FundsJournal": {
+      "types": "./src/FundsJournal.ts",
+      "import": "./src/FundsJournal.ts"
+    },
+    "./AccountConnection": {
+      "types": "./src/AccountConnection.ts",
+      "import": "./src/AccountConnection.ts"
+    },
+    "./WalletClient": {
+      "types": "./src/WalletClient.ts",
+      "import": "./src/WalletClient.ts"
+    },
+    "./DeviceCredentials": {
+      "types": "./src/DeviceCredentials.ts",
+      "import": "./src/DeviceCredentials.ts"
+    },
+    "./DeviceLogin": {
+      "types": "./src/DeviceLogin.ts",
+      "import": "./src/DeviceLogin.ts"
+    },
+    "./FundsClient": {
+      "types": "./src/FundsClient.ts",
+      "import": "./src/FundsClient.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vp test run --config ../../vite.config.ts --dir ."
+  },
+  "dependencies": {
+    "@noble/hashes": "catalog:",
+    "@t3tools/contracts": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

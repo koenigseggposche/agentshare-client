@@ -32,7 +32,6 @@ import { flushCompileCache } from "./compileCache.ts";
 import * as Keybindings from "./keybindings.ts";
 import * as ExternalLauncher from "./process/externalLauncher.ts";
 import * as EffectWorker from "./orchestration-v2/EffectWorker.ts";
-import * as LegacyV1ThreadImporter from "./orchestration-v2/legacy/LegacyV1ThreadImporter.ts";
 import * as Orchestrator from "./orchestration-v2/Orchestrator.ts";
 import * as ProviderRuntimeRecovery from "./orchestration-v2/ProviderRuntimeRecoveryService.ts";
 import * as ProviderSessionManager from "./orchestration-v2/ProviderSessionManager.ts";
@@ -411,27 +410,22 @@ export const startEffectWorkerWithRelay = Effect.fn(
 
 const runOrderedV2StartupPhases = Effect.fn("serverRuntimeStartup.runOrderedV2StartupPhases")(
   function* <
-    Import,
     Recovery,
     Bootstrap,
-    ImportError,
     RecoveryError,
     DelegationError,
     WorkerError,
     BootstrapError,
-    ImportContext,
     RecoveryContext,
     DelegationContext,
     WorkerContext,
     BootstrapContext,
   >(input: {
-    readonly importLegacyShells: Effect.Effect<Import, ImportError, ImportContext>;
     readonly recover: Effect.Effect<Recovery, RecoveryError, RecoveryContext>;
     readonly recoverDelegatedTasks: Effect.Effect<void, DelegationError, DelegationContext>;
     readonly startEffectWorker: Effect.Effect<void, WorkerError, WorkerContext>;
     readonly autoBootstrap: Effect.Effect<Bootstrap, BootstrapError, BootstrapContext>;
   }) {
-    yield* input.importLegacyShells;
     const recovery = yield* input.recover;
     yield* input.recoverDelegatedTasks;
     yield* input.startEffectWorker;
@@ -443,7 +437,6 @@ const runOrderedV2StartupPhases = Effect.fn("serverRuntimeStartup.runOrderedV2St
 const make = Effect.fn("serverRuntimeStartup.make")(function* (options?: StartupOptions) {
   const serverConfig = yield* ServerConfig.ServerConfig;
   const keybindings = yield* Keybindings.Keybindings;
-  const legacyV1ThreadImporter = yield* LegacyV1ThreadImporter.LegacyV1ThreadImporter;
   const providerRuntimeRecovery = yield* ProviderRuntimeRecovery.ProviderRuntimeRecoveryService;
   const orchestrator = yield* Orchestrator.OrchestratorV2;
   const providerSessions = yield* ProviderSessionManager.ProviderSessionManagerV2;
@@ -519,28 +512,7 @@ const make = Effect.fn("serverRuntimeStartup.make")(function* (options?: Startup
 
     const welcomeBase = yield* resolveWelcomeBase;
     const environment = yield* serverEnvironment.getDescriptor;
-    const legacyMigrationThreadCount = yield* legacyV1ThreadImporter.pendingThreadCount;
-    if (legacyMigrationThreadCount > 0) {
-      yield* lifecycleEvents.publish({
-        version: 1,
-        type: "legacyThreadMigration",
-        payload: {
-          status: "running",
-          totalThreadCount: legacyMigrationThreadCount,
-        },
-      });
-    }
     const { recovery, bootstrap: bootstrapTargets } = yield* runOrderedV2StartupPhases({
-      importLegacyShells: runStartupPhase(
-        "orchestration-v2.legacy-v1.import-shells",
-        legacyV1ThreadImporter.reconcileShells.pipe(
-          Effect.tap((summary) =>
-            summary.importedThreadCount === 0
-              ? Effect.void
-              : Effect.logInfo("Imported legacy v1 thread shells", summary),
-          ),
-        ),
-      ),
       recover: runStartupPhase("orchestration-v2.recovery", providerRuntimeRecovery.recover),
       recoverDelegatedTasks: runStartupPhase(
         "orchestration-v2.delegated-tasks.recover",
@@ -580,30 +552,6 @@ const make = Effect.fn("serverRuntimeStartup.make")(function* (options?: Startup
       ),
       forkParked,
     );
-
-    const importPendingTranscripts = legacyV1ThreadImporter.importPendingTranscripts.pipe(
-      Effect.tap((summary) =>
-        summary.importedThreadCount === 0
-          ? Effect.void
-          : Effect.logInfo("Hydrated legacy v1 thread transcripts", summary),
-      ),
-    );
-    yield* (
-      legacyMigrationThreadCount > 0
-        ? importPendingTranscripts.pipe(
-            Effect.tap(() =>
-              lifecycleEvents.publish({
-                version: 1,
-                type: "legacyThreadMigration",
-                payload: {
-                  status: "complete",
-                  totalThreadCount: legacyMigrationThreadCount,
-                },
-              }),
-            ),
-          )
-        : importPendingTranscripts
-    ).pipe(forkParked);
 
     yield* forkParked(
       Effect.gen(function* () {

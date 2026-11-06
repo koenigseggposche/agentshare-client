@@ -237,7 +237,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       const layerConfig = ConfigProvider.layer(
         ConfigProvider.fromEnv({
           env: {
-            T3CODE_DEV_AUTH_TOKEN: "  reusable-dev-auth-token-that-is-long-enough  ",
+            AGENTSHARE_CLIENT_DEV_AUTH_TOKEN: "  reusable-dev-auth-token-that-is-long-enough  ",
           },
         }),
       );
@@ -280,7 +280,7 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
         lan: Option.none<boolean>(),
       };
       const layerConfig = ConfigProvider.layer(
-        ConfigProvider.fromEnv({ env: { T3CODE_DEV_AUTH_TOKEN: secret } }),
+        ConfigProvider.fromEnv({ env: { AGENTSHARE_CLIENT_DEV_AUTH_TOKEN: secret } }),
       );
       const error = yield* resolveServerConfig(flags, Option.none()).pipe(
         Effect.provide(Layer.mergeAll(layerConfig, NetService.layer)),
@@ -342,10 +342,10 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_BOOTSTRAP_FD: String(fd),
-                  T3CODE_NO_BROWSER: "true",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
-                  T3CODE_LOG_WS_EVENTS: "true",
+                  AGENTSHARE_CLIENT_BOOTSTRAP_FD: String(fd),
+                  AGENTSHARE_CLIENT_NO_BROWSER: "true",
+                  AGENTSHARE_CLIENT_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
+                  AGENTSHARE_CLIENT_LOG_WS_EVENTS: "true",
                 },
               }),
             ),
@@ -419,12 +419,13 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_MODE: "web",
-                  T3CODE_BOOTSTRAP_FD: String(fd),
-                  T3CODE_HOME: baseDir,
-                  T3CODE_NO_BROWSER: "true",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
-                  T3CODE_LOG_WS_EVENTS: "true",
+                  AGENTSHARE_CLIENT_MODE: "web",
+                  AGENTSHARE_CLIENT_BOOTSTRAP_FD: String(fd),
+                  AGENTSHARE_CLIENT_HOME: baseDir,
+                  T3CODE_HOME: "/foreign/workbench",
+                  AGENTSHARE_CLIENT_NO_BROWSER: "true",
+                  AGENTSHARE_CLIENT_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
+                  AGENTSHARE_CLIENT_LOG_WS_EVENTS: "true",
                 },
               }),
             ),
@@ -660,8 +661,8 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
             ConfigProvider.layer(
               ConfigProvider.fromEnv({
                 env: {
-                  T3CODE_NO_BROWSER: "false",
-                  T3CODE_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
+                  AGENTSHARE_CLIENT_NO_BROWSER: "false",
+                  AGENTSHARE_CLIENT_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
                 },
               }),
             ),
@@ -910,60 +911,68 @@ it.layer(NodeServices.layer)("cli config resolution", (it) => {
       }),
   );
 
-  it.effect("listens on private networks per T3CODE_LAN, else under the service launcher", () =>
-    Effect.gen(function* () {
-      const { join } = yield* Path.Path;
-      const baseDir = join(NodeOS.tmpdir(), "t3-cli-config-service-host");
-      const resolveHost = (input: {
-        readonly connected: boolean;
-        readonly env?: Record<string, string>;
-      }) =>
-        resolveServerConfig(minimalWebFlags(baseDir), Option.none()).pipe(
-          Effect.map(({ host, privateNetworkOnly }) => ({ host, privateNetworkOnly })),
-          Effect.provide(
-            Layer.mergeAll(
-              ConfigProvider.layer(ConfigProvider.fromEnv({ env: input.env ?? {} })),
-              NetService.layer,
+  it.effect(
+    "listens on private networks per AGENTSHARE_CLIENT_LAN, else under the service launcher",
+    () =>
+      Effect.gen(function* () {
+        const { join } = yield* Path.Path;
+        const baseDir = join(NodeOS.tmpdir(), "t3-cli-config-service-host");
+        const resolveHost = (input: {
+          readonly connected: boolean;
+          readonly env?: Record<string, string>;
+        }) =>
+          resolveServerConfig(minimalWebFlags(baseDir), Option.none()).pipe(
+            Effect.map(({ host, privateNetworkOnly }) => ({ host, privateNetworkOnly })),
+            Effect.provide(
+              Layer.mergeAll(
+                ConfigProvider.layer(ConfigProvider.fromEnv({ env: input.env ?? {} })),
+                NetService.layer,
+              ),
             ),
-          ),
-          Effect.provideService(HostProcess.Environment, {
-            [SERVICE_LAUNCHER_CONTEXT_ENV]: JSON.stringify({
-              protocol: SERVICE_LAUNCHER_PROTOCOL,
-              childVersion: packageJson.version,
+            Effect.provideService(HostProcess.Environment, {
+              [SERVICE_LAUNCHER_CONTEXT_ENV]: JSON.stringify({
+                protocol: SERVICE_LAUNCHER_PROTOCOL,
+                childVersion: packageJson.version,
+              }),
             }),
-          }),
-          Effect.provideService(ServiceLauncherHostProcess, {
-            connected: input.connected,
-            send: () => false,
-            on: () => undefined,
-            off: () => undefined,
-          }),
-        );
+            Effect.provideService(ServiceLauncherHostProcess, {
+              connected: input.connected,
+              send: () => false,
+              on: () => undefined,
+              off: () => undefined,
+            }),
+          );
 
-      // A service installed before T3CODE_LAN existed.
-      expect(yield* resolveHost({ connected: true })).toEqual({
-        host: "0.0.0.0",
-        privateNetworkOnly: true,
-      });
-      // `service.env` reaches the server as its environment.
-      expect(yield* resolveHost({ connected: true, env: { T3CODE_HOST: "127.0.0.1" } })).toEqual({
-        host: "127.0.0.1",
-        privateNetworkOnly: undefined,
-      });
-      expect(yield* resolveHost({ connected: true, env: { T3CODE_LAN: "false" } })).toEqual({
-        host: undefined,
-        privateNetworkOnly: undefined,
-      });
-      expect(yield* resolveHost({ connected: false, env: { T3CODE_LAN: "true" } })).toEqual({
-        host: "0.0.0.0",
-        privateNetworkOnly: true,
-      });
-      // Without the launcher's IPC channel the context was inherited, e.g. by
-      // `t3 serve` started from an agent inside the service.
-      expect(yield* resolveHost({ connected: false })).toEqual({
-        host: undefined,
-        privateNetworkOnly: undefined,
-      });
-    }),
+        // A service installed before AGENTSHARE_CLIENT_LAN existed.
+        expect(yield* resolveHost({ connected: true })).toEqual({
+          host: "0.0.0.0",
+          privateNetworkOnly: true,
+        });
+        // `service.env` reaches the server as its environment.
+        expect(
+          yield* resolveHost({ connected: true, env: { AGENTSHARE_CLIENT_HOST: "127.0.0.1" } }),
+        ).toEqual({
+          host: "127.0.0.1",
+          privateNetworkOnly: undefined,
+        });
+        expect(
+          yield* resolveHost({ connected: true, env: { AGENTSHARE_CLIENT_LAN: "false" } }),
+        ).toEqual({
+          host: undefined,
+          privateNetworkOnly: undefined,
+        });
+        expect(
+          yield* resolveHost({ connected: false, env: { AGENTSHARE_CLIENT_LAN: "true" } }),
+        ).toEqual({
+          host: "0.0.0.0",
+          privateNetworkOnly: true,
+        });
+        // Without the launcher's IPC channel the context was inherited, e.g. by
+        // `agentshare-client serve` started from an agent inside the service.
+        expect(yield* resolveHost({ connected: false })).toEqual({
+          host: undefined,
+          privateNetworkOnly: undefined,
+        });
+      }),
   );
 });

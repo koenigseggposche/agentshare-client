@@ -167,7 +167,10 @@ export const make = Effect.gen(function* () {
     httpClient
       .execute(
         HttpClientRequest.post(`https://${host}${path}`).pipe(
-          HttpClientRequest.setHeaders({ accept: "application/json", "user-agent": "t3code" }),
+          HttpClientRequest.setHeaders({
+            accept: "application/json",
+            "user-agent": "t3code",
+          }),
           HttpClientRequest.bodyUrlParams(body),
         ),
       )

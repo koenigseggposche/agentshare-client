@@ -1642,6 +1642,7 @@ export function threadShellFromProjection(
     ...threadErrorSummary(
       latestRootProviderFailure(latestRun, projection.turnItems),
       providerSession?.lastError ?? null,
+      latestRun?.status ?? null,
     ),
     pendingRuntimeRequest,
     pendingGuestMessageCount: pendingGuestMessageCount(projection.thread.guestShare),
@@ -4067,6 +4068,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
           const summary = threadErrorSummary(
             item.type === "error" ? item.failure : null,
             row.last_error,
+            "failed",
           );
           if (summary.lastErrorClass !== "usage_limit") continue;
           candidates.push({
@@ -6782,6 +6784,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
             threadErrorSummary(
               blockingFailure?.type === "error" ? blockingFailure.failure : null,
               row.last_error,
+              "failed",
             ).lastErrorClass === "usage_limit";
           if (blocksQueue && blockingFailure !== null) {
             terminalFailureItem = blockingFailure;
@@ -6849,6 +6852,7 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
           ...threadErrorSummary(
             terminalFailureItem?.type === "error" ? terminalFailureItem.failure : null,
             row.last_error,
+            latestRunStatus,
           ),
           pendingRuntimeRequest,
           latestUserMessageAt:

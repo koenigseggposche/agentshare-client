@@ -1,4 +1,5 @@
 import { type CSSProperties, memo } from "react";
+import { MessageSquareTextIcon } from "lucide-react";
 
 import {
   normalizeProviderAccentColor,
@@ -19,6 +20,7 @@ import {
 } from "../settings/AcpRegistryIcon";
 
 const PROVIDER_ICON_BY_PROVIDER: Partial<Record<ProviderDriverKind, Icon>> = {
+  [ProviderDriverKind.make("agentshareText")]: MessageSquareTextIcon,
   [ProviderDriverKind.make("codex")]: OpenAI,
   [ProviderDriverKind.make("claudeAgent")]: ClaudeAI,
   [ProviderDriverKind.make("antigravity")]: AntigravityIcon,

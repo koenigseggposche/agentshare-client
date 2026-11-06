@@ -16,6 +16,7 @@ import { commandLabel } from "./KeybindingsSettings.logic";
 import type { ResolvedSettingsScope } from "./settingsScope";
 
 export type SettingsPath =
+  | "/settings/agentshare"
   | "/settings/projects"
   | "/settings/general"
   | "/settings/diagnostics"
@@ -86,6 +87,7 @@ export interface SettingsSearchAvailability {
 }
 
 export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
+  "/settings/agentshare": "AgentShare",
   "/settings/diagnostics": "Diagnostics",
   "/settings/projects": "Projects",
   "/settings/general": "General",
@@ -118,6 +120,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   {
     heading: null,
     paths: [
+      "/settings/agentshare",
       "/settings/general",
       "/settings/appearance",
       "/settings/chat",
@@ -709,7 +712,7 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "cli-command",
-    title: "t3 command",
+    title: "agentshare-client command",
     to: "/settings/about",
     searchTerms: ["cli terminal shell path install command line"],
     desktopOnly: true,
@@ -718,13 +721,13 @@ export const SETTINGS_SEARCH_ITEMS = [
     id: "mobile-app",
     title: "Mobile app",
     to: "/settings/about",
-    searchTerms: ["phone tablet iPhone iPad iOS Android App Store Google Play QR"],
+    searchTerms: ["phone tablet iPhone iPad iOS Android preview pairing"],
   },
   {
-    id: "privacy-policy",
-    title: "Privacy policy",
+    id: "data-use",
+    title: "Data & privacy / 数据与隐私",
     to: "/settings/about",
-    searchTerms: ["telemetry analytics usage data tracking legal opt out"],
+    searchTerms: ["privacy data prompts files provider billing archives diagnostics"],
   },
   {
     id: "telemetry-export",
@@ -1069,6 +1072,13 @@ export const SETTINGS_SEARCH_ITEMS = [
     desktopOnly: true,
   },
   {
+    id: "client-startup",
+    title: "Open client at sign-in",
+    to: "/settings/connections",
+    searchTerms: ["startup autostart login boot background 登录 开机 自启 后台"],
+    desktopOnly: true,
+  },
+  {
     id: "network-access",
     title: "Network access",
     to: "/settings/access",
@@ -1192,6 +1202,7 @@ export type SettingsSearchItemId = (typeof SETTINGS_SEARCH_ITEMS)[number]["id"];
 const SEARCH_ITEMS_BY_ID = new Map(SETTINGS_SEARCH_ITEMS.map((item) => [item.id, item] as const));
 
 const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScope | null>> = {
+  "/settings/agentshare": "environment",
   "/settings/diagnostics": "environment",
   "/settings/projects": "project",
   "/settings/general": null,

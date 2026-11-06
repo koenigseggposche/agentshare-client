@@ -1,3 +1,6 @@
+import * as AgentShareFunds from "@agentshare/account-client/FundsClient";
+import * as AgentShareWallet from "@agentshare/account-client/WalletClient";
+import { AgentShareAccountError } from "@t3tools/contracts";
 import { OrchestrationDispatchCommandError } from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import * as SecureRandom from "effect/crypto/SecureRandom";
@@ -184,6 +187,7 @@ import * as ServerLifecycleEvents from "./serverLifecycleEvents.ts";
 import * as ServerRuntimeStartup from "./serverRuntimeStartup.ts";
 import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretResolver";
 import * as ServerSettings from "./serverSettings.ts";
+import * as AgentShare from "./agentshare/AgentShare.ts";
 import { invalidateSettingsSecrets } from "./sourceControl/sourceControlHostSecrets.ts";
 import * as DatabaseStorage from "./persistence/DatabaseStorage.ts";
 import * as StorageCleanup from "./storageCleanup.ts";
@@ -854,16 +858,6 @@ export const subscribeOrchestrationV2Thread = Effect.fn("ws.orchestrationV2.subs
     yield* Effect.annotateCurrentSpan({
       "orchestration_v2.thread_id": input.threadId,
     });
-    yield* threadManagement.ensureLegacyTranscript(input.threadId).pipe(
-      Effect.mapError(
-        (cause) =>
-          new OrchestrationV2GetThreadProjectionError({
-            threadId: input.threadId,
-            message: `Failed to hydrate migrated thread ${input.threadId}`,
-            cause,
-          }),
-      ),
-    );
 
     const eventStreamFrom = (afterSequence: number) =>
       threadManagement
@@ -1462,6 +1456,9 @@ export const layerWsRpc = (
       const storageCleanup = yield* StorageCleanup.StorageCleanup;
       const databaseStorage = yield* DatabaseStorage.DatabaseStorage;
       const serverSettings = yield* ServerSettings.ServerSettingsService;
+      const agentShare = yield* AgentShare.AgentShare;
+      const agentShareFunds = yield* AgentShareFunds.FundsClient;
+      const agentShareWallet = yield* AgentShareWallet.WalletClient;
       const secretResolver = yield* SecretResolver.SecretResolver;
       const peerLinks = yield* PeerLinks.PeerLinks;
       const peerLinkRequests = yield* PeerLinkRequests.PeerLinkRequests;
@@ -2309,6 +2306,55 @@ export const layerWsRpc = (
             Effect.andThen(scheduledTasks.getWebhookDelivery(input)),
           ),
         [WS_METHODS.serverProbe]: (_input) => Effect.succeed({}),
+        [WS_METHODS.agentShareGetState]: () => agentShare.getState(),
+        [WS_METHODS.agentShareFundsRead]: (input) =>
+          agentShareFunds.read(input).pipe(
+            Effect.mapError(
+              (error) =>
+                new AgentShareAccountError({
+                  operation: error.operation,
+                  category: error.category,
+                  ...(error.status === undefined ? {} : { status: error.status }),
+                }),
+            ),
+          ),
+        [WS_METHODS.agentShareFundsCommand]: (input) =>
+          agentShareFunds.command(input).pipe(
+            Effect.mapError(
+              (error) =>
+                new AgentShareAccountError({
+                  operation: error.operation,
+                  category: error.category,
+                  ...(error.status === undefined ? {} : { status: error.status }),
+                }),
+            ),
+          ),
+        [WS_METHODS.agentShareWalletRead]: (input) =>
+          agentShareWallet.read(input).pipe(
+            Effect.mapError(
+              (error) =>
+                new AgentShareAccountError({
+                  operation: error.operation,
+                  category: error.category,
+                  ...(error.status === undefined ? {} : { status: error.status }),
+                }),
+            ),
+          ),
+        [WS_METHODS.agentShareWalletCommand]: (input) =>
+          agentShareWallet.command(input).pipe(
+            Effect.mapError(
+              (error) =>
+                new AgentShareAccountError({
+                  operation: error.operation,
+                  category: error.category,
+                  ...(error.status === undefined ? {} : { status: error.status }),
+                }),
+            ),
+          ),
+        [WS_METHODS.agentShareRead]: (input) => agentShare.read(input.resource),
+        [WS_METHODS.agentShareCommand]: (input) => agentShare.command(input),
+        [WS_METHODS.agentShareConfigureModel]: (input) => agentShare.configureModel(input),
+        [WS_METHODS.agentSharePrepareTerminal]: (input) => agentShare.prepareTerminal(input),
         [WS_METHODS.serverGetConfig]: (_input) =>
           loadServerConfig({
             usageLimitsCommand: false,

@@ -3,6 +3,7 @@ import {
   AuthAccessWriteScope,
   AuthOrchestrationOperateScope,
   AuthStandardClientScopes,
+  AuthOwnerClientScopes,
   type AuthAccessTokenResult,
   type AuthBrowserSessionResult,
   type AuthClientMetadata,
@@ -1144,7 +1145,7 @@ export const make = Effect.gen(function* () {
     () => {
       // Unguarded: startup already refused auth policies the managed policy leaves out.
       const fallback = issuePairingLink({
-        scopes: AuthStandardClientScopes,
+        scopes: AuthOwnerClientScopes,
         subject: INTERNAL_ADMINISTRATIVE_BOOTSTRAP_SUBJECT,
         purpose: "startup",
       }).pipe(Effect.map(toPairingCredential));

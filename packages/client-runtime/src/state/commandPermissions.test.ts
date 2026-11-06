@@ -9,11 +9,13 @@ import { vi } from "vite-plus/test";
 import {
   AuthAccessReadScope,
   AuthAccessWriteScope,
+  AuthFundsWriteScope,
   AuthOrchestrationOperateScope,
   AuthOrchestrationReadScope,
   AuthPreviewOperateScope,
   AuthSettingsWriteScope,
   AuthSourceControlWriteScope,
+  AuthTerminalOperateScope,
   ThreadId,
   EnvironmentId,
   ORCHESTRATION_V2_WS_METHODS,
@@ -30,7 +32,7 @@ import * as Layer from "effect/Layer";
 import { Atom, AtomRegistry, AsyncResult } from "effect/reactivity";
 import { EnvironmentRegistry } from "../connection/registry.ts";
 import { createCommandPermissions } from "./commandPermissions.ts";
-import { createEnvironmentRpcCommand } from "./runtime.ts";
+import { createEnvironmentRpcCommand, withRpcPermissionGuard } from "./runtime.ts";
 import { AVAILABLE_CONNECTION_STATE } from "../connection/model.ts";
 import { createPeerLinkEnvironmentAtoms } from "./peerLinks.ts";
 
@@ -67,6 +69,32 @@ const setup = Effect.gen(function* () {
 });
 
 describe("command permissions", () => {
+  it.effect("requires both host management and terminal operation for a managed CLI", () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const registry = yield* setup;
+        const prepare = createCommandPermissions(runtime, WS_METHODS.agentSharePrepareTerminal);
+        for (const scopes of [[AuthAccessWriteScope], [AuthTerminalOperateScope]]) {
+          registry.set(
+            sessions(env),
+            AsyncResult.success({ ...grant(false), scopes, permissions: scopes }),
+          );
+          expect(registry.get(prepare.permissionAtom(env))).toBe(false);
+          expect((yield* prepare.authorize(registry, env).pipe(Effect.flip))._tag).toBe(
+            "EnvironmentAuthorizationError",
+          );
+        }
+        const scopes = [AuthAccessWriteScope, AuthTerminalOperateScope];
+        registry.set(
+          sessions(env),
+          AsyncResult.success({ ...grant(false), scopes, permissions: scopes }),
+        );
+        expect(registry.get(prepare.permissionAtom(env))).toBe(true);
+        yield* prepare.authorize(registry, env);
+        expect(registry.get(prepare.permissionAtom(other))).toBe(false);
+      }),
+    ),
+  );
   it.effect("requires the destination read grant to refresh providers", () =>
     Effect.scoped(
       Effect.gen(function* () {
@@ -560,4 +588,107 @@ it.effect("rejects protected unary and streamed RPCs outside a guarded command",
     expect(streamed._tag).toBe("EnvironmentAuthorizationError");
     expect(writes).toBe(0);
   }),
+);
+
+it.effect.each([
+  WS_METHODS.agentShareRead,
+  WS_METHODS.agentShareWalletRead,
+  WS_METHODS.agentShareWalletCommand,
+  WS_METHODS.agentShareFundsRead,
+  WS_METHODS.agentShareFundsCommand,
+] as const)("authorizes protected account RPC %s against the current destination grant", (method) =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const registry = yield* setup;
+      let reads = 0;
+      const session = {
+        client: {
+          [method]: () =>
+            Effect.sync(() => {
+              reads++;
+              return { ok: true };
+            }),
+        },
+      } as unknown as RpcSession;
+      const supervisor = {
+        target: { environmentId: env, label: "target" },
+        session: yield* SubscriptionRef.make(Option.some(session)),
+      } as unknown as EnvironmentSupervisor["Service"];
+      const read = (
+        method === WS_METHODS.agentShareRead
+          ? requestGuarded(method, { resource: "status" }).pipe(
+              withRpcPermissionGuard(runtime),
+              Effect.as({ ok: true }),
+              Effect.mapError((error) => String(error._tag)),
+            )
+          : method === WS_METHODS.agentShareWalletRead
+            ? requestGuarded(method, { action: "overview", owner: "account:fixture" }).pipe(
+                withRpcPermissionGuard(runtime),
+                Effect.as({ ok: true }),
+                Effect.mapError((error) => String(error._tag)),
+              )
+            : method === WS_METHODS.agentShareFundsRead
+              ? requestGuarded(method, { action: "read", owner: "account:fixture" }).pipe(
+                  withRpcPermissionGuard(runtime),
+                  Effect.as({ ok: true }),
+                  Effect.mapError((error) => String(error._tag)),
+                )
+              : method === WS_METHODS.agentShareFundsCommand
+                ? requestGuarded(method, { action: "payoutStatus", owner: "account:fixture" }).pipe(
+                    withRpcPermissionGuard(runtime),
+                    Effect.as({ ok: true }),
+                    Effect.mapError((error) => String(error._tag)),
+                  )
+                : requestGuarded(method, {
+                    action: "paymentPreference",
+                    owner: "account:fixture",
+                    currency: "USD",
+                    earnings_first: true,
+                  }).pipe(
+                    withRpcPermissionGuard(runtime),
+                    Effect.as({ ok: true }),
+                    Effect.mapError((error) => String(error._tag)),
+                  )
+      ).pipe(
+        Effect.provideService(AtomRegistry.AtomRegistry, registry),
+        Effect.provideService(EnvironmentSupervisor, supervisor),
+      );
+      registry.set(
+        sessions(env),
+        AsyncResult.success({ ...grant(false), scopes: [], permissions: [] }),
+      );
+      expect(yield* read.pipe(Effect.flip)).toBe("EnvironmentAuthorizationError");
+      expect(reads).toBe(0);
+      if (method === WS_METHODS.agentShareFundsCommand) {
+        registry.set(
+          sessions(env),
+          AsyncResult.success({
+            ...grant(false),
+            scopes: [AuthAccessWriteScope],
+            permissions: [AuthAccessWriteScope],
+          }),
+        );
+        expect(yield* read.pipe(Effect.flip)).toBe("EnvironmentAuthorizationError");
+        expect(reads).toBe(0);
+      }
+      const required =
+        method === WS_METHODS.agentShareFundsCommand ? AuthFundsWriteScope : AuthAccessWriteScope;
+      registry.set(
+        sessions(env),
+        AsyncResult.success({
+          ...grant(false),
+          scopes: [required],
+          permissions: [required],
+        }),
+      );
+      expect(yield* read).toEqual({ ok: true });
+      expect(reads).toBe(1);
+      registry.set(
+        sessions(env),
+        AsyncResult.success({ ...grant(false), scopes: [AuthAccessWriteScope], permissions: [] }),
+      );
+      expect(yield* read.pipe(Effect.flip)).toBe("EnvironmentAuthorizationError");
+      expect(reads).toBe(1);
+    }),
+  ),
 );

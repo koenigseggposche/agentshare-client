@@ -1,3 +1,4 @@
+import { nativeAppLinkOrigin } from "../../lib/appLinkOrigin";
 import { StackActions, useNavigation } from "@react-navigation/native";
 import { Platform } from "react-native";
 import { resolveThreadReferenceCopyTarget } from "@t3tools/client-runtime/thread-reference";
@@ -63,6 +64,7 @@ export function HardwareKeyboardCommandProvider({
         ? null
         : resolveThreadReferenceCopyTarget({
             threadRef: activeThreadRef,
+            hostedAppUrl: nativeAppLinkOrigin(),
             title: activeThread?.title ?? "",
             pullRequests: activeThread?.pullRequests,
             linkedPullRequestUrl:

@@ -25,13 +25,8 @@ export const runDoctor = Effect.fn("runDoctor")(function* (
   yield* Console.log(
     `Database: ${formatBytes(status.databaseBytes)}, ${formatBytes(status.reclaimableBytes)} reclaimable.`,
   );
-  if (status.legacyDatabaseBytes !== null) {
-    yield* Console.log(
-      `Database from before 0.1.0: ${formatBytes(status.legacyDatabaseBytes)}, kept for rolling back.`,
-    );
-  }
-  const repairs = [
-    ...(status.incrementalVacuumEnabled && status.reclaimableBytes === 0
+  const repairs =
+    status.incrementalVacuumEnabled && status.reclaimableBytes === 0
       ? []
       : [
           {
@@ -46,18 +41,7 @@ export const runDoctor = Effect.fn("runDoctor")(function* (
               !status.incrementalVacuumEnabled ||
               status.reclaimableBytes >= DATABASE_COMPACTION_RECOMMENDED_BYTES,
           },
-        ]),
-    ...(status.legacyDatabaseBytes === null
-      ? []
-      : [
-          {
-            id: "legacy" as const,
-            title: "Delete the database from before 0.1.0",
-            description: `Frees ${formatBytes(status.legacyDatabaseBytes)}. Your threads and settings are already in the current database.\n  Warning: after this, a T3 Code version before 0.1.0 starts with no threads or settings, so you can no longer roll back.`,
-            recommended: false,
-          },
-        ]),
-  ];
+        ];
   if (repairs.length === 0) {
     yield* Console.log("Nothing to repair.");
     return;
@@ -113,11 +97,6 @@ export const runDoctor = Effect.fn("runDoctor")(function* (
           ),
         ),
     );
-  }
-  if (selected.includes("legacy")) {
-    // Only pre-0.1.0 servers use this file; removal refuses while they hold it open.
-    yield* maintenance.removeLegacyDatabase(databasePath);
-    yield* Console.log("\nDeleted the database from before 0.1.0.");
   }
 });
 

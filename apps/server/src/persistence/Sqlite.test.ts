@@ -2,6 +2,7 @@
 import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
+import * as NodeSqlite from "node:sqlite";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
@@ -11,6 +12,7 @@ import * as Layer from "effect/Layer";
 import * as SqlClient from "effect/sql/SqlClient";
 
 import * as SqlitePersistence from "./Sqlite.ts";
+import * as ServerConfig from "../config.ts";
 
 // Linux names an open, already-deleted file "<path> (deleted)" in /proc/self/fd.
 // SQLite names its temp files "etilqs_*" and, without TMPDIR, puts them in
@@ -94,5 +96,35 @@ it.effect("drops planner statistics a database already has", () => {
     }).pipe(Effect.provide(persistence()));
   }).pipe(
     Effect.ensuring(Effect.sync(() => NodeFS.rmSync(tempDir, { recursive: true, force: true }))),
+  );
+});
+
+it.effect("creates its own database while preserving an adjacent older database", () => {
+  const directory = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "db-isolation-"));
+  const userdata = NodePath.join(directory, "userdata");
+  NodeFS.mkdirSync(userdata);
+  const source = NodePath.join(userdata, "state.sqlite");
+  const database = new NodeSqlite.DatabaseSync(source);
+  database.exec(
+    "CREATE TABLE generated_private_history(value TEXT); INSERT INTO generated_private_history VALUES ('generated fixture')",
+  );
+  database.close();
+  const before = NodeFS.readFileSync(source);
+  return Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    const copied =
+      yield* sql`SELECT name FROM sqlite_schema WHERE name = 'generated_private_history'`;
+    assert.deepEqual(copied, []);
+    yield* sql`CREATE TABLE generated_new_history(value TEXT)`;
+    yield* sql`INSERT INTO generated_new_history VALUES ('new work')`;
+    assert.deepEqual(NodeFS.readFileSync(source), before);
+  }).pipe(
+    Effect.provide(
+      SqlitePersistence.layerConfig.pipe(
+        Layer.provide(ServerConfig.layerTest(directory, directory)),
+        Layer.provide(NodeServices.layer),
+      ),
+    ),
+    Effect.ensuring(Effect.sync(() => NodeFS.rmSync(directory, { recursive: true, force: true }))),
   );
 });

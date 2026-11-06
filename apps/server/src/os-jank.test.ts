@@ -8,9 +8,20 @@ import * as NodeChildProcess from "node:child_process";
 import * as NodeOS from "node:os";
 import { assert, it, vi } from "vite-plus/test";
 
-import { fixPath, hydratePosixHome } from "./os-jank.ts";
+import { fixPath, hydratePosixHome, resolveBaseDir } from "./os-jank.ts";
 
 vi.mock("node:child_process", { spy: true });
+
+effectIt.effect("uses the client-owned home unless a data directory is explicitly selected", () =>
+  Effect.gen(function* () {
+    assert.equal(yield* resolveBaseDir(undefined), "/home/example/.agentshare-client");
+    assert.equal(yield* resolveBaseDir("  "), "/home/example/.agentshare-client");
+    assert.equal(yield* resolveBaseDir("~/custom"), "/home/example/custom");
+  }).pipe(
+    Effect.provideService(HostProcess.HomeDirectory, "/home/example"),
+    Effect.provide(NodeServices.layer),
+  ),
+);
 
 it("hydrates HOME independently of a blank process HOME", () => {
   const originalHome = process.env.HOME;

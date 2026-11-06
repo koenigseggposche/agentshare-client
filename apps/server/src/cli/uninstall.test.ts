@@ -44,10 +44,13 @@ it.live.runIf(HostProcess.Platform.defaultValue() === "win32")(
       const path = yield* Path.Path;
       const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-uninstall-" });
       const runtimeDir = path.join(root, "t3 home %COMSPEC% !COMSPEC! & data", "runtime");
+      const launcher = path.join(root, "bin %COMSPEC% !COMSPEC! & data", "agentshare-client.cmd");
       yield* fs.makeDirectory(path.join(runtimeDir, "versions", "1.0.0"), { recursive: true });
       yield* fs.writeFileString(path.join(runtimeDir, "versions", "1.0.0", "t3.exe"), "");
+      yield* fs.makeDirectory(path.dirname(launcher));
+      yield* fs.writeFileString(launcher, "generated owned launcher");
 
-      const child = spawnWindowsRemoval(process.env.ComSpec ?? "cmd.exe", runtimeDir);
+      const child = spawnWindowsRemoval(process.env.ComSpec ?? "cmd.exe", runtimeDir, launcher);
       yield* Effect.callback<void, Error>((resume) => {
         child.once("error", (error) => resume(Effect.fail(error)));
         child.once("exit", (code) =>
@@ -56,5 +59,6 @@ it.live.runIf(HostProcess.Platform.defaultValue() === "win32")(
       });
 
       assert.isFalse(yield* fs.exists(runtimeDir));
+      assert.isFalse(yield* fs.exists(launcher));
     }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );

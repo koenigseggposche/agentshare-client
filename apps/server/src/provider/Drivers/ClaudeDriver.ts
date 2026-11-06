@@ -1,3 +1,7 @@
+import { makeAgentShareClaudeAdapter } from "../../agentshare/ClaudeSessions.ts";
+import * as NativeSessions from "../../agentshare/NativeSessions.ts";
+import * as CoreClient from "@agentshare/core-client/CoreClient";
+import { makeAgentShareNativeProvider } from "../../agentshare/NativeProvider.ts";
 import { ClaudeSettings, ProviderDriverKind } from "@t3tools/contracts";
 import * as Cache from "effect/Cache";
 import * as Duration from "effect/Duration";
@@ -68,6 +72,7 @@ const withoutUsage = (capabilities: ClaudeCapabilitiesProbe): ClaudeCapabilities
 };
 
 export type ClaudeDriverEnv =
+  | CoreClient.CoreClient
   | ClaudeAdapterV2DriverEnv
   | ProviderHost.ProviderHost
   | ChildProcessSpawner.ChildProcessSpawner
@@ -98,6 +103,26 @@ export const ClaudeDriver: ProviderDriver<ClaudeSettings, ClaudeDriverEnv, Path.
     enabled,
     config,
   }) {
+    if (config.agentShareModel !== undefined)
+      return yield* makeAgentShareNativeProvider(
+        {
+          instanceId,
+          displayName,
+          accentColor,
+          environment,
+          enabled,
+          config,
+        },
+        "claude",
+        makeAgentShareClaudeAdapter({
+          instanceId,
+          displayName,
+          accentColor,
+          environment,
+          enabled,
+          config,
+        }).pipe(Effect.provide(NativeSessions.layer)),
+      );
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;

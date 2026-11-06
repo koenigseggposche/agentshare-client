@@ -173,6 +173,23 @@ var x = 1;
 //#endregion
 `;
 
+  it("rejects unresolved imports in lazy server chunks while allowing staged native roots", () => {
+    const source =
+      region("../../node_modules/effect/dist/index.js") +
+      [
+        'import { sha256 } from "@noble/hashes/sha2";',
+        'const native = () => import("@ff-labs/fff-node");',
+        'const dependency = () => import("missing-pure-js-package");',
+        'const chunk = () => import("./server-chunk.mjs");',
+        'import { readFile } from "node:fs/promises";',
+        'const example = `import "only-in-an-example";`;',
+      ].join("\n");
+    assert.deepStrictEqual(findInlinedExternalPackages(source).unstagedImports, [
+      "@noble/hashes/sha2",
+      "missing-pure-js-package",
+    ]);
+  });
+
   it("flags an external package that was inlined", () => {
     const source =
       region("../../node_modules/.pnpm/node-addon-api@7.1.1/node_modules/node-addon-api/index.js") +

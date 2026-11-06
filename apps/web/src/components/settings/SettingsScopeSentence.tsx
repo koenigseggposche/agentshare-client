@@ -74,6 +74,14 @@ export function SettingsScopeSentence() {
     environments,
     onChange: scope.selectScope,
   };
+  if (pathname === "/settings/agentshare") {
+    return (
+      <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <span>执行电脑 / Execution host</span>
+        <EnvironmentScopeMenu {...props} singleEnvironment />
+      </p>
+    );
+  }
   return (
     <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 px-3 text-sm text-muted-foreground sm:px-4">
       <span className="flex min-w-0 items-center gap-1.5">

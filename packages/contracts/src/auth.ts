@@ -42,11 +42,13 @@ export const AuthFilesystemReadScope = "filesystem:read" as const;
 export const AuthFilesystemWriteScope = "filesystem:write" as const;
 /** Retained for decoding existing credentials; grants no current RPC access. */
 const AuthReviewWriteScope = "review:write" as const;
+export const AuthFundsWriteScope = "funds:write" as const;
 export const AuthAccessReadScope = "access:read" as const;
 export const AuthAccessWriteScope = "access:write" as const;
 export const AuthRelayReadScope = "relay:read" as const;
 export const AuthRelayWriteScope = "relay:write" as const;
 export const AuthEnvironmentScope = Schema.Literals([
+  AuthFundsWriteScope,
   AuthOrchestrationReadScope,
   AuthOrchestrationOperateScope,
   AuthSettingsWriteScope,
@@ -112,7 +114,10 @@ const legacyParents: Partial<Record<AuthEnvironmentScope, AuthEnvironmentScope>>
 /** Keep permission denials decodable by clients with the original scope enum. */
 export function authScopeRequiredResponse(requiredPermission: AuthEnvironmentScope) {
   return {
-    requiredScope: legacyParents[requiredPermission] ?? requiredPermission,
+    requiredScope:
+      requiredPermission === AuthFundsWriteScope
+        ? AuthAccessWriteScope
+        : (legacyParents[requiredPermission] ?? requiredPermission),
     requiredPermission,
   };
 }
@@ -165,6 +170,9 @@ export const AuthStandardClientScopes = [
   AuthAccessWriteScope,
   AuthRelayWriteScope,
 ] as const;
+
+// Local owner bootstrap includes funds; ordinary pairing links require an explicit grant.
+export const AuthOwnerClientScopes = [...AuthStandardClientScopes, AuthFundsWriteScope] as const;
 
 export const AuthTokenExchangeGrantType =
   "urn:ietf:params:oauth:grant-type:token-exchange" as const;

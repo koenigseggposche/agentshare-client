@@ -67,9 +67,11 @@ describe("DesktopEnvironment", () => {
         { VITE_DEV_SERVER_URL: "http://localhost:5173" },
       );
       const production = yield* makeEnvironment();
+      const foreignShell = yield* makeEnvironment({}, { T3CODE_HOME: "/Users/alice/.t3" });
 
-      assert.equal(development.stateDir, "/Users/alice/.t3/dev");
-      assert.equal(production.stateDir, "/Users/alice/.t3/userdata");
+      assert.equal(development.stateDir, "/Users/alice/.agentshare-client/dev");
+      assert.equal(production.stateDir, "/Users/alice/.agentshare-client/userdata");
+      assert.equal(foreignShell.stateDir, "/Users/alice/.agentshare-client/userdata");
     }),
   );
 });

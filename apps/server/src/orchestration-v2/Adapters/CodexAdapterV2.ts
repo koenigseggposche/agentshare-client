@@ -1,3 +1,4 @@
+import * as AgentShareNative from "../../agentshare/NativeSessions.ts";
 import { pipe } from "effect/Function";
 import * as DocumentText from "../../provider/DocumentText.ts";
 import { revertCodexThread } from "../../provider/CodexThreadRevert.ts";
@@ -1566,20 +1567,54 @@ export const layerAppServerClientFactory: Layer.Layer<
     const { native: nativeEventLogger } = yield* ProviderEventLoggers.ProviderEventLoggers;
     const agentScope = yield* AgentScope;
     const portDiscovery = yield* PortScanner.PortDiscovery;
+    const nativeSessions = yield* Effect.serviceOption(AgentShareNative.NativeSessions);
 
     return CodexAppServerClientFactory.of({
       open: Effect.fn("CodexAdapterV2.open")(function* (input) {
         const scope = yield* Scope.Scope;
-        const environment = {
+        const managed = input.settings.agentShareModel;
+        if (
+          managed !== undefined &&
+          (Option.isNone(nativeSessions) || input.settings.agentShareOwner === undefined)
+        ) {
+          return yield* new ProviderAdapter.ProviderAdapterOpenSessionError({
+            driver: CODEX_PROVIDER,
+            providerSessionId: input.providerSessionId,
+            cause: new Error("Model host is unavailable"),
+          });
+        }
+        const lease =
+          managed === undefined || Option.isNone(nativeSessions)
+            ? undefined
+            : yield* nativeSessions.value
+                .acquire({
+                  model: managed,
+                  owner: input.settings.agentShareOwner ?? "",
+                  directory: input.runtimePolicy.cwd ?? "",
+                })
+                .pipe(
+                  Effect.mapError(
+                    () =>
+                      new ProviderAdapter.ProviderAdapterOpenSessionError({
+                        driver: CODEX_PROVIDER,
+                        providerSessionId: input.providerSessionId,
+                        cause: new Error("The selected model connection could not be opened"),
+                      }),
+                  ),
+                );
+        const environment = lease?.launch.environment ?? {
           ...codexAppServerEnvironment(input.environment),
           ...(input.settings.homePath ? { CODEX_HOME: input.settings.homePath } : {}),
         };
         const command = yield* makeCodexAppServerSpawnCommand({
-          command: input.settings.binaryPath || "codex",
-          args: codexAppServerArgs(
-            resolveCodexLaunchArgs(input.settings.launchArgs, input.environment),
-          ),
+          command: lease?.launch.binary ?? (input.settings.binaryPath || "codex"),
+          args:
+            lease?.launch.args ??
+            codexAppServerArgs(
+              resolveCodexLaunchArgs(input.settings.launchArgs, input.environment),
+            ),
           env: environment,
+          ...(lease === undefined ? {} : { cwd: lease.launch.directory, extendEnv: false }),
           threadId: input.threadId,
         }).pipe(Effect.provideService(AgentScope, agentScope));
         const handle = yield* spawner.spawn(command).pipe(
@@ -1593,6 +1628,12 @@ export const layerAppServerClientFactory: Layer.Layer<
               }),
           ),
         );
+        if (lease !== undefined) {
+          yield* lease.keepAlive.pipe(
+            Effect.catch(() => handle.kill().pipe(Effect.ignore)),
+            Effect.forkScoped,
+          );
+        }
         // Its shells carry each thread's T3CODE_THREAD_ID, so port discovery reads listeners' threads.
         yield* Effect.acquireRelease(Effect.sync(portDiscovery.trackAgent), (release) =>
           Effect.sync(release),

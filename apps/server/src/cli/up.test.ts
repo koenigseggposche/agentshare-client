@@ -61,7 +61,7 @@ const SERVICE = {
   supported: true,
   installed: true,
   current: true,
-  unitPath: "/home/me/.config/systemd/user/t3code.service",
+  unitPath: "/home/me/.config/systemd/user/agentshare-client.service",
   logPath: "/home/me/.t3/userdata/logs/boot-service.log",
 } as const;
 
@@ -174,21 +174,21 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
     {
       label: "nothing changed",
       installed: true,
-      env: "T3CODE_LAN=false\n",
+      env: "AGENTSHARE_CLIENT_LAN=false\n",
       args: ["--no-lan"],
       installs: 0,
       restarts: 0,
-      envAfter: "T3CODE_LAN=false\n",
+      envAfter: "AGENTSHARE_CLIENT_LAN=false\n",
     },
     {
       label: "the local network opens",
-      prints: "Run `t3 pair --base-dir <baseDir>`.",
+      prints: "Run `agentshare-client pair --base-dir <baseDir>`.",
       installed: true,
-      env: "T3CODE_LAN=false\n",
+      env: "AGENTSHARE_CLIENT_LAN=false\n",
       args: ["--lan"],
       installs: 0,
       restarts: 1,
-      envAfter: "T3CODE_LAN=true\n",
+      envAfter: "AGENTSHARE_CLIENT_LAN=true\n",
     },
     {
       label: "a new service starts with its settings",
@@ -197,26 +197,26 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       args: ["--lan"],
       installs: 1,
       restarts: 0,
-      envAfter: "T3CODE_LAN=true\n",
+      envAfter: "AGENTSHARE_CLIENT_LAN=true\n",
     },
     {
       label: "a route turns off with no service to run",
       installed: false,
-      env: "T3CODE_LAN=true\n",
+      env: "AGENTSHARE_CLIENT_LAN=true\n",
       args: ["--no-lan"],
       installs: 0,
       restarts: 0,
-      envAfter: "T3CODE_LAN=false\n",
+      envAfter: "AGENTSHARE_CLIENT_LAN=false\n",
     },
     {
       label: "a stopped newer service starts as it is",
       installed: true,
       status: { current: false, installedVersion: "999.0.0", problems: ["service-stopped"] },
-      env: "T3CODE_LAN=false\n",
+      env: "AGENTSHARE_CLIENT_LAN=false\n",
       args: ["--yes"],
       installs: 0,
       restarts: 1,
-      envAfter: "T3CODE_LAN=false\n",
+      envAfter: "AGENTSHARE_CLIENT_LAN=false\n",
     },
     {
       label: "a failed update keeps service.env matching the old service",
@@ -235,22 +235,22 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       label: "a failed restart puts service.env back and restarts on it",
       installed: true,
       restartFails: true,
-      env: "T3CODE_LAN=false\n",
+      env: "AGENTSHARE_CLIENT_LAN=false\n",
       args: ["--lan"],
       installs: 0,
       restarts: 2,
-      envAfter: "T3CODE_LAN=false\n",
+      envAfter: "AGENTSHARE_CLIENT_LAN=false\n",
     },
     {
       label: "declining an update changes nothing",
       installed: true,
       status: { current: false },
       answer: "n",
-      env: "T3CODE_LAN=false\n",
+      env: "AGENTSHARE_CLIENT_LAN=false\n",
       args: ["--lan"],
       installs: 0,
       restarts: 0,
-      envAfter: "T3CODE_LAN=false\n",
+      envAfter: "AGENTSHARE_CLIENT_LAN=false\n",
     },
     {
       label: "no service manager still records the choice",
@@ -260,7 +260,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       args: ["--lan"],
       installs: 0,
       restarts: 0,
-      envAfter: "T3CODE_LAN=true\n",
+      envAfter: "AGENTSHARE_CLIENT_LAN=true\n",
     },
     {
       label: "the old default is kept",
@@ -269,7 +269,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       args: ["--yes"],
       installs: 0,
       restarts: 0,
-      envAfter: "T3CODE_LAN=true\n",
+      envAfter: "AGENTSHARE_CLIENT_LAN=true\n",
     },
   ])("restarts the service only when it must: $label", (input) =>
     Effect.gen(function* () {
@@ -351,9 +351,22 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
 });
 
 it("rewrites only the named service.env keys and keeps the user's lines", () => {
-  const before = ["# my settings", "T3CODE_PORT=4000", "export T3CODE_LAN=0", "T3CODE_LAN=1", ""];
-  expect(upsertServiceEnv(before.join("\n"), { T3CODE_LAN: "true", T3CODE_HOST: undefined })).toBe(
-    ["# my settings", "T3CODE_PORT=4000", "T3CODE_LAN=true", ""].join("\n"),
+  const before = [
+    "# my settings",
+    "AGENTSHARE_CLIENT_PORT=4000",
+    "export AGENTSHARE_CLIENT_LAN=0",
+    "AGENTSHARE_CLIENT_LAN=1",
+    "",
+  ];
+  expect(
+    upsertServiceEnv(before.join("\n"), {
+      AGENTSHARE_CLIENT_LAN: "true",
+      AGENTSHARE_CLIENT_HOST: undefined,
+    }),
+  ).toBe(
+    ["# my settings", "AGENTSHARE_CLIENT_PORT=4000", "AGENTSHARE_CLIENT_LAN=true", ""].join("\n"),
   );
-  expect(upsertServiceEnv("", { T3CODE_LAN: "false" })).toBe("T3CODE_LAN=false\n");
+  expect(upsertServiceEnv("", { AGENTSHARE_CLIENT_LAN: "false" })).toBe(
+    "AGENTSHARE_CLIENT_LAN=false\n",
+  );
 });

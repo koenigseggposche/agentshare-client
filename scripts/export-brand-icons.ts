@@ -12,6 +12,7 @@ import * as Schema from "effect/Schema";
 import * as Stream from "effect/Stream";
 import { Command, Flag } from "effect/cli";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
+import sharp from "sharp";
 
 import { BRAND_ASSET_PATHS, DEVELOPMENT_PUBLIC_ICON_OVERRIDES } from "./lib/brand-assets.ts";
 import { encodePngIco, readPngDimensions, WINDOWS_ICON_SIZES } from "./lib/icon-export.ts";
@@ -539,6 +540,36 @@ const renderIcon = Effect.fn("iconExport.renderIcon")(function* (
   return buffer;
 });
 
+// Render the original vector directly into the classic macOS safe area.
+// This does not resize or composite an Icon Composer PNG.
+const renderClassicMacIcon = Effect.fn("iconExport.renderClassicMacIcon")(function* (
+  sourcePath: string,
+  variant: IconVariant,
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const markPath = path.join(sourcePath, "Assets", "mark.svg");
+  const source = yield* fs
+    .readFileString(markPath)
+    .pipe(
+      Effect.mapError(
+        (cause) => new IconExportFileSystemError({ operation: "read-file", path: markPath, cause }),
+      ),
+    );
+  const paths = source.match(/<path[^>]*\/>/g) ?? [];
+  if (paths.length === 0) {
+    return yield* new IconExportEncodingError({
+      variant: variant.label,
+      cause: new Error("The AgentShare mark has no vector paths."),
+    });
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><g transform="translate(100 100) scale(12.875)"><rect width="64" height="64" rx="14" fill="#1d1d1f"/>${paths.join("")}</g></svg>`;
+  return yield* Effect.tryPromise({
+    try: () => sharp(Buffer.from(svg), { density: 300 }).resize(1024, 1024).png().toBuffer(),
+    catch: (cause) => new IconExportEncodingError({ variant: variant.label, cause }),
+  });
+});
+
 const renderVariant = Effect.fn("iconExport.renderVariant")(function* (
   toolPath: string,
   repositoryRoot: string,
@@ -590,6 +621,7 @@ const renderVariant = Effect.fn("iconExport.renderVariant")(function* (
 
   return new Map<string, Buffer>([
     [variant.outputs.ios, ios],
+    [variant.outputs.macos, yield* renderClassicMacIcon(sourcePath, variant)],
     [variant.outputs.universal, ios],
     [variant.outputs.appleTouch, yield* render("iOS", 180)],
     [variant.outputs.favicon16, yield* render("iOS", 16)],

@@ -49,11 +49,13 @@ export function createEnvironmentCatalogAtoms<R, E>(
     Stream.unwrap(
       EnvironmentRegistry.EnvironmentRegistry.pipe(
         Effect.map((registry) =>
-          SubscriptionRef.changes(registry.entries).pipe(
-            Stream.map((entries) => ({
-              isReady: true,
+          Stream.zipLatestWith(
+            SubscriptionRef.changes(registry.entries),
+            SubscriptionRef.changes(registry.savedCatalogStatus),
+            (entries, savedConnectionsStatus): EnvironmentCatalogState => ({
+              isReady: savedConnectionsStatus === "ready" || entries.size > 0,
               entries,
-            })),
+            }),
           ),
         ),
       ),
@@ -64,6 +66,20 @@ export function createEnvironmentCatalogAtoms<R, E>(
   const catalogValueAtom = Atom.make((get) =>
     AsyncResult.getOrElse(get(catalogAtom), () => EMPTY_ENVIRONMENT_CATALOG_STATE),
   ).pipe(Atom.withLabel("environment-catalog-value"));
+
+  const savedCatalogStatusAtom = runtime.atom(
+    Stream.unwrap(
+      EnvironmentRegistry.EnvironmentRegistry.pipe(
+        Effect.map((registry) => SubscriptionRef.changes(registry.savedCatalogStatus)),
+      ),
+    ),
+    { initialValue: "loading" as const },
+  );
+  const catalogStatusAtom = Atom.make((get) => {
+    const status = get(savedCatalogStatusAtom);
+    if (AsyncResult.isFailure(status)) return "failed" as const;
+    return AsyncResult.getOrElse(status, () => "loading" as const);
+  }).pipe(Atom.withLabel("environment-catalog-status"));
 
   const pullRequestRoutingPermissionsAtom = runtime.atom(
     Stream.unwrap(
@@ -195,6 +211,7 @@ export function createEnvironmentCatalogAtoms<R, E>(
   return {
     catalogAtom,
     catalogValueAtom,
+    catalogStatusAtom,
     pullRequestRoutingPermissionsValueAtom,
     setPullRequestRoutingPermission,
     networkStatusAtom,

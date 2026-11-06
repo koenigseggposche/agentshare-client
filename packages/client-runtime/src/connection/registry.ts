@@ -1,5 +1,6 @@
 import { EnvironmentId } from "@t3tools/contracts";
 import * as Context from "effect/Context";
+import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Equal from "effect/Equal";
 import * as Exit from "effect/Exit";
@@ -98,6 +99,7 @@ export class EnvironmentRegistry extends Context.Service<
       ReadonlyMap<EnvironmentId, ConnectionCatalogEntry>
     >;
     readonly networkStatus: SubscriptionRef.SubscriptionRef<NetworkStatus>;
+    readonly savedCatalogStatus: SubscriptionRef.SubscriptionRef<"loading" | "ready" | "failed">;
     readonly start: Effect.Effect<void>;
     /**
      * Succeeds with `false` and changes nothing when the environment is
@@ -220,8 +222,6 @@ export const make = Effect.gen(function* () {
   const driver = yield* ConnectionDriver.ConnectionDriver;
   const wakeups = yield* ConnectionWakeups.ConnectionWakeups;
   const ssh = yield* ClientCapabilities.SshEnvironmentGateway;
-  const persistedTargets = yield* storage.list;
-  const disabledEnvironmentIds = new Set(yield* storage.listDisabled);
   const loadRoute = Effect.fn("EnvironmentRegistry.loadRoute")(function* (
     target: ConnectionTarget,
   ) {
@@ -231,51 +231,18 @@ export const make = Effect.gen(function* () {
         : Option.none();
     return { target, profile } satisfies ConnectionRoute;
   });
-  const persistedRoutesByEnvironment = new Map<EnvironmentId, Array<ConnectionTarget>>();
-  for (const target of persistedTargets) {
-    const routes = persistedRoutesByEnvironment.get(target.environmentId) ?? [];
-    routes.push(target);
-    persistedRoutesByEnvironment.set(target.environmentId, routes);
-  }
-  const initialEntries = new Map(
-    yield* Effect.forEach(
-      persistedRoutesByEnvironment,
-      Effect.fn("EnvironmentRegistry.loadCatalogEntry")(function* ([environmentId, targets]) {
-        const loaded = yield* Effect.forEach(targets, loadRoute, { concurrency: "unbounded" });
-        const seen = new Set<string>();
-        const usable = loaded.filter((route) => {
-          const id = connectionRouteId(route.target);
-          if (seen.has(id)) return false;
-          seen.add(id);
-          return !(id.startsWith("learned:") && Option.isNone(route.profile));
-        });
-        const routes = usable.length > 0 ? usable : loaded.slice(0, 1);
-        const first = routes[0]!;
-        return [
-          environmentId,
-          entryWithRoutes(
-            {
-              target: first.target,
-              profile: first.profile,
-              enabled: !disabledEnvironmentIds.has(environmentId),
-            },
-            routes,
-          ),
-        ] as const;
-      }),
-      { concurrency: "unbounded" },
-    ),
+  const entries = yield* SubscriptionRef.make<ReadonlyMap<EnvironmentId, ConnectionCatalogEntry>>(
+    new Map(),
   );
-  const entries =
-    yield* SubscriptionRef.make<ReadonlyMap<EnvironmentId, ConnectionCatalogEntry>>(initialEntries);
+  const savedCatalogStatus = yield* SubscriptionRef.make<"loading" | "ready" | "failed">("loading");
+  const catalogLoaded = yield* Deferred.make<void, Persistence.ConnectionPersistenceError>();
+  const awaitCatalog = Deferred.await(catalogLoaded);
   const networkStatus = yield* SubscriptionRef.make(yield* connectivity.status);
   const serviceScopes = yield* SubscriptionRef.make<
     ReadonlyMap<EnvironmentId, EnvironmentServiceScope>
   >(new Map());
   const platformEnvironmentIds = yield* Ref.make<ReadonlySet<EnvironmentId>>(new Set());
-  const persistedEnvironmentIds = yield* Ref.make<ReadonlySet<EnvironmentId>>(
-    new Set(persistedRoutesByEnvironment.keys()),
-  );
+  const persistedEnvironmentIds = yield* Ref.make<ReadonlySet<EnvironmentId>>(new Set());
   interface LeaseLock {
     readonly semaphore: Semaphore.Semaphore;
     readonly users: number;
@@ -396,6 +363,9 @@ export const make = Effect.gen(function* () {
   const acquireSupervisor = Effect.fn("EnvironmentRegistry.acquireSupervisor")(function* (
     environmentId: EnvironmentId,
   ) {
+    if (!(yield* SubscriptionRef.get(entries)).has(environmentId)) {
+      yield* awaitCatalog.pipe(Effect.ignore);
+    }
     return yield* withLeaseLock(
       environmentId,
       Effect.gen(function* () {
@@ -469,11 +439,13 @@ export const make = Effect.gen(function* () {
     );
 
   const start = Effect.gen(function* () {
+    if (registryScope.state._tag === "Closed") return;
     if (yield* Ref.getAndSet(started, true)) {
       return;
     }
+    yield* awaitCatalog.pipe(Effect.ignore);
     yield* Effect.forEach(
-      persistedRoutesByEnvironment.keys(),
+      yield* Ref.get(persistedEnvironmentIds),
       (environmentId) =>
         acquireSupervisor(environmentId).pipe(
           Effect.catchTags({ EnvironmentNotRegisteredError: () => Effect.void }),
@@ -544,6 +516,15 @@ export const make = Effect.gen(function* () {
   const assertKnownAddress = Effect.fn("EnvironmentRegistry.assertKnownAddress")(function* (
     route: ConnectionRoute,
   ) {
+    yield* awaitCatalog.pipe(
+      Effect.mapError(
+        () =>
+          new ConnectionBlockedError({
+            reason: "configuration",
+            detail: "Saved connections could not be read. Reopen the client before pairing.",
+          }),
+      ),
+    );
     const environmentId = route.target.environmentId;
     if ((yield* Ref.get(platformEnvironmentIds)).has(environmentId)) return;
     const saved = (yield* SubscriptionRef.get(entries)).get(environmentId);
@@ -562,6 +543,7 @@ export const make = Effect.gen(function* () {
     registration: ConnectionRegistration,
     options?: { readonly knownAddressOnly?: boolean },
   ) {
+    yield* awaitCatalog;
     const registered = connectionRegistrationCatalogEntry(registration);
     const environmentId = registered.target.environmentId;
     const route: ConnectionRoute = { target: registered.target, profile: registered.profile };
@@ -897,6 +879,7 @@ export const make = Effect.gen(function* () {
   });
 
   const remove = Effect.fn("EnvironmentRegistry.remove")(function* (environmentId: EnvironmentId) {
+    yield* awaitCatalog;
     return yield* withLeaseLock(environmentId, removeLocked(environmentId));
   });
 
@@ -984,6 +967,7 @@ export const make = Effect.gen(function* () {
   ) {
     // One lock for the whole decision: a route registered between "this was
     // the last route" and the removal must not be deleted with it.
+    yield* awaitCatalog;
     yield* withLeaseLock(
       environmentId,
       Effect.gen(function* () {
@@ -1006,6 +990,7 @@ export const make = Effect.gen(function* () {
     environmentId: EnvironmentId,
     routeIds: ReadonlyArray<string>,
   ) {
+    yield* awaitCatalog;
     yield* withLeaseLock(
       environmentId,
       Effect.gen(function* () {
@@ -1027,6 +1012,7 @@ export const make = Effect.gen(function* () {
 
   const removeRelayEnvironments = Effect.fn("EnvironmentRegistry.removeRelayEnvironments")(
     function* () {
+      yield* awaitCatalog;
       const relayEnvironmentIds = [...(yield* SubscriptionRef.get(entries)).values()]
         .filter((entry) =>
           connectionRoutes(entry).some((route) => route.target._tag === "RelayConnectionTarget"),
@@ -1057,6 +1043,7 @@ export const make = Effect.gen(function* () {
     environmentId: EnvironmentId,
     enabled: boolean,
   ) {
+    yield* awaitCatalog;
     yield* withLeaseLock(
       environmentId,
       Effect.gen(function* () {
@@ -1183,9 +1170,92 @@ export const make = Effect.gen(function* () {
     );
   });
 
+  const loadSavedCatalog = Effect.fn("EnvironmentRegistry.loadSavedCatalog")(function* () {
+    const targets = yield* storage.list;
+    const disabled = new Set(yield* storage.listDisabled);
+    const grouped = new Map<EnvironmentId, Array<ConnectionTarget>>();
+    for (const target of targets) {
+      const routes = grouped.get(target.environmentId) ?? [];
+      routes.push(target);
+      grouped.set(target.environmentId, routes);
+    }
+    const loaded = yield* Effect.forEach(
+      grouped,
+      Effect.fn("EnvironmentRegistry.loadCatalogEntry")(function* ([environmentId, targets]) {
+        const routes = yield* Effect.forEach(targets, loadRoute, { concurrency: "unbounded" });
+        const seen = new Set<string>();
+        const usable = routes.filter((route) => {
+          const id = connectionRouteId(route.target);
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return !(id.startsWith("learned:") && Option.isNone(route.profile));
+        });
+        const retained = usable.length > 0 ? usable : routes.slice(0, 1);
+        return [
+          environmentId,
+          entryWithRoutes({ ...retained[0]!, enabled: !disabled.has(environmentId) }, retained),
+        ] as const;
+      }),
+      { concurrency: "unbounded" },
+    );
+    yield* Ref.set(persistedEnvironmentIds, new Set(grouped.keys()));
+    for (const [environmentId, entry] of loaded) {
+      yield* withLeaseLock(
+        environmentId,
+        Effect.gen(function* () {
+          if ((yield* Ref.get(platformEnvironmentIds)).has(environmentId)) {
+            // The host owns its primary entry. Clear the saved shadow only after a real read.
+            // Leave a failed cleanup eligible for the next platform reconciliation.
+            appliedPlatformRegistrations = undefined;
+            yield* Effect.gen(function* () {
+              yield* pullRequestRoutingPermissions.forget(environmentId);
+              yield* registrations.remove(environmentId);
+              yield* Ref.update(persistedEnvironmentIds, (ids) => {
+                const next = new Set(ids);
+                next.delete(environmentId);
+                return next;
+              });
+            }).pipe(
+              Effect.catch(() =>
+                Effect.logWarning(
+                  "Could not clear a saved connection shadowed by the local workbench.",
+                ),
+              ),
+            );
+            return;
+          }
+          yield* SubscriptionRef.update(entries, (current) =>
+            new Map(current).set(environmentId, entry),
+          );
+        }),
+      );
+    }
+  });
+  yield* loadSavedCatalog().pipe(
+    Effect.mapError(
+      (error) =>
+        new Persistence.ConnectionPersistenceError({
+          operation: "list-targets",
+          message: `Could not load saved connections: ${error.message}`,
+        }),
+    ),
+    Effect.matchEffect({
+      onSuccess: () =>
+        SubscriptionRef.set(savedCatalogStatus, "ready").pipe(
+          Effect.andThen(Deferred.succeed(catalogLoaded, undefined)),
+        ),
+      onFailure: (error) =>
+        SubscriptionRef.set(savedCatalogStatus, "failed").pipe(
+          Effect.andThen(Deferred.fail(catalogLoaded, error)),
+        ),
+    }),
+    Effect.forkScoped({ startImmediately: true }),
+  );
+
   return EnvironmentRegistry.of({
     entries,
     networkStatus,
+    savedCatalogStatus,
     start,
     register,
     assertKnownAddress,

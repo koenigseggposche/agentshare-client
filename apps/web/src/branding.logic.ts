@@ -1,4 +1,4 @@
-const NIGHTLY_SERVER_VERSION_PATTERN = /^[^-+]+-(?:nightly|preview)\.\d{8}\.\d+$/;
+const SERVER_CHANNEL_PATTERN = /^[^-+]+-(nightly|preview)\.\d{8}\.\d+$/;
 
 export function formatAppDisplayName(input: {
   readonly baseName: string;
@@ -15,10 +15,12 @@ export function resolveServerBackedAppStageLabel(input: {
   readonly primaryServerVersion: string | null | undefined;
   readonly fallbackStageLabel: string;
 }): string {
-  return input.primaryServerVersion &&
-    NIGHTLY_SERVER_VERSION_PATTERN.test(input.primaryServerVersion)
-    ? "Nightly"
-    : input.fallbackStageLabel;
+  const channel = input.primaryServerVersion?.match(SERVER_CHANNEL_PATTERN)?.[1];
+  return channel === "preview"
+    ? "Beta"
+    : channel === "nightly"
+      ? "Nightly"
+      : input.fallbackStageLabel;
 }
 
 export function resolveServerBackedAppDisplayName(input: {

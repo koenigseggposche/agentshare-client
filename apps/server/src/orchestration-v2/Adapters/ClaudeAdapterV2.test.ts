@@ -1515,7 +1515,7 @@ describe("ClaudeAdapterV2 resume compaction", () => {
         const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
           instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
           settings: DEFAULT_CLAUDE_SETTINGS,
-          environment: {},
+          environment: { CLAUDE_CONFIG_DIR: attachmentsDir },
           attachmentsDir,
           fileSystem,
           path: yield* Path.Path,
@@ -3156,7 +3156,7 @@ describe("ClaudeAdapterV2 background wake turns", () => {
       const adapter = yield* ClaudeAdapterV2.makeClaudeAdapterV2({
         instanceId: ClaudeAdapterV2.CLAUDE_DEFAULT_INSTANCE_ID,
         settings: options?.settings ?? DEFAULT_CLAUDE_SETTINGS,
-        environment: options?.environment ?? {},
+        environment: { CLAUDE_CONFIG_DIR: attachmentsDir, ...options?.environment },
         attachmentsDir,
         fileSystem,
         path: yield* Path.Path,

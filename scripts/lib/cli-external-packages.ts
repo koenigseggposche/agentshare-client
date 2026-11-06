@@ -1,3 +1,5 @@
+import { findEsmImportsOfExternalPackages } from "./cli-executable-imports.ts";
+
 /** Keep bundler externals and staged runtime dependency roots aligned. */
 // Filesystem-loaded externals need dependencies outside the bundle.
 const CLI_RUNTIME_EXTERNAL_PREFIXES = [
@@ -60,6 +62,7 @@ export function findInlinedExternalPackages(source: string): {
   readonly regionCount: number;
   readonly inlined: ReadonlyArray<string>;
   readonly inlinedPackages: ReadonlyArray<string>;
+  readonly unstagedImports: ReadonlyArray<string>;
 } {
   // Rolldown marks each inlined module with a `//#region <path>` line; newer
   // releases (vite-plus 1.4) emit a bare `// <path>` line instead.
@@ -84,5 +87,8 @@ export function findInlinedExternalPackages(source: string): {
     regionCount,
     inlined: [...inlined].sort(),
     inlinedPackages: [...inlinedPackages].sort(),
+    unstagedImports: findEsmImportsOfExternalPackages(source).filter(
+      (id) => !isRuntimeExternalCliDependency(id),
+    ),
   };
 }

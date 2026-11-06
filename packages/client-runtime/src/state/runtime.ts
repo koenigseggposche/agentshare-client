@@ -1009,3 +1009,18 @@ export function createEnvironmentRpcCommand<
     permissionAtom: permissions.permissionAtom,
   };
 }
+
+export function withRpcPermissionGuard<R, ER>(
+  runtime: Atom.AtomRuntime<EnvironmentRegistry.EnvironmentRegistry | R, ER>,
+) {
+  return <A, E, R2>(effect: Effect.Effect<A, E, R2>) =>
+    Effect.gen(function* () {
+      const registry = yield* AtomRegistry.AtomRegistry;
+      return yield* effect.pipe(
+        Effect.provideService(RpcPermissionGuard, {
+          authorize: (id, method, payload) =>
+            createCommandPermissions(runtime, method).authorize(registry, id, payload),
+        }),
+      );
+    });
+}

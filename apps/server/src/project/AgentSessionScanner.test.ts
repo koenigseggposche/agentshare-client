@@ -1932,7 +1932,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() === "win32")(
         }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
     );
 
-    it.effect("still reads the git identity of repositories next to a blocked one", () =>
+    it.live("still reads the git identity of repositories next to a blocked one", () =>
       Effect.gen(function* () {
         const path = yield* Path.Path;
         const fileSystem = yield* FileSystem.FileSystem;
@@ -1964,7 +1964,6 @@ describe.skipIf(HostProcess.Platform.defaultValue() === "win32")(
           const result = yield* Effect.scoped(
             Effect.gen(function* () {
               yield* awaitGateReader(path.join(repos[1], ".git", "config"));
-              yield* TestClock.adjust("2 seconds");
               return yield* Fiber.join(scan);
             }),
           );
@@ -2035,7 +2034,7 @@ describe.skipIf(HostProcess.Platform.defaultValue() === "win32")(
       }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
     );
 
-    it.effect("completes every scan when a .git pointer file or commondir never opens", () =>
+    it.live("completes every scan when a .git pointer file or commondir never opens", () =>
       Effect.gen(function* () {
         const path = yield* Path.Path;
         const fileSystem = yield* FileSystem.FileSystem;
@@ -2069,18 +2068,9 @@ describe.skipIf(HostProcess.Platform.defaultValue() === "win32")(
             Effect.map(({ candidates }) => candidates.map(({ path }) => path)),
           );
           const first = yield* Effect.forkChild(scanPaths);
-          // Pointer files are read first, then the commondir files they lead to.
-          for (const gatePath of [
-            path.join(pointerCheckout, ".git"),
-            path.join(worktreeGitDir, "commondir"),
-          ]) {
-            yield* Effect.scoped(
-              Effect.gen(function* () {
-                yield* awaitGateReader(gatePath);
-                yield* TestClock.adjust("2 seconds");
-              }),
-            );
-          }
+          // Keep both FIFO writers open until the real subprocess deadlines expire.
+          yield* awaitGateReader(path.join(pointerCheckout, ".git"));
+          yield* awaitGateReader(path.join(worktreeGitDir, "commondir"));
           expect(yield* Fiber.join(first)).toEqual([pointerCheckout]);
           for (let attempt = 2; attempt <= LIBUV_POOL_SIZE + 1; attempt++) {
             expect(yield* scanPaths, `scan ${attempt}`).toEqual([pointerCheckout]);

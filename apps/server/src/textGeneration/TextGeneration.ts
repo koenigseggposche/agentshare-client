@@ -1,11 +1,13 @@
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Schema from "effect/Schema";
 import type { ModelSelection, ProviderInstanceId } from "@t3tools/contracts";
 import {
   isProviderAvailable,
   isProviderTextGenerationCapable,
   resolveProjectProviderInstanceEnabled,
+  AgentShareModel,
 } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import { exhaustedUsageWindow } from "@t3tools/shared/usageLimits";
@@ -66,6 +68,12 @@ const resolveInstance = (
 
 // Review guides investigate the checkout read-only; the other drivers reject that request.
 const INVESTIGATING_DRIVERS = new Set(["codex", "claudeAgent"]);
+const isAgentShareConnection = Schema.is(
+  Schema.Struct({
+    agentShareOwner: Schema.String,
+    agentShareModel: AgentShareModel,
+  }),
+);
 
 /** @public */
 export const make = Effect.gen(function* () {
@@ -80,6 +88,16 @@ export const make = Effect.gen(function* () {
       modelSelection: ModelSelection,
     ) => Effect.Effect<A, TextGenerationError>,
   ) {
+    const settings = yield* serverSettings.getSettings.pipe(
+      Effect.mapError(
+        () => new TextGenerationError({ operation, detail: "Could not read model settings." }),
+      ),
+    );
+    if (isAgentShareConnection(settings.providerInstances[selection.instanceId]?.config))
+      return yield* new TextGenerationError({
+        operation,
+        detail: "Auxiliary generation is disabled for this AgentShare connection.",
+      });
     const snapshots = yield* registry.listInstances.pipe(
       Effect.flatMap((instances) =>
         Effect.forEach(instances, (instance) => instance.snapshot.getSnapshot),
@@ -92,16 +110,6 @@ export const make = Effect.gen(function* () {
       selection.model,
     );
     if (limited) {
-      const settings = yield* serverSettings.getSettings.pipe(
-        Effect.mapError(
-          (cause) =>
-            new TextGenerationError({
-              operation,
-              detail: "Could not read fallback model settings.",
-              cause,
-            }),
-        ),
-      );
       selection =
         fallbackTextGenerationModelSelection(
           settings.providerInstances,

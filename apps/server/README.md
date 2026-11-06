@@ -1,3 +1,3 @@
-# Server
+# AgentShare Client workbench
 
-Node.js WebSocket server for the T3 Code app.
+Node.js workbench service for AgentShare Client. Connect desktop, web and mobile clients to the same execution host.

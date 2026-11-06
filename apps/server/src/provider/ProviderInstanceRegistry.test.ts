@@ -1,3 +1,4 @@
+import * as CoreClient from "@agentshare/core-client/CoreClient";
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import * as CodexInstallation from "./CodexInstallation.ts";
 import * as CodexManagedTokenBroker from "./CodexManagedTokenBroker.ts";
@@ -188,6 +189,7 @@ describe("ProviderInstanceRegistry — multi-instance codex slice", () => {
     ),
     Layer.provideMerge(layerBackgroundPolicyAlwaysRun),
     Layer.provideMerge(ServerSettings.layerTest()),
+    Layer.provideMerge(Layer.mock(CoreClient.CoreClient)({})),
     Layer.provideMerge(layerTestHttpClient),
     Layer.provideMerge(ServerSettings.layerTest()),
     Layer.provideMerge(

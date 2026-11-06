@@ -59,15 +59,11 @@ Add `--browser` to open a browser automatically.
 
 ### State and ports
 
-Linked worktrees default to their own `.t3/userdata`, even when `T3CODE_HOME` is set.
+Linked worktrees default to their own `.t3/userdata`, even when `AGENTSHARE_CLIENT_HOME` is set.
 The main checkout defaults to `~/.t3/dev`. An explicit `--home-dir` wins in both cases.
-The first start in a worktree seeds its empty database from a read-only copy of
-`~/.t3/userdata/statev2.sqlite` if the source is at most 500 MiB. Larger sources warn
-and dev starts with an empty database. `--no-seed` or `T3CODE_DEV_SEED=0` skips seeding.
-To copy a larger source, run `vp run migrate-dev-db` with dev stopped. It may use
-substantial disk space before pruning.
-Never run a development server against the live `~/.t3/userdata`.
-See [test data](../../AGENTS.md#test-data) for copying a consistent database snapshot.
+Each new worktree starts with its own database. Populate test projects and
+conversations using generated fixtures. Keep runtime credentials and private history
+outside Git. Use a dedicated data directory for every development server.
 
 Read ports from the `[dev-runner]` output. Worktrees derive stable preferences from their paths,
 but occupied ports can shift them. `T3CODE_PORT_OFFSET` or `T3CODE_DEV_INSTANCE` can select a
@@ -164,7 +160,7 @@ openssl rand -hex 32
 Put that value in the main checkout's gitignored `.env`:
 
 ```dotenv
-T3CODE_DEV_AUTH_TOKEN=<the value generated above>
+AGENTSHARE_CLIENT_DEV_AUTH_TOKEN=<the value generated above>
 ```
 
 The `t3.json` Setup Worktree action links that file to each worktree's `.env`. The dev runner reads repository env files at startup. `.env.local` and inherited process
@@ -173,7 +169,7 @@ environment values override `.env`, so no per-worktree export is needed after se
 For a manual worktree or launcher without that link, export the same fixed value instead:
 
 ```sh
-export T3CODE_DEV_AUTH_TOKEN="<the value generated above>"
+export AGENTSHARE_CLIENT_DEV_AUTH_TOKEN="<the value generated above>"
 ```
 
 Do not generate a new value at startup. Start or restart `vp run dev --share` after configuration,
@@ -225,7 +221,7 @@ TypeScript workspaces typecheck with `tsc`. The `typescript` catalog entry is
 refactors built in. VS Code uses it through `js/ts.tsdk.path` in `.vscode/settings.json`.
 
 Use `vp run lint:mobile` for native mobile changes. CI owns the full suite; see
-[ci.yml](../../.github/workflows/ci.yml) for its current jobs.
+[ci.yml](../../.github/workflows/ci.yml) for its current jobs. AgentShare runs these checks on GitHub-hosted Ubuntu and macOS runners; the upstream repository retains its Blacksmith runners.
 The [manual Windows lane](../../.github/workflows/windows-tests.yml) is available for focused
 Windows investigation while that suite is not a required gate.
 
@@ -249,7 +245,16 @@ Runtime-discovered entrypoints and dependency exceptions belong in [knip.jsonc](
 
 ## Desktop artifacts
 
-Local artifact builds are unsigned by default and write to `release/`:
+The macOS desktop login startup entry associates its process with the installed client bundle so the system can attribute local-network access to that app. Keep the bundle identifier aligned with the packaged app. See Apple's [local-network privacy guidance](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy). Ad hoc build acceptance does not establish reliable permission retention across upgrades.
+
+Local artifact builds write to `release/`. macOS builds without distribution credentials use an ad hoc signature and disable notarization; the packager checks the final app signature before exporting Apple Silicon artifacts. These builds do not establish Developer ID or Gatekeeper distribution approval. Windows builds without signing credentials remain unsigned.
+Each build requires a Core release manifest for the selected platform and architecture.
+Set `AGENTSHARE_CORE_MANIFEST` to its absolute path, or pass `--core-manifest`.
+The JSON contains `schema: 1`, `api_version: 1`, `version`, `revision`, `platform`
+(`darwin`, `linux`, or `win32`), `arch` (`arm64`, `x64`, or macOS `universal`),
+`binary` (a filename beside the manifest), `size` in bytes, and lowercase `sha256`.
+Core versions must use semantic versioning. Builds verify the binary header and hash before staging and again in the final package. The desktop installer refuses to replace a newer installed Core. macOS packaging preserves the verified Core bytes; provide an already distribution-signed Core and compute its manifest after signing when preparing a public signed release.
+Use a manifest for the matching target for each command below:
 
 ```sh
 vp run dist:desktop:dmg

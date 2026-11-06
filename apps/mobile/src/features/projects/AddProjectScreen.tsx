@@ -221,6 +221,9 @@ function ListRow(props: {
   }
   return (
     <Pressable
+      accessibilityLabel={[props.title, props.subtitle].filter(Boolean).join(", ")}
+      accessibilityRole={props.selected !== undefined ? "radio" : "button"}
+      accessibilityState={props.selected !== undefined ? { checked: props.selected } : undefined}
       disabled={props.disabled}
       onPress={props.onPress}
       className={cn(

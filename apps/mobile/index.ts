@@ -1,8 +1,6 @@
 // Must stay first: the render counter and behavior probe wrap the DevTools hook before any React commit.
 import "./src/features/development/render-counter-entry";
 import "./src/features/development/behavior-probe-entry";
-// Next, so errors thrown while the rest of the app loads are recorded too.
-import "./src/features/observability/observe";
 import { registerRootComponent } from "expo";
 import "react-native-gesture-handler";
 import { LogBox } from "react-native";
@@ -15,6 +13,11 @@ featureFlags.experiment.synchronousScreenUpdatesEnabled = true;
 
 if (process.env.EXPO_PUBLIC_SHOWCASE === "1") {
   LogBox.ignoreAllLogs();
+}
+
+if (__DEV__) {
+  // Keep native header actions reachable; the dev menu remains available through shortcuts.
+  void import("expo-dev-client").then(({ setToolsButtonVisible }) => setToolsButtonVisible(false));
 }
 
 registerRootComponent(App);

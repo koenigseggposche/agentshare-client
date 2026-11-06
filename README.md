@@ -1,153 +1,67 @@
-# T3 Code
+# AgentShare Client
 
-T3 Code is an "agent harness control surface". It enables control of the agents on your machine with a best-in-class mobile app ([iOS](https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824), [Android](https://play.google.com/store/apps/details?id=com.t3tools.t3code)), [web app](https://app.t3.codes) and [Electron-based desktop app](https://t3.codes).
+AgentShare Client is the AgentShare workbench for desktop, phone and tablet, based on a fork of [T3 Code](https://github.com/pingdotgg/t3code).
 
-Works with your subscriptions on Claude Code, Codex, Cursor, Grok Build, OpenCode, Google Antigravity, and fx. If they're set up on your computer, T3 Code can control them.
+The workbench owns projects, coding tasks, files, terminals and conversation history. AgentShare's Go Core owns device capabilities and model access. Paid inference follows **Consumer → Core → Gateway → Provider**; the platform owns balances, billing and Provider settlement.
 
-## "Wait, what are you selling me?"
+A phone or iPad connects to an execution computer. The task and its files run on that computer, while connected clients view the same conversation. Account and wallet access use the device's own AgentShare login.
 
-Nothing. We built T3 Code because we wanted the best possible development experience with agents. We were inspired by existing solutions like the Codex desktop app, Conductor, Claude Desktop and Cursor Glass, but none met our bar.
+## Development
 
-We wanted something performant, remote-ready, and truly open. If we ever go the wrong direction, we want you to have everything you need to fork and build the editor that you want.
+This repository contains the web client, Electron desktop app, React Native mobile app and TypeScript workbench server. The Go Core is maintained in [agentshare](https://github.com/koenigseggposche/agentshare). Product integration and platform acceptance are in progress.
 
-## Installation
+Use Node.js 26 and pnpm 12.14.0. Install dependencies, then start an isolated development workbench:
 
-> [!WARNING]
-> T3 Code currently supports Codex, Claude, Cursor, Grok Build, OpenCode, Antigravity, and fx. Install and authenticate at least one provider before use:
->
-> - Codex: install [Codex CLI](https://developers.openai.com/codex/cli) and run `codex login`
-> - Claude: install [Claude Code](https://claude.com/product/claude-code) and run `claude auth login`
-> - Cursor: install [Cursor CLI](https://cursor.com/cli) and run `agent login`
-> - Grok Build: install [Grok Build CLI](https://x.ai/cli) and run `grok login`
-> - OpenCode: install [OpenCode](https://opencode.ai) and run `opencode auth login`
-> - Antigravity: enable it in Settings, then use **Install Antigravity** and **Sign in with Google**. No CLI is required.
-> - fx: install [fx](https://fx.sh) and run `fx login` on the machine running the T3 Code server ([setup guide](./docs/user/providers-fx.md))
-
-### Command line
-
-```bash
-curl -fsSL https://t3.codes/install.sh | sh
+```sh
+pnpm install
+pnpm exec vp run dev --home-dir ./.t3
 ```
 
-On Windows, in PowerShell:
+Use the actual local URL printed by the development runner. Keep the workbench data in this checkout's ignored `.t3` directory. Connect an AgentShare Core configured for the intended account environment when exercising AgentShare model and device capabilities.
 
-```powershell
-irm https://t3.codes/install.ps1 | iex
+For native desktop packaging, provide a Core artifact manifest for the matching platform and architecture. See [desktop artifact setup](docs/operations/development.md#desktop-artifacts). For mobile development, use [the native-client workflow](.agents/skills/test-t3-mobile/SKILL.md). Keep native signing material and runtime credentials outside this checkout.
+
+Before contributing, read [AGENTS.md](AGENTS.md). Validate changes with:
+
+```sh
+pnpm exec vp run check:changed
 ```
 
-Then run `t3` to start the server and open the local web app. `t3 service install` keeps it running in the background, `t3 update` moves to a newer release, and `t3 --help` has the full reference.
+## Attribution
 
-To try it once without installing, run `npx t3@latest` instead.
+T3 Code is developed by its upstream contributors. This fork retains the [MIT license](LICENSE) and [third-party notices](third-party-licenses). AgentShare's application identity is maintained in [assets](assets/README.md).
 
-### Desktop app
+---
 
-Install the latest version of the desktop app from [GitHub Releases](https://github.com/pingdotgg/t3code/releases), or from your favorite package registry:
+# AgentShare 客户端
 
-#### Windows (`winget`)
+AgentShare Client 基于 [T3 Code](https://github.com/pingdotgg/t3code) 的源码 fork 开发，面向电脑、手机和平板。
 
-```bash
-winget install T3Tools.T3Code
+工作台负责项目、编程任务、文件、终端和会话历史。AgentShare 的 Go Core 负责设备能力和模型连接。付费推理经过 **Consumer → Core → Gateway → Provider**，账号余额、计费和 Provider 收益结算由平台负责。
+
+手机或 iPad 连接一台执行电脑：任务和文件操作在电脑上运行，连接到这台电脑的客户端查看同一条会话。每台客户端使用自己的 AgentShare 登录查看账号和钱包。
+
+## 开发
+
+本仓库包含网页、Electron 桌面端、React Native 移动端和 TypeScript 工作台服务。Go Core 位于 [agentshare](https://github.com/koenigseggposche/agentshare) 仓库。产品集成和各平台验收仍在进行。
+
+准备 Node.js 26 和 pnpm 12.14.0。安装依赖后，启动隔离的开发工作台：
+
+```sh
+pnpm install
+pnpm exec vp run dev --home-dir ./.t3
 ```
 
-#### Windows (`scoop`)
+使用启动日志打印的实际地址。开发数据保存在当前 checkout 已忽略的 `.t3` 目录。测试 AgentShare 模型和设备能力时，连接配置好对应账号环境的 AgentShare Core。
 
-```bash
-scoop install extras/t3code
+桌面打包需要提供与目标平台、架构匹配的 Core 产物清单，见[桌面打包配置](docs/operations/development.md#desktop-artifacts)。移动端开发见[原生客户端流程](.agents/skills/test-t3-mobile/SKILL.md)。签名材料和运行凭据保存在本仓库之外。
+
+修改代码前阅读 [AGENTS.md](AGENTS.md)，修改后运行：
+
+```sh
+pnpm exec vp run check:changed
 ```
 
-#### macOS (Homebrew)
+## 开源说明
 
-```bash
-brew install --cask t3-code
-```
-
-#### Debian, Ubuntu (`.deb`)
-
-Download the `.deb` from [GitHub Releases](https://github.com/pingdotgg/t3code/releases), then:
-
-```bash
-sudo apt install ./T3-Code-*.deb
-```
-
-#### Arch Linux (AUR)
-
-Stable:
-
-```bash
-yay -S t3code-bin
-```
-
-Nightly:
-
-```bash
-yay -S t3code-nightly-bin
-```
-
-The AUR packaging is maintained in this repository under [`packaging/aur`](./packaging/aur).
-
-#### Nix (nixpkgs)
-
-```bash
-nix profile add github:NixOS/nixpkgs/nixos-unstable#t3code
-```
-
-The package is maintained in [nixpkgs](https://github.com/NixOS/nixpkgs/tree/nixos-unstable/pkgs/by-name/t3/t3code)
-and includes the desktop app (`t3code-desktop`) and the `t3` command.
-See [Nix installation](./docs/user/install.md#nix-nixpkgs) for NixOS configuration and updates.
-
-## Some notes
-
-We are very very early in this project. Expect bugs.
-
-We are (mostly) not accepting contributions yet. Small fixes may be considered. Big features will not be.
-
-## Documentation
-
-Full docs live in [docs/](./docs). There's no docs site yet.
-
-- [FAQ](./docs/user/faq.md)
-- [Install and first run](./docs/user/install.md)
-- [Permission modes](./docs/user/permission-modes.md)
-- [Keyboard shortcuts](./docs/user/keybindings.md)
-- [Project settings](./docs/user/project-settings.md)
-- [Appearance preferences](./docs/user/appearance.md)
-- [Remote access from a phone or another machine](./docs/user/remote-access.md)
-- [Connect Claude Code, Codex, ChatGPT and other agents over MCP](./docs/user/outside-agents.md)
-- [Keeping app and server in sync](./docs/user/updating.md)
-- [Source control integrations](./docs/user/source-control.md)
-- Multiple accounts: [Codex](./docs/user/providers-codex.md) · [Claude](./docs/user/providers-claude.md)
-- [Run T3 Code as a background service](./docs/user/background-service.md)
-
-Building from source? Start at [docs/internals/overview.md](./docs/internals/overview.md).
-
-## If you REALLY want to contribute still.... read this first
-
-### Install `vp`
-
-T3 Code uses Vite+ so you'll need to install the global `vp` command-line tool.
-
-#### macOS / Linux
-
-```bash
-curl -fsSL https://vite.plus | bash
-```
-
-#### Windows
-
-```bash
-irm https://vite.plus/ps1 | iex
-```
-
-Checkout their getting started guide for more information: https://viteplus.dev/guide/
-
-### Install dependencies
-
-```bash
-vp i
-```
-
-Read [CONTRIBUTING.md](./CONTRIBUTING.md) before reporting a bug or opening a PR.
-
-Have a feature request? Start an [Ideas discussion](https://github.com/pingdotgg/t3code/discussions/categories/ideas).
-
-Need support? Join the [Discord](https://discord.gg/jn4EGJjrvv).
+T3 Code 由上游贡献者开发。本 fork 保留 [MIT 许可](LICENSE)和[第三方声明](third-party-licenses)。AgentShare 的应用标识和图标维护方式见 [assets](assets/README.md)。

@@ -1,3 +1,4 @@
+import { Driver as LocalTextDriver } from "../agentshare/LocalTextDriver.ts";
 import {
   AcpRegistryDriver,
   type AcpRegistryDriverEnv,
@@ -32,6 +33,7 @@ export type BuiltInDriversEnv =
 
 export const BUILT_IN_DRIVERS: ReadonlyArray<AnyProviderDriver<BuiltInDriversEnv>> = [
   CodexDriver,
+  LocalTextDriver,
   ClaudeDriver,
   CursorDriver,
   GrokDriver,

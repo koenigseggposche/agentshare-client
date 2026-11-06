@@ -75,6 +75,7 @@ describe("deriveProviderInstanceConfigMap", () => {
     const merged = deriveProviderInstanceConfigMap(settings);
 
     expect(merged[instanceId]).toBeUndefined();
+    expect(merged).toEqual({});
   });
 
   it("ignores a project override that disables an instance, leaving the machine's config in charge", () => {

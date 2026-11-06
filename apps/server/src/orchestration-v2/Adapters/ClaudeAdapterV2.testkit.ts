@@ -1036,7 +1036,7 @@ function layerClaudeProviderAdapterRegistryReplay(
               displayName: undefined,
               environment: [{ name: "CLAUDE_CODE_TMPDIR", value: tmpRoot, sensitive: false }],
               enabled: true,
-              config: DEFAULT_CLAUDE_SETTINGS,
+              config: { ...DEFAULT_CLAUDE_SETTINGS, homePath: tmpRoot },
             },
             {},
           ).pipe(Effect.map((adapter) => [adapter])),

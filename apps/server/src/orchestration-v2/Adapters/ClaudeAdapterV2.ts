@@ -1243,7 +1243,16 @@ export const layerQueryRunner: Layer.Layer<
                     stage: "decoded",
                     payload: {
                       type: "query.apply_flag_settings",
-                      settings,
+                      settings: {
+                        ...settings,
+                        ...(settings.env
+                          ? {
+                              env: Object.fromEntries(
+                                Object.keys(settings.env).map((key) => [key, "[REDACTED]"]),
+                              ),
+                            }
+                          : {}),
+                      },
                     },
                   }),
                 ),

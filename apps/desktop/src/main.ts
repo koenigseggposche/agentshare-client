@@ -32,6 +32,7 @@ import * as ElectronProtocol from "./electron/ElectronProtocol.ts";
 import * as ElectronSafeStorage from "./electron/ElectronSafeStorage.ts";
 import * as ElectronShell from "./electron/ElectronShell.ts";
 import * as ElectronTheme from "./electron/ElectronTheme.ts";
+import * as ElectronTray from "./electron/ElectronTray.ts";
 import * as ElectronUpdater from "./electron/ElectronUpdater.ts";
 import * as ElectronWindow from "./electron/ElectronWindow.ts";
 import * as DesktopApp from "./app/DesktopApp.ts";
@@ -64,7 +65,9 @@ import * as DesktopShellEnvironment from "./shell/DesktopShellEnvironment.ts";
 import * as DesktopSshEnvironment from "./ssh/DesktopSshEnvironment.ts";
 import * as DesktopSshPasswordPrompts from "./ssh/DesktopSshPasswordPrompts.ts";
 import * as DesktopState from "./app/DesktopState.ts";
-import * as DesktopLegacyLocalStorage from "./app/DesktopLegacyLocalStorage.ts";
+import * as DesktopTray from "./app/DesktopTray.ts";
+import * as DesktopStartup from "./app/DesktopStartup.ts";
+import { startupContextFromArguments } from "./app/DesktopStartupEntries.ts";
 import * as DesktopTelemetryPublisher from "./telemetry/DesktopTelemetryPublisher.ts";
 import * as DesktopRendererHistory from "./telemetry/DesktopRendererHistory.ts";
 import * as DesktopUpdatePolicy from "./updates/DesktopUpdatePolicy.ts";
@@ -87,6 +90,18 @@ if (process.argv.includes("--version")) {
     if (!(error instanceof Error) || !("code" in error) || error.code !== "EPIPE") throw error;
   }
   Electron.app.exit(0);
+}
+
+const startupContext = Effect.runSync(
+  Effect.gen(function* () {
+    return startupContextFromArguments(yield* HostProcess.Arguments, yield* HostProcess.Platform);
+  }),
+);
+if (startupContext) {
+  process.env.AGENTSHARE_CLIENT_HOME = startupContext.workbenchHome;
+  process.env.AGENTSHARE_HOME = startupContext.coreHome;
+  if (startupContext.port !== undefined)
+    process.env.AGENTSHARE_CLIENT_PORT = String(startupContext.port);
 }
 
 const layerDesktopEnvironment = Layer.unwrap(
@@ -137,6 +152,7 @@ const layerElectron = Layer.mergeAll(
   ElectronSafeStorage.layer,
   ElectronShell.layer,
   ElectronTheme.layer,
+  ElectronTray.layer,
   ElectronUpdater.layer,
   ElectronWindow.layer,
   DesktopIpc.layer(Electron.ipcMain),
@@ -147,7 +163,6 @@ const layerDesktopFoundation = Layer.mergeAll(
   DesktopManagedPolicy.layer,
   DesktopState.layer,
   DesktopShutdown.layer,
-  DesktopLegacyLocalStorage.layer,
   DesktopAppSettings.layer,
   DesktopClientSettings.layer,
   DesktopConnectionCatalogStore.layer.pipe(Layer.provideMerge(DesktopSavedEnvironments.layer)),
@@ -212,8 +227,10 @@ const layerDesktopApplication = Layer.mergeAll(
   DesktopApplicationMenu.layer,
   DesktopLinuxUrlHandler.layer,
   DesktopCliCommand.layer,
+  DesktopStartup.layer,
   layerDesktopSsh,
 ).pipe(
+  Layer.provideMerge(DesktopTray.layer),
   Layer.provideMerge(layerDesktopSnapShot),
   Layer.provideMerge(
     DesktopUpdates.layer.pipe(
@@ -250,4 +267,15 @@ const layerDesktopRuntime = layerDesktopClerk.pipe(
   Layer.provideMerge(DesktopPreReadyPlatform.layer),
 );
 
-DesktopApp.program.pipe(Effect.provide(layerDesktopRuntime), NodeRuntime.runMain);
+if (process.argv.includes("--agentshare-remove-startup")) {
+  const startupRemovalLayer = DesktopStartup.layer.pipe(
+    Layer.provide(layerDesktopEnvironment),
+    Layer.provide(Layer.mergeAll(ElectronApp.layer, NodeServices.layer, NodeCrypto.layer)),
+  );
+  Effect.gen(function* () {
+    yield* (yield* DesktopStartup.DesktopStartup).set(false);
+    Electron.app.exit(0);
+  }).pipe(Effect.provide(startupRemovalLayer), NodeRuntime.runMain);
+} else {
+  DesktopApp.program.pipe(Effect.provide(layerDesktopRuntime), NodeRuntime.runMain);
+}

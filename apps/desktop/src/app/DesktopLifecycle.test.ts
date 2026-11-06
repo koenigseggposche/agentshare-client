@@ -16,6 +16,7 @@ import * as DesktopEnvironment from "./DesktopEnvironment.ts";
 import * as DesktopLifecycle from "./DesktopLifecycle.ts";
 import * as DesktopShutdown from "./DesktopShutdown.ts";
 import * as DesktopState from "./DesktopState.ts";
+import * as DesktopTray from "./DesktopTray.ts";
 import * as DesktopWindow from "../window/DesktopWindow.ts";
 
 function layerElectronApp(
@@ -108,6 +109,61 @@ function layerDesktopWindow(
 }
 
 describe("DesktopLifecycle", () => {
+  it.effect.each([
+    { platform: "win32", trayAvailable: true },
+    { platform: "linux", trayAvailable: true },
+    { platform: "win32", trayAvailable: false },
+    { platform: "linux", trayAvailable: false },
+  ] as const)(
+    "retains the host only with an available tray: $platform / $trayAvailable",
+    ({ platform, trayAvailable }) =>
+      Effect.gen(function* () {
+        const appListeners = new Map<string, (...args: readonly unknown[]) => void>();
+        const activated = yield* Deferred.make<void>();
+        let quitCalls = 0;
+        const layer = DesktopLifecycle.layer.pipe(
+          Layer.provideMerge(
+            layerElectronApp(
+              appListeners,
+              Effect.sync(() => {
+                quitCalls++;
+              }),
+            ),
+          ),
+          Layer.provideMerge(layerElectronTheme),
+          Layer.provideMerge(layerElectronWindow()),
+          Layer.provideMerge(
+            layerDesktopWindow({
+              activate: Deferred.succeed(activated, undefined).pipe(Effect.asVoid),
+            }),
+          ),
+          Layer.provideMerge(
+            Layer.succeed(DesktopEnvironment.DesktopEnvironment, {
+              platform,
+              isDevelopment: false,
+            } as DesktopEnvironment.DesktopEnvironment["Service"]),
+          ),
+          Layer.provideMerge(
+            Layer.succeed(DesktopTray.DesktopTray, {
+              keepRunning: Effect.succeed(trayAvailable),
+              configure: Effect.void,
+            }),
+          ),
+          Layer.provideMerge(DesktopShutdown.layer),
+          Layer.provideMerge(DesktopState.layer),
+        );
+        yield* Effect.scoped(
+          Effect.gen(function* () {
+            yield* (yield* DesktopLifecycle.DesktopLifecycle).register;
+            appListeners.get("window-all-closed")?.();
+            appListeners.get("activate")?.();
+            yield* Deferred.await(activated);
+            assert.equal(quitCalls, trayAvailable ? 0 : 1);
+          }),
+        ).pipe(Effect.provide(layer));
+      }),
+  );
+
   it.effect.each(["darwin", "win32", "linux"] satisfies ReadonlyArray<NodeJS.Platform>)(
     "lets the updater's quit event proceed on %s",
     (platform) => {
@@ -121,6 +177,12 @@ describe("DesktopLifecycle", () => {
       const layer = DesktopLifecycle.layer.pipe(
         Layer.provideMerge(layerElectronApp(appListeners)),
         Layer.provideMerge(layerElectronTheme),
+        Layer.provideMerge(
+          Layer.succeed(DesktopTray.DesktopTray, {
+            keepRunning: Effect.succeed(false),
+            configure: Effect.void,
+          }),
+        ),
         Layer.provideMerge(
           layerElectronWindow(
             Effect.sync(() => {
@@ -199,6 +261,12 @@ describe("DesktopLifecycle", () => {
       const layer = DesktopLifecycle.layer.pipe(
         Layer.provideMerge(layerElectronApp(appListeners, quit)),
         Layer.provideMerge(layerElectronTheme),
+        Layer.provideMerge(
+          Layer.succeed(DesktopTray.DesktopTray, {
+            keepRunning: Effect.succeed(false),
+            configure: Effect.void,
+          }),
+        ),
         Layer.provideMerge(layerElectronWindow(destroyAll)),
         Layer.provideMerge(layerDesktopWindow({ flushMainWindowBounds })),
         Layer.provideMerge(layerEnvironment),
@@ -243,6 +311,12 @@ describe("DesktopLifecycle", () => {
           ),
         ),
         Layer.provideMerge(layerElectronTheme),
+        Layer.provideMerge(
+          Layer.succeed(DesktopTray.DesktopTray, {
+            keepRunning: Effect.succeed(false),
+            configure: Effect.void,
+          }),
+        ),
         Layer.provideMerge(layerElectronWindow()),
         Layer.provideMerge(layerDesktopWindow()),
         Layer.provideMerge(layerEnvironment),
@@ -261,8 +335,8 @@ describe("DesktopLifecycle", () => {
         Effect.provideService(HostProcess.Arguments, [
           "/opt/T3 Code/t3code",
           "--no-sandbox",
-          "T3CODE://pair?token=spent",
-          "t3code://new?prompt=hello",
+          "AGENTSHARE-CLIENT://pair?token=spent",
+          "agentshare-client://new?prompt=hello",
         ]),
       );
 
@@ -285,6 +359,12 @@ describe("DesktopLifecycle", () => {
       const layer = DesktopLifecycle.layer.pipe(
         Layer.provideMerge(layerElectronApp(appListeners, Effect.void, exit)),
         Layer.provideMerge(layerElectronTheme),
+        Layer.provideMerge(
+          Layer.succeed(DesktopTray.DesktopTray, {
+            keepRunning: Effect.succeed(false),
+            configure: Effect.void,
+          }),
+        ),
         Layer.provideMerge(layerElectronWindow()),
         Layer.provideMerge(layerDesktopWindow()),
         Layer.provideMerge(layerEnvironment),
@@ -338,6 +418,12 @@ describe("DesktopLifecycle", () => {
       const layer = DesktopLifecycle.layer.pipe(
         Layer.provideMerge(layerElectronApp(appListeners)),
         Layer.provideMerge(layerElectronTheme),
+        Layer.provideMerge(
+          Layer.succeed(DesktopTray.DesktopTray, {
+            keepRunning: Effect.succeed(false),
+            configure: Effect.void,
+          }),
+        ),
         Layer.provideMerge(layerElectronWindow()),
         Layer.provideMerge(layerDesktopWindow({ activate })),
         Layer.provideMerge(layerEnvironment),

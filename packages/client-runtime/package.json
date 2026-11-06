@@ -518,6 +518,26 @@
     "./provider-clients": {
       "types": "./src/providerClients.ts",
       "default": "./src/providerClients.ts"
+    },
+    "./state/agentShare": {
+      "types": "./src/state/agentShare.ts",
+      "default": "./src/state/agentShare.ts"
+    },
+    "./agentShareWallet": {
+      "types": "./src/agentShareWallet.ts",
+      "default": "./src/agentShareWallet.ts"
+    },
+    "./agentShareTerminal": "./src/agentShareTerminal.ts",
+    "./agentShareTools": "./src/agentShareTools.ts",
+    "./agentShareSharing": "./src/agentShareSharing.ts",
+    "./agentShareModelManager": "./src/agentShareModelManager.ts",
+    "./agentshare/brand": {
+      "types": "./src/agentShareBrand.ts",
+      "default": "./src/agentShareBrand.ts"
+    },
+    "./agentshare/data-use": {
+      "types": "./src/agentShareDataUse.ts",
+      "default": "./src/agentShareDataUse.ts"
     }
   },
   "scripts": {

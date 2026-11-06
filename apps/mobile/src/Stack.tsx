@@ -1,3 +1,5 @@
+import { SettingsAgentShareModelsRouteScreen } from "./features/settings/SettingsAgentShareModelsRouteScreen";
+import { SettingsAgentShareRouteScreen } from "./features/settings/SettingsAgentShareRouteScreen";
 import { isDraftThreadRoute } from "./features/threads/thread-route-state";
 import { ComponentCatalogScreen } from "./features/development/ComponentCatalogScreen";
 import { PullRequestGuideStopScreen } from "./features/pull-requests/guide/PullRequestGuideScreen";
@@ -112,7 +114,10 @@ import {
   ScheduledTaskBranchPickerRouteScreen,
 } from "./features/settings/ScheduledTaskPickerScreens";
 import { SettingsKeyboardRouteScreen } from "./features/settings/SettingsKeyboardRouteScreen";
-import { SettingsLegalRouteScreen } from "./features/settings/SettingsLegalRouteScreen";
+import {
+  SettingsDataUseCloseHeaderButton,
+  SettingsDataUseRouteScreen,
+} from "./features/settings/SettingsDataUseRouteScreen";
 import { SettingsMicrophoneRouteScreen } from "./features/settings/SettingsMicrophoneRouteScreen";
 import {
   SettingsOpenSourceLicenseRouteScreen,
@@ -134,10 +139,7 @@ import {
   registerPresentedRoutes,
 } from "./features/layout/workspace-overlay-routes";
 import { ShowcaseReadyMarker } from "./features/showcase/ShowcaseCaptureCoordinator";
-import {
-  SettingsLegalDocumentCloseHeaderButton,
-  SettingsLegalDocumentExternalHeaderButton,
-} from "./features/settings/components/SettingsLegalDocumentRouteScreen";
+
 import { GLASS_HEADER_OPTIONS, type AppScreenOptions } from "./native/glass-header-options";
 import { deriveLayout } from "./lib/layout";
 import { useNativeLayoutMetrics } from "./native/native-layout-metrics";
@@ -183,11 +185,10 @@ const SHEET_GLASS_HEADER_OPTIONS: AppScreenOptions = {
   unstable_navigationItemStyle: undefined,
 };
 
-const LEGAL_DOCUMENT_HEADER_OPTIONS: AppScreenOptions = {
+const DATA_USE_HEADER_OPTIONS: AppScreenOptions = {
   ...SHEET_SOLID_HEADER_OPTIONS,
   headerBackVisible: false,
-  headerLeft: SettingsLegalDocumentCloseHeaderButton,
-  headerRight: () => <SettingsLegalDocumentExternalHeaderButton />,
+  headerLeft: SettingsDataUseCloseHeaderButton,
   presentation: "fullScreenModal",
 };
 
@@ -205,6 +206,16 @@ const THREAD_SETTINGS_SHEET_OPTIONS = {
 const SETTINGS_PAGE_OPTIONS = SHEET_GLASS_HEADER_OPTIONS;
 
 const SETTINGS_SCREENS = {
+  SettingsAgentShareModels: createNativeStackScreen({
+    screen: SettingsAgentShareModelsRouteScreen,
+    linking: "settings/agentshare/models/:environmentId",
+    options: { ...SETTINGS_PAGE_OPTIONS, title: "Local models" },
+  }),
+  SettingsAgentShare: createNativeStackScreen({
+    screen: SettingsAgentShareRouteScreen,
+    linking: "settings/agentshare",
+    options: { ...SETTINGS_PAGE_OPTIONS, title: "AgentShare" },
+  }),
   Settings: createNativeStackScreen({
     screen: SettingsRouteScreen,
     linking: "settings",
@@ -936,12 +947,12 @@ const RootStackConfig = createWorkspaceStackNavigator({
       },
     }),
     ...SETTINGS_SCREENS,
-    SettingsLegal: createNativeStackScreen({
-      screen: SettingsLegalRouteScreen,
-      linking: "settings/legal",
+    SettingsDataUse: createNativeStackScreen({
+      screen: SettingsDataUseRouteScreen,
+      linking: "settings/data-use",
       options: {
-        ...LEGAL_DOCUMENT_HEADER_OPTIONS,
-        title: "Legal",
+        ...DATA_USE_HEADER_OPTIONS,
+        title: "Data & privacy / 数据与隐私",
       },
     }),
     ConnectOnboarding: createNativeStackScreen({

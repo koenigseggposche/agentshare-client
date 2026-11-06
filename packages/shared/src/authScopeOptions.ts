@@ -1,5 +1,6 @@
 import {
   AuthAccessReadScope,
+  AuthFundsWriteScope,
   AuthAccessWriteScope,
   AuthDiagnosticsReadScope,
   AuthEnvironmentMaintainScope,
@@ -92,6 +93,11 @@ export const AUTH_SCOPE_OPTIONS: ReadonlyArray<{
     scope: AuthAccessWriteScope,
     title: "Manage access",
     description: "Issue and revoke credentials for other clients.",
+  },
+  {
+    scope: AuthFundsWriteScope,
+    title: "Manage AgentShare funds",
+    description: "Create top-ups, withdraw settled earnings, and set up payout accounts.",
   },
   {
     scope: AuthRelayReadScope,

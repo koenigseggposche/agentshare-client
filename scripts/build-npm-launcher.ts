@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// GitHub archives avoid npm scanning delays; output <output-dir>/t3/ and publishable t3.tgz.
+// GitHub archives avoid npm scanning delays; output the AgentShare Client package and publishable tarball.
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as Effect from "effect/Effect";
@@ -12,12 +12,13 @@ import { Command, Flag } from "effect/cli";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 
 import * as HostProcess from "@t3tools/shared/HostProcess";
+import { CLI_NPM_PACKAGE_NAME } from "@t3tools/shared/cliRelease";
 import { fromJsonStringPretty } from "@t3tools/shared/schemaJson";
 import serverPackageJson from "../apps/server/package.json" with { type: "json" };
 
 import { windowsSystemTar } from "./lib/windows-tar.ts";
 
-export const NPM_LAUNCHER_PACKAGE_NAME = "t3";
+export const NPM_LAUNCHER_PACKAGE_NAME = CLI_NPM_PACKAGE_NAME;
 
 const encodePackageJson = Schema.encodeEffect(fromJsonStringPretty(Schema.Unknown));
 
@@ -36,11 +37,14 @@ export function npmLauncherPackageManifest(version: string, databaseMigration: n
     name: NPM_LAUNCHER_PACKAGE_NAME,
     version,
     description:
-      "T3 Code CLI. Downloads the self-contained executable for this platform from the GitHub Release.",
+      "AgentShare Client CLI. Downloads the self-contained executable for this platform from the GitHub Release.",
     license: serverPackageJson.license,
-    repository: serverPackageJson.repository,
-    bin: { t3: "./bin/t3.mjs" },
-    files: ["bin", "dist"],
+    repository: {
+      type: "git",
+      url: "git+https://github.com/koenigseggposche/agentshare-client.git",
+    },
+    bin: { [CLI_NPM_PACKAGE_NAME]: "./bin/agentshare-client.mjs" },
+    files: ["bin"],
     engines: { node: ">=20.11" },
     t3code: { databaseMigration },
   };
@@ -76,16 +80,19 @@ export const buildNpmLauncher = Effect.fn("buildNpmLauncher")(function* (input: 
   });
   const stageDir = path.join(scratch, "package");
   yield* fs.makeDirectory(path.join(stageDir, "bin"), { recursive: true });
-  yield* fs.makeDirectory(path.join(stageDir, "dist"));
   yield* fs.writeFileString(
     path.join(stageDir, "package.json"),
     `${yield* encodePackageJson(
       npmLauncherPackageManifest(input.version, yield* latestServerMigrationId()),
     )}\n`,
   );
-  yield* fs.copyFile(path.join(sourceDir, "t3.mjs"), path.join(stageDir, "bin/t3.mjs"));
-  yield* fs.chmod(path.join(stageDir, "bin/t3.mjs"), 0o755);
-  yield* fs.copyFile(path.join(sourceDir, "bin.mjs"), path.join(stageDir, "dist/bin.mjs"));
+  yield* fs.copyFile(
+    path.join(sourceDir, "agentshare-client.mjs"),
+    path.join(stageDir, "bin/agentshare-client.mjs"),
+  );
+  yield* fs.chmod(path.join(stageDir, "bin/agentshare-client.mjs"), 0o755);
+  const license = yield* path.fromFileUrl(new URL("../LICENSE", import.meta.url));
+  yield* fs.copyFile(license, path.join(stageDir, "LICENSE"));
   const readme = yield* path.fromFileUrl(new URL("../apps/server/README.md", import.meta.url));
   if (yield* fs.exists(readme)) {
     yield* fs.copyFile(readme, path.join(stageDir, "README.md"));
@@ -98,6 +105,7 @@ export const buildNpmLauncher = Effect.fn("buildNpmLauncher")(function* (input: 
   // npm tarballs root everything under `package/`.
   const child = yield* spawner.spawn(
     ChildProcess.make(tar, ["-czf", tarball, "-C", scratch, "package"], {
+      env: { COPYFILE_DISABLE: "1" },
       stdout: "inherit",
       stderr: "inherit",
     }),
@@ -121,7 +129,7 @@ const command = Command.make(
     outputDir: Flag.String("output-dir").pipe(Flag.withDefault("npm-packages")),
   },
   buildNpmLauncher,
-).pipe(Command.withDescription("Build the t3 npm launcher package."));
+).pipe(Command.withDescription("Build the AgentShare Client npm launcher package."));
 
 if (import.meta.main) {
   Command.run(command, { version: "0.0.0" }).pipe(

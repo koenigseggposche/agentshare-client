@@ -50,9 +50,9 @@ const run = Effect.fn("test.run")(function* (
 const serveFakeRelease = Effect.fn("test.serveFakeRelease")(function* (
   root: string,
   executable = `#!/bin/sh
-if [ -n "$T3CODE_TEST_CALLS" ]; then echo "$*|$T3CODE_NPM_LAUNCHER_PATH" >> "$T3CODE_TEST_CALLS"; fi
+if [ -n "$T3CODE_TEST_CALLS" ]; then echo "$*|$AGENTSHARE_CLIENT_NPM_LAUNCHER_PATH" >> "$T3CODE_TEST_CALLS"; fi
 if [ "$1" = "--version" ]; then echo "${VERSION}"; exit 0; fi
-echo "stub $* launcher=$T3CODE_NPM_LAUNCHER_PATH"
+echo "stub $* launcher=$AGENTSHARE_CLIENT_NPM_LAUNCHER_PATH"
 exit 7
 `,
 ) {
@@ -120,9 +120,11 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
         const manifest = yield* decodeManifest(
           yield* fs.readFileString(path.join(output.packageDir, "package.json")),
         );
-        assert.equal(manifest.name, "t3");
+        assert.equal(manifest.name, "agentshare-client");
         assert.equal(manifest.version, VERSION);
-        assert.deepStrictEqual(manifest.bin, { t3: "./bin/t3.mjs" });
+        assert.deepStrictEqual(manifest.bin, {
+          "agentshare-client": "./bin/agentshare-client.mjs",
+        });
         assert.isUndefined(manifest.dependencies);
         assert.isUndefined(manifest.optionalDependencies);
         assert.isAbove(npmReleaseDatabaseMigration(manifest) ?? 0, 0);
@@ -134,17 +136,61 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
           env: { PATH: process.env.PATH },
         });
         assert.equal(unpack.exitCode, 0, unpack.stderr);
+        assert.deepStrictEqual(yield* fs.readDirectory(installed), ["package"]);
         const packageDir = path.join(installed, "package");
 
         const release = yield* serveFakeRelease(root);
         const home = path.join(root, "home");
         const env = {
           PATH: process.env.PATH,
-          T3CODE_HOME: home,
+          AGENTSHARE_CLIENT_HOME: home,
           T3CODE_TEST_CALLS: path.join(root, "calls"),
-          T3CODE_RELEASE_BASE_URL: release.baseUrl,
+          AGENTSHARE_CLIENT_RELEASE_BASE_URL: release.baseUrl,
         };
-        const launcher = path.join(packageDir, "bin/t3.mjs");
+        const launcher = yield* fs.realPath(path.join(packageDir, "bin/agentshare-client.mjs"));
+        const networkProbe = path.join(root, "reject-download.mjs");
+        yield* fs.writeFileString(
+          networkProbe,
+          "globalThis.fetch = async (url) => { throw new Error(`requested ${url}`); };\n",
+        );
+        const defaultDownload = yield* run(process.execPath, ["--import", networkProbe, launcher], {
+          cwd: root,
+          env: {
+            PATH: process.env.PATH,
+            AGENTSHARE_CLIENT_HOME: path.join(root, "default-release"),
+          },
+        });
+        assert.equal(defaultDownload.exitCode, 1);
+        assert.include(
+          defaultDownload.stderr,
+          `https://github.com/koenigseggposche/agentshare-client/releases/download/v${VERSION}/SHA256SUMS`,
+        );
+
+        const defaultHome = path.join(root, "default-home");
+        const defaultRuntime = path.join(
+          defaultHome,
+          ".agentshare-client/runtime/versions",
+          VERSION,
+        );
+        yield* fs.makeDirectory(defaultRuntime, { recursive: true });
+        yield* fs.writeFileString(path.join(defaultRuntime, ".install-complete"), `${VERSION}\n`);
+        yield* fs.writeFileString(
+          path.join(defaultRuntime, "t3"),
+          '#!/bin/sh\necho "cached client"\n',
+        );
+        yield* fs.chmod(path.join(defaultRuntime, "t3"), 0o755);
+        const homeProbe = path.join(root, "default-home.mjs");
+        yield* fs.writeFileString(
+          homeProbe,
+          `import os from "node:os"; os.homedir = () => ${JSON.stringify(defaultHome)};\n`,
+        );
+        const defaultCache = yield* run(process.execPath, ["--import", homeProbe, launcher], {
+          cwd: root,
+          env: { PATH: process.env.PATH },
+        });
+        assert.equal(defaultCache.exitCode, 0, defaultCache.stderr);
+        assert.equal(defaultCache.stdout.trim(), "cached client");
+
         const first = yield* run(process.execPath, [launcher, "serve", "a b"], {
           cwd: root,
           env,
@@ -192,27 +238,29 @@ it.layer(NodeServices.layer)("build-npm-launcher", (it) => {
           ipcServer,
           `#!${process.execPath}\nprocess.on("SIGTERM", () => process.exit(23));\nprocess.on("message", (m) => process.send({ reply: m }));\nprocess.send({ args: process.argv.slice(2) });\n`,
         );
-        const legacy = NodeChildProcess.fork(
-          path.join(packageDir, "dist/bin.mjs"),
-          ["__service-preflight", "a b"],
-          { env, silent: true },
-        );
+        const launcherChild = NodeChildProcess.fork(launcher, ["__service-preflight", "a b"], {
+          env,
+          silent: true,
+        });
         yield* Effect.promise(async () => {
-          assert.deepStrictEqual((await NodeEvents.EventEmitter.once(legacy, "message"))[0], {
-            args: ["__service-preflight", "a b"],
-          });
-          const reply = NodeEvents.EventEmitter.once(legacy, "message");
-          legacy.send({ type: "trial-accepted" });
+          assert.deepStrictEqual(
+            (await NodeEvents.EventEmitter.once(launcherChild, "message"))[0],
+            {
+              args: ["__service-preflight", "a b"],
+            },
+          );
+          const reply = NodeEvents.EventEmitter.once(launcherChild, "message");
+          launcherChild.send({ type: "trial-accepted" });
           assert.deepStrictEqual((await reply)[0], { reply: { type: "trial-accepted" } });
-          const exit = NodeEvents.EventEmitter.once(legacy, "exit");
-          legacy.kill("SIGTERM");
+          const exit = NodeEvents.EventEmitter.once(launcherChild, "exit");
+          launcherChild.kill("SIGTERM");
           assert.deepStrictEqual(await exit, [23, null]);
         });
 
         const raceHome = path.join(root, "race-home");
         const launch = run(process.execPath, [launcher, "--version"], {
           cwd: root,
-          env: { ...env, T3CODE_HOME: raceHome },
+          env: { ...env, AGENTSHARE_CLIENT_HOME: raceHome },
         });
         const [one, two] = yield* Effect.all([launch, launch], { concurrency: "unbounded" });
         assert.equal(one.exitCode, 0, one.stderr);
@@ -290,7 +338,7 @@ fs.readFileSync = (file, ...rest) => {
         const recovered = yield* run(
           process.execPath,
           ["--import", peerHook, launcher, "--version"],
-          { cwd: root, env: { ...env, T3CODE_HOME: staleHome } },
+          { cwd: root, env: { ...env, AGENTSHARE_CLIENT_HOME: staleHome } },
         );
         const checks = (yield* fs.readFileString(peerChecks)).trim().split("\n");
         assert.isAtLeast(checks.length, 2);
@@ -310,7 +358,7 @@ fs.readFileSync = (file, ...rest) => {
         yield* fs.makeDirectory(`${staleOnlyDir}.lock`);
         const locked = yield* run(process.execPath, [launcher, "--version"], {
           cwd: root,
-          env: { ...env, T3CODE_HOME: staleOnlyHome },
+          env: { ...env, AGENTSHARE_CLIENT_HOME: staleOnlyHome },
         });
         assert.equal(locked.exitCode, 1);
         assert.include(locked.stderr, `delete ${staleOnlyDir}.lock`);
@@ -320,7 +368,7 @@ fs.readFileSync = (file, ...rest) => {
         yield* fs.remove(`${staleOnlyDir}.lock`, { recursive: true });
         const replaced = yield* run(process.execPath, [launcher, "--version"], {
           cwd: root,
-          env: { ...env, T3CODE_HOME: staleOnlyHome },
+          env: { ...env, AGENTSHARE_CLIENT_HOME: staleOnlyHome },
         });
         assert.equal(replaced.stdout.trim(), VERSION, replaced.stderr);
         assert.equal(replaced.exitCode, 0);
@@ -332,7 +380,7 @@ fs.readFileSync = (file, ...rest) => {
         release.corruptChecksum();
         const corrupt = yield* run(process.execPath, [launcher, "--version"], {
           cwd: root,
-          env: { ...env, T3CODE_HOME: path.join(root, "other-home") },
+          env: { ...env, AGENTSHARE_CLIENT_HOME: path.join(root, "other-home") },
         });
         assert.equal(corrupt.exitCode, 1);
         assert.include(corrupt.stderr, "checksum mismatch");
@@ -369,18 +417,18 @@ fs.readFileSync = (file, ...rest) => {
 import { syncBuiltinESMExports } from "node:module";
 const { spawnSync } = childProcess;
 childProcess.spawnSync = (command, args, options) => spawnSync(command, args,
-  options?.timeout === undefined ? options : { ...options, timeout: 500 });
+  options?.timeout === undefined ? options : { ...options, timeout: 3000 });
 syncBuiltinESMExports();
 `,
           );
           const env = {
             PATH: process.env.PATH,
-            T3CODE_HOME: home,
-            T3CODE_RELEASE_BASE_URL: release.baseUrl,
+            AGENTSHARE_CLIENT_HOME: home,
+            AGENTSHARE_CLIENT_RELEASE_BASE_URL: release.baseUrl,
             T3CODE_TEST_READY: path.join(root, "probe-ready"),
             T3CODE_TEST_TERM: path.join(root, "probe-term"),
           };
-          const launcher = path.join(output.packageDir, "bin/t3.mjs");
+          const launcher = path.join(output.packageDir, "bin/agentshare-client.mjs");
           const failed = yield* run(
             process.execPath,
             ["--import", probeTimeoutHook, launcher, "serve"],

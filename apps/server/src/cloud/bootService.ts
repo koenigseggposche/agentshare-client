@@ -11,6 +11,7 @@ import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import { HttpClient } from "effect/http";
 import * as Schema from "effect/Schema";
+import * as Schedule from "effect/Schedule";
 
 import { CLI_RELEASE_BASE_URL_ENV } from "@t3tools/shared/cliRelease";
 
@@ -34,13 +35,13 @@ import {
   type ServiceState,
 } from "./serviceProtocol.ts";
 
-const BOOT_SERVICE_NAME = "t3code";
+const BOOT_SERVICE_NAME = "agentshare-client";
 export const BOOT_SERVICE_UNIT_FILE = `${BOOT_SERVICE_NAME}.service`;
 // `.service` suffix keeps the label distinct from the desktop app's bundle id
-// (com.t3tools.t3code), so launchd and TCC records never collide.
-export const BOOT_SERVICE_LAUNCHD_LABEL = "com.t3tools.t3code.service";
+// (app.agentshare.client), so launchd and TCC records never collide.
+export const BOOT_SERVICE_LAUNCHD_LABEL = "app.agentshare.client.service";
 export const BOOT_SERVICE_PLIST_FILE = `${BOOT_SERVICE_LAUNCHD_LABEL}.plist`;
-const BOOT_SERVICE_UNIT_ENV = "T3_BOOT_SERVICE_UNIT";
+const BOOT_SERVICE_UNIT_ENV = "AGENTSHARE_CLIENT_SERVICE_UNIT";
 export const BOOT_SERVICE_LOG_FILE = "boot-service.log";
 
 /** systemd expands `%` specifiers, including in unquoted append-log paths. */
@@ -65,9 +66,11 @@ const unescapeXmlText = (value: string) =>
   value.replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
 
 export function bootServiceBaseDirOf(contents: string): string | undefined {
-  const systemd = /^Environment=T3CODE_HOME=(.*)$/m.exec(contents)?.[1];
+  const systemd = /^Environment=AGENTSHARE_CLIENT_HOME=(.*)$/m.exec(contents)?.[1];
   if (systemd !== undefined) return unquoteSystemdValue(systemd.trim());
-  const plist = /<key>T3CODE_HOME<\/key>\s*<string>([^<]*)<\/string>/.exec(contents)?.[1];
+  const plist = /<key>AGENTSHARE_CLIENT_HOME<\/key>\s*<string>([^<]*)<\/string>/.exec(
+    contents,
+  )?.[1];
   return plist === undefined ? undefined : unescapeXmlText(plist);
 }
 
@@ -95,14 +98,14 @@ export function renderBootServiceUnit(plan: BootServicePlan): string {
   // The user manager has no reliable network-online target; server networking retries itself.
   return [
     "[Unit]",
-    "Description=T3 Code server",
+    "Description=AgentShare Client server",
     "StartLimitIntervalSec=300",
     "StartLimitBurst=5",
     "",
     "[Service]",
     "Type=simple",
     "WorkingDirectory=%h",
-    `Environment=T3CODE_HOME=${quoteSystemdValue(plan.baseDir)}`,
+    `Environment=AGENTSHARE_CLIENT_HOME=${quoteSystemdValue(plan.baseDir)}`,
     `Environment=${BOOT_SERVICE_UNIT_ENV}=${BOOT_SERVICE_UNIT_FILE}`,
     `ExecStart=${plan.program.map(quoteSystemdValue).join(" ")}`,
     // Let the launcher mark an explicit stop before it signals the server.
@@ -119,7 +122,7 @@ export function renderBootServiceUnit(plan: BootServicePlan): string {
     // protection of user.slice and user@.service, which only root can grant.
     "MemoryLow=1536M",
     // A user manager's own score, the lowest it may set: below its other services (200) and agents (800).
-    // `t3 service protect` lowers it further through a drop-in.
+    // `agentshare-client service protect` lowers it further through a drop-in.
     "OOMScoreAdjust=100",
     // systemd-oomd ignores this preference when the watched cgroup is root-owned, as user-1000.slice usually is.
     "ManagedOOMPreference=avoid",
@@ -159,7 +162,7 @@ export function renderBootServicePlist(
     `  <dict>`,
     `    <key>PATH</key>`,
     `    <string>${escapeXmlText(options.environmentPath)}</string>`,
-    `    <key>T3CODE_HOME</key>`,
+    `    <key>AGENTSHARE_CLIENT_HOME</key>`,
     `    <string>${escapeXmlText(plan.baseDir)}</string>`,
     `    <key>${BOOT_SERVICE_UNIT_ENV}</key>`,
     `    <string>${BOOT_SERVICE_PLIST_FILE}</string>`,
@@ -304,12 +307,12 @@ function launchdManager(input: {
         homeDir: input.homeDir,
         environmentPath: input.environmentPath,
       }),
-    // bootout --wait is undocumented but waits through ExitTimeOut, preventing bootstrap EIO races.
+    // bootout returns before removal; runSteps waits for the job to disappear before bootstrap.
     stop: [
       {
         step: "stopping the installed launch agent",
         command: "launchctl",
-        args: ["bootout", "--wait", serviceTarget],
+        args: ["bootout", serviceTarget],
         optional: true,
         timeout: STOP_STEP_TIMEOUT,
       },
@@ -340,7 +343,7 @@ function launchdManager(input: {
       {
         step: "stopping the service",
         command: "launchctl",
-        args: ["bootout", "--wait", serviceTarget],
+        args: ["bootout", serviceTarget],
         optional: true,
         timeout: STOP_STEP_TIMEOUT,
       },
@@ -453,7 +456,7 @@ export class BootServiceInstallError extends Schema.TaggedError<BootServiceInsta
   { cause: Schema.Defect() },
 ) {
   override get message(): string {
-    return "Could not set up the T3 Code background service.";
+    return "Could not set up the AgentShare Client background service.";
   }
 }
 
@@ -474,13 +477,13 @@ export function formatBootServiceProblem(problem: BootServiceProblem): string {
     case "linger-unavailable":
       return 'Cannot check whether this user can run services after logout. Run `loginctl show-user "$(id -un)" --property=Linger` and check that systemd-logind is available.';
     case "linger-disabled":
-      return 'Lingering is disabled. T3 Code will stop when your last login session ends and will not start at boot. Run `sudo loginctl enable-linger "$(id -un)"` on this machine, then retry the service command as your normal user.';
+      return 'Lingering is disabled. AgentShare Client will stop when your last login session ends and will not start at boot. Run `sudo loginctl enable-linger "$(id -un)"` on this machine, then retry the service command as your normal user.';
     case "service-disabled":
-      return "The service is not enabled to start automatically. Run `t3 service install` to repair it.";
+      return "The service is not enabled to start automatically. Run `agentshare-client service install` to repair it.";
     case "service-stopped":
-      return "The service is not running. Check the service log and `systemctl --user status t3code.service`, then run `t3 service install`.";
+      return "The service is not running. Check the service log and `systemctl --user status agentshare-client.service`, then run `agentshare-client service install`.";
     case "restart-pending":
-      return "A newer version is installed but the service is still running the previous one. Run `t3 service restart` to switch.";
+      return "A newer version is installed but the service is still running the previous one. Run `agentshare-client service restart` to switch.";
   }
 }
 
@@ -703,7 +706,47 @@ export const make = Effect.fn("cloud.boot_service.make")(function* (input: {
           entry.args,
           entry.timeout === undefined ? undefined : { timeout: entry.timeout },
         );
-        return entry.optional === true ? run.pipe(Effect.ignore) : run.pipe(Effect.asVoid);
+        const completed =
+          entry.optional === true ? run.pipe(Effect.ignore) : run.pipe(Effect.asVoid);
+        const serviceTarget = entry.args[1];
+        if (
+          entry.command !== "launchctl" ||
+          entry.args[0] !== "bootout" ||
+          serviceTarget === undefined
+        )
+          return completed;
+        return completed.pipe(
+          Effect.andThen(
+            runner
+              .run({
+                command: "launchctl",
+                args: ["print", serviceTarget],
+                timeout: Duration.seconds(5),
+              })
+              .pipe(
+                Effect.repeat({
+                  until: (result) => result.code !== 0,
+                  schedule: Schedule.spaced("100 millis"),
+                }),
+                Effect.timeoutOrElse({
+                  duration: STOP_STEP_TIMEOUT,
+                  orElse: () =>
+                    Effect.fail(
+                      new BootServiceCommandError({ step: "waiting for the launch agent to stop" }),
+                    ),
+                }),
+                Effect.mapError((cause) =>
+                  cause._tag === "BootServiceCommandError"
+                    ? cause
+                    : new BootServiceCommandError({
+                        step: "checking whether the launch agent stopped",
+                        cause,
+                      }),
+                ),
+                Effect.asVoid,
+              ),
+          ),
+        );
       },
       { discard: true },
     );

@@ -1,5 +1,6 @@
+import * as CoreClient from "@agentshare/core-client/CoreClient";
+import { layerLocalCore } from "../agentshare/LocalCore.ts";
 import {
-  defaultInstanceIdForDriver,
   ProviderDriverKind,
   ProviderInstanceId,
   providerInstanceConfigEnabledFlag,
@@ -36,6 +37,7 @@ type ProviderInstanceRegistryHydrationEnv =
       | ProviderOrchestrationAdapterInfrastructure.ProviderOrchestrationAdapterInfrastructure
       | AcpRegistrySupport.AcpRegistryCatalog
       | ProviderHost.ProviderHost
+      | CoreClient.CoreClient
     >
   | Settings.ServerSettingsService
   | BackgroundPolicy.BackgroundPolicy
@@ -51,13 +53,6 @@ export const deriveProviderInstanceConfigMap = (
   settings: ServerSettings,
 ): ProviderInstanceConfigMap => {
   const merged: Record<string, ProviderInstanceConfig> = { ...settings.providerInstances };
-
-  for (const driver of BUILT_IN_DRIVERS) {
-    if (driver.metadata.hasDefaultInstance === false) continue;
-    const instanceId = defaultInstanceIdForDriver(driver.driverKind);
-    if (instanceId in merged) continue;
-    merged[instanceId] = { driver: driver.driverKind };
-  }
 
   // Probe project-enabled instances even if disabled machine-wide; project threads can still route to them.
   for (const overrides of Object.values(settings.projectSettingsOverrides)) {
@@ -184,6 +179,7 @@ export const layer: Layer.Layer<
       Layer.provide(ProviderHostLive.layer),
       Layer.provide(Layer.succeed(HostProcess.Environment, hostEnvironment)),
       Layer.provide(SecretResolver.layer),
+      Layer.provide(layerLocalCore),
     );
 
     return layerSettingsWatcher(settingsChanges).pipe(Layer.provideMerge(layerMutable));
