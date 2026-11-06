@@ -66,6 +66,7 @@ export function SettingsAgentShareRouteScreen() {
         className="flex-1"
         contentContainerClassName="gap-5 px-5 pt-4 pb-12"
         contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
       >
         <SettingsSection title={t("语言", "Language")}>
           <ListActionRow label="中文" onPress={() => void savePreferences({ uiLanguage: "zh" })} />
