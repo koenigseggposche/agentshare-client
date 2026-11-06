@@ -60,6 +60,11 @@ const audio = vi.hoisted(() => ({
   navigate: vi.fn(),
   query: vi.fn(),
 }));
+// Account startup is independent of this fixture's storage/media behavior.
+vi.mock("../features/agentshare/accountLayer", async () => ({
+  layer: (await import("effect/Layer")).empty,
+}));
+
 vi.mock("expo-audio", () => ({
   AudioModule: { setAudioSessionOwner: audio.setSessionOwner },
   useAudioPlayer: () => audio.player,
@@ -112,6 +117,7 @@ vi.mock("../components/ui/Button", () => ({
   Button: (props: { label: string; onPress(): void; disabled?: boolean }) =>
     createElement("button", { onClick: props.onPress, disabled: props.disabled }, props.label),
 }));
+vi.mock("expo-constants", () => ({ default: { expoConfig: { extra: {} } } }));
 vi.mock("expo", () => ({
   useEvent: (_player: unknown, _event: unknown, initial: unknown) => initial,
   useReleasingSharedObjectWithLifecycle: (

@@ -69,6 +69,11 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+// Account startup is independent of this fixture's storage/media behavior.
+vi.mock("../features/agentshare/accountLayer", async () => ({
+  layer: (await import("effect/Layer")).empty,
+}));
+
 vi.mock("expo", () => ({
   requireOptionalNativeModule: () => null,
 }));
