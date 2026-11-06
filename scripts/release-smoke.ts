@@ -10,6 +10,7 @@ import * as Effect from "effect/Effect";
 const repoRoot = NodePath.resolve(NodePath.dirname(NodeURL.fileURLToPath(import.meta.url)), "..");
 
 const workspaceFiles = [
+  ".npmrc",
   "package.json",
   "pnpm-lock.yaml",
   "pnpm-workspace.yaml",
@@ -24,6 +25,8 @@ const workspaceFiles = [
   "apps/marketing/package.json",
   "infra/relay/package.json",
   "oxlint-plugin-t3code/package.json",
+  "packages/agentshare-account-client/package.json",
+  "packages/agentshare-core-client/package.json",
   "packages/client-runtime/package.json",
   "packages/contracts/package.json",
   "packages/shared/package.json",

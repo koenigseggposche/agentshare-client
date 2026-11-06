@@ -1,5 +1,6 @@
 import {
   AntigravitySettings,
+  AgentShareTextSettings,
   ClaudeSettings,
   CodexSettings,
   defaultInstanceIdForDriver,
@@ -70,6 +71,7 @@ const PIN_BYPASS_FIELDS: ReadonlyMap<
 /** Drivers this build knows, by the names users see; a policy naming any other is refused. */
 const KNOWN_DRIVERS: ReadonlyMap<ProviderDriverKind, KnownDriver> = new Map([
   known("codex", "Codex", CodexSettings),
+  known("agentshareText", "AgentShare Text", AgentShareTextSettings, false),
   known("claudeAgent", "Claude", ClaudeSettings),
   known("antigravity", "Antigravity", AntigravitySettings),
   ...PACKAGED_CLIENTS.map((client) =>

@@ -253,10 +253,11 @@ so restart T3 Code after that.
 ### Providers
 
 `providers.allowedDrivers` lists the providers that may run, by ID: `codex` (Codex),
+`agentshareText` (AgentShare Text),
 `claudeAgent` (Claude), `cursor` (Cursor), `grok` (Grok), `opencode` (OpenCode), `antigravity`
 (Antigravity), `fx` (fx), `kiro` (Kiro), `pi` (Pi), `muse` (Muse Code), and `acpRegistry` (ACP
 Registry).
-`t3 policy check` rejects an ID this version does not know. Threads on other providers stay,
+`agentshare-client policy check` rejects an ID this version does not know. Threads on other providers stay,
 marked unavailable, and users can still turn those providers off.
 
 `providers.instances` sets fields on every instance of a provider, such as an environment variable

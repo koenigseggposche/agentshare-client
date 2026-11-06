@@ -12,6 +12,11 @@ export const AgentShareModel = Schema.Struct({
 });
 export type AgentShareModel = typeof AgentShareModel.Type;
 
+export const AgentShareTextSettings = Schema.Struct({
+  agentShareOwner: Schema.optional(Schema.String),
+  agentShareModel: Schema.optional(AgentShareModel),
+});
+
 export const AgentShareModelInfo = Schema.Struct({
   model: AgentShareModel,
   name: Schema.String,

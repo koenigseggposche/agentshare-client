@@ -1,5 +1,9 @@
 import * as CoreClient from "@agentshare/core-client/CoreClient";
-import { AgentShareModel, TextGenerationError, agentShareModelsMatch } from "@t3tools/contracts";
+import {
+  AgentShareTextSettings,
+  TextGenerationError,
+  agentShareModelsMatch,
+} from "@t3tools/contracts";
 import * as ProviderHost from "@t3tools/provider-core/server/ProviderHost";
 import type { ProviderDriver } from "@t3tools/provider-core/server/driver";
 import { ProviderDriverError } from "@t3tools/provider-core/server/errors";
@@ -11,14 +15,10 @@ import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import type * as FileSystem from "effect/FileSystem";
 import type * as Path from "effect/Path";
-import * as Schema from "effect/Schema";
 
 import * as LocalTextAdapter from "./LocalTextAdapter.ts";
 
-export const Settings = Schema.Struct({
-  agentShareOwner: Schema.optional(Schema.String),
-  agentShareModel: Schema.optional(AgentShareModel),
-});
+export const Settings = AgentShareTextSettings;
 
 const unavailable = (operation: string) =>
   Effect.fail(
