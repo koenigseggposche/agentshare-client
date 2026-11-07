@@ -127,6 +127,7 @@ jobs:
             !/.repos/
           sparse-checkout-cone-mode: false
       - name: Checkout pinned Core source
+        if: matrix.core_target != 'win32-arm64'
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: koenigseggposche/agentshare
@@ -134,6 +135,49 @@ jobs:
           path: .core-source
           ssh-key: ${{ secrets.AGENTSHARE_CORE_READ_KEY }}
           persist-credentials: false
+      - name: Checkout pinned Core source with a private Windows ACL
+        if: matrix.core_target == 'win32-arm64'
+        shell: pwsh
+        env:
+          CORE_READ_KEY: ${{ secrets.AGENTSHARE_CORE_READ_KEY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $keyDirectory = Join-Path $env:RUNNER_TEMP ([Guid]::NewGuid().ToString())
+          $key = Join-Path $keyDirectory 'identity'
+          $knownHosts = Join-Path $keyDirectory 'known_hosts'
+          $source = Join-Path $env:GITHUB_WORKSPACE '.core-source'
+          New-Item -ItemType Directory $keyDirectory | Out-Null
+          try {
+            # The Windows ARM runner's temp directory grants Authenticated Users access.
+            $owner = [Security.Principal.WindowsIdentity]::GetCurrent().User
+            $acl = [Security.AccessControl.DirectorySecurity]::new()
+            $acl.SetOwner($owner)
+            $acl.SetAccessRuleProtection($true, $false)
+            $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new(
+              $owner, 'FullControl', 'ContainerInherit, ObjectInherit', 'None', 'Allow'
+            ))
+            Set-Acl -LiteralPath $keyDirectory -AclObject $acl
+            New-Item -ItemType File $key | Out-Null
+            $keyAcl = [Security.AccessControl.FileSecurity]::new()
+            $keyAcl.SetOwner($owner)
+            $keyAcl.SetAccessRuleProtection($true, $false)
+            $keyAcl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($owner, 'FullControl', 'Allow'))
+            Set-Acl -LiteralPath $key -AclObject $keyAcl
+            [IO.File]::WriteAllText($key, $env:CORE_READ_KEY.TrimEnd() + "`n")
+            Remove-Item Env:CORE_READ_KEY
+            # https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints
+            Set-Content -LiteralPath $knownHosts -Encoding ascii -Value 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl'
+            $ssh = (Join-Path $env:SystemRoot 'System32/OpenSSH/ssh.exe').Replace('\', '/')
+            $key = $key.Replace('\', '/')
+            $knownHosts = $knownHosts.Replace('\', '/')
+            $env:GIT_SSH_COMMAND = '"{0}" -i "{1}" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile={2}"' -f $ssh, $key, $knownHosts
+            git init $source
+            git -C $source fetch --no-tags --depth=1 git@github.com:koenigseggposche/agentshare.git $env:CORE_REF
+            git -C $source checkout --detach FETCH_HEAD
+          } finally {
+            Remove-Item -LiteralPath $keyDirectory -Recurse -Force
+          }
       - name: Isolate Core source from client packaging
         run: mv .core-source "$RUNNER_TEMP/core-source"
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
