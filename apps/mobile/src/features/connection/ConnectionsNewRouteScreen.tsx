@@ -36,6 +36,7 @@ import { workspaceHasColumns } from "../workspace/workspace-selection-store";
 type ConnectionsNewRouteParams = {
   readonly mode?: string;
   readonly pairingUrl?: string;
+  readonly reviewPairing?: { readonly url: string };
   readonly autoConnect?: string;
   readonly routeFor?: EnvironmentId;
 };
@@ -44,13 +45,15 @@ export function ConnectionsNewRouteScreen({
   route,
 }: StaticScreenProps<ConnectionsNewRouteParams | undefined>) {
   const params = route.params ?? {};
-  // Dev-only prefill prevents production links from supplying an attacker-chosen host and token.
-  const routePairingUrl = __DEV__ ? (params.pairingUrl?.trim() ?? "") : "";
+  // Only the published link parser can create the structured review value.
+  const reviewUrl = params.reviewPairing?.url;
+  const routePairingUrl = reviewUrl ?? (__DEV__ ? (params.pairingUrl?.trim() ?? "") : "");
   // A new prefill link replaces whatever the form held.
   return (
     <PairingForm
       key={routePairingUrl}
       routePairingUrl={routePairingUrl}
+      reviewAddress={reviewUrl !== undefined}
       routeFor={params.routeFor}
     />
   );
@@ -58,9 +61,11 @@ export function ConnectionsNewRouteScreen({
 
 function PairingForm({
   routePairingUrl,
+  reviewAddress,
   routeFor,
 }: {
   readonly routePairingUrl: string;
+  readonly reviewAddress: boolean;
   readonly routeFor: EnvironmentId | undefined;
 }) {
   const { connectionPairingUrl, onChangeConnectionPairingUrl, onConnectPress } =
@@ -215,7 +220,9 @@ function PairingForm({
           />
 
           <View collapsable={false} className="gap-2">
-            <Text className="px-4 text-sm font-t3-medium text-foreground-muted">Or enter it</Text>
+            <Text className="px-4 text-sm font-t3-medium text-foreground-muted">
+              {reviewAddress ? "Check the computer address before connecting" : "Or enter it"}
+            </Text>
             <View
               collapsable={false}
               className={cn(

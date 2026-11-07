@@ -1,5 +1,6 @@
 import type { NavigationState, PartialState } from "@react-navigation/native";
 import { CommonActions, StackActions } from "@react-navigation/native";
+import { resolveRemotePairingTarget } from "@t3tools/shared/remote";
 import { Atom } from "effect/reactivity";
 
 import { findLinkedRoute, updateLinkedRoute } from "../../lib/appLinking";
@@ -8,6 +9,7 @@ import { appAtomRegistry } from "../../state/atom-registry";
 import { leaveSettingsPage } from "../settings/settings-navigation";
 import { workspaceHasColumns } from "../workspace/workspace-selection-store";
 import { pairEnvironment } from "../../state/use-remote-environment-registry";
+import { buildPairingUrl } from "./pairing";
 
 export type DevAutoConnectAttempt =
   | { readonly pairingUrl: string; readonly status: "connecting" }
@@ -81,6 +83,40 @@ export function withoutPairingTarget(
     if (route.params === undefined || !("routeFor" in route.params)) return route;
     const { routeFor: _routeFor, ...params } = route.params as { readonly routeFor?: unknown };
     return { ...route, params };
+  });
+}
+
+/**
+ * A published pairing link only opens a form. Discard query-supplied navigation flags,
+ * including the development-only auto-connect flag.
+ */
+export function preparePairingLink(
+  state: PartialState<NavigationState> | undefined,
+  path: string,
+): PartialState<NavigationState> | undefined {
+  const relativePath = path.replace(/^\/+/, "");
+  if (!/^pair\/?(?:[?#]|$)/.test(relativePath)) return state;
+
+  return updateLinkedRoute(state, PAIRING_FORM_ROUTES, (route) => {
+    const { pairingUrl } = (route.params ?? {}) as { readonly pairingUrl?: unknown };
+    let reviewPairing: { readonly url: string } | undefined;
+    if (typeof pairingUrl === "string") {
+      try {
+        const target = resolveRemotePairingTarget({ pairingUrl });
+        const address = new URL(target.httpBaseUrl);
+        if (!address.username && !address.password) {
+          reviewPairing = { url: buildPairingUrl(target.httpBaseUrl, target.credential) };
+        }
+      } catch {
+        // The form remains available for manual pairing when the link is invalid.
+      }
+    }
+    return {
+      ...route,
+      // React Navigation records the raw path, which includes the one-time credential.
+      path: "pair",
+      params: reviewPairing ? { reviewPairing } : {},
+    };
   });
 }
 

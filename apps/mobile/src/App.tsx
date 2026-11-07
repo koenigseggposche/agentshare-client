@@ -55,6 +55,7 @@ import { hasCloudPublicConfig } from "./features/cloud/publicConfig";
 import { takeScheduledTaskNewLink } from "./features/settings/scheduled-task-editor-state";
 import {
   pairingFormLinkAction,
+  preparePairingLink,
   startDevAutoConnect,
   withoutPairingTarget,
 } from "./features/connection/devAutoConnect";
@@ -116,6 +117,7 @@ function getAppStateFromPath(path: string, options: Parameters<typeof getStateFr
     takeThreadPromptLink,
     takeNewTaskPromptLink,
     withoutPairingTarget,
+    (state) => preparePairingLink(state, path),
     startDevAutoConnect,
     takeScheduledTaskNewLink,
   );

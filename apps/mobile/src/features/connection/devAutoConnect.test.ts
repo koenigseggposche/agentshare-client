@@ -68,6 +68,7 @@ import {
   autoConnectReport,
   devAutoConnectAttemptAtom,
   pairingFormLinkAction,
+  preparePairingLink,
   startDevAutoConnect,
 } from "./devAutoConnect";
 
@@ -254,3 +255,34 @@ it("a pairing link fills the pairing form already on screen instead of stacking 
     params: { pairingUrl: PAIRING_URL },
   });
 });
+
+it("opens a published pairing link for review without connecting or replacing a saved route", () => {
+  const path = `pair?pairingUrl=${encodeURIComponent(PAIRING_URL)}&autoConnect=1&routeFor=saved`;
+  const state = getStateFromPath(path, {
+    screens: { ConnectionsNew: { path: "connections/new", alias: ["pair"] } },
+  });
+  const prepared = preparePairingLink(state, path);
+
+  expect(startDevAutoConnect(prepared)?.routes).toEqual([
+    {
+      name: "ConnectionsNew",
+      path: "pair",
+      params: { reviewPairing: { url: "http://192.168.1.10:3773/#token=abc" } },
+    },
+  ]);
+  expect(harness.pair).not.toHaveBeenCalled();
+});
+
+it.each(["file:///private/test#token=abc", "https://user:password@example.test/#token=abc"])(
+  "opens an empty pairing form for the invalid destination %s",
+  (pairingUrl) => {
+    const path = `pair?pairingUrl=${encodeURIComponent(pairingUrl)}`;
+    const state = getStateFromPath(path, {
+      screens: { ConnectionsNew: { path: "connections/new", alias: ["pair"] } },
+    });
+
+    expect(preparePairingLink(state, path)?.routes).toEqual([
+      { name: "ConnectionsNew", path: "pair", params: {} },
+    ]);
+  },
+);
