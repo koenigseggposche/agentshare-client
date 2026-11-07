@@ -3,6 +3,7 @@ import {
   formatWalletAmount,
   parseWalletMinorAmount,
   walletMinorFactor,
+  walletRecordStatus,
 } from "./agentShareWallet.ts";
 describe("wallet money display", () => {
   it("parses exact platform minor units without rounding or accepting exponent input", () => {
@@ -44,5 +45,17 @@ describe("wallet money display", () => {
     expect(formatWalletAmount(-1, "USD", "en")).toBe("-$0.000001");
     expect(formatWalletAmount(0, "USD", "en")).toBe("$0.00");
     expect(formatWalletAmount(NaN, "USD", "en")).toBe("N/A");
+  });
+});
+
+describe("wallet status display", () => {
+  it("distinguishes settlement, a credited top-up, and a recorded payout", () => {
+    expect(walletRecordStatus("settled", "spending", "zh")).toBe("已结算");
+    expect(walletRecordStatus("settled", "earnings", "en")).toBe("Settled");
+    expect(walletRecordStatus("paid", "topups", "zh")).toBe("充值已到账");
+    expect(walletRecordStatus("paid", "withdrawals", "zh")).toBe("已记录付款");
+    expect(walletRecordStatus("expired", "topups", "en")).toBe("Expired");
+    expect(walletRecordStatus(undefined, "operator_credits", "zh")).toBeUndefined();
+    expect(walletRecordStatus("future_status", "spending", "en")).toBe("future_status");
   });
 });

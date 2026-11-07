@@ -1,3 +1,5 @@
+import type { AgentShareWalletHistoryKind } from "@t3tools/contracts";
+
 export function formatWalletAmount(
   micros: number,
   currency: string,
@@ -60,6 +62,7 @@ export function walletFundStatus(
 ): string {
   const labels: Record<string, readonly [string, string]> = {
     pending: ["等待付款", "Awaiting payment"],
+    expired: ["已过期", "Expired"],
     requested: ["等待转账", "Awaiting transfer"],
     processing: ["转账确认中", "Transfer confirmation pending"],
     transferred: [
@@ -70,6 +73,29 @@ export function walletFundStatus(
       action === "topup" ? ["充值已到账", "Balance credited"] : ["已记录付款", "Payment recorded"],
     rejected: ["已拒绝", "Rejected"],
   };
-  const label = labels[status] ?? ["需要核对平台记录", "Check platform records"];
+  const label = Object.hasOwn(labels, status)
+    ? labels[status]!
+    : ["需要核对平台记录", "Check platform records"];
   return label[language === "zh" ? 0 : 1];
+}
+
+const dealStatuses = new Map<string, readonly [string, string]>([
+  ["started", ["处理中", "In progress"]],
+  ["review", ["待审核", "Under review"]],
+  ["estimated", ["费用已预估", "Estimated"]],
+  ["charged", ["已扣费", "Charged"]],
+  ["settled", ["已结算", "Settled"]],
+  ["released", ["冻结金额已释放", "Hold released"]],
+]);
+
+export function walletRecordStatus(
+  status: string | undefined,
+  kind: AgentShareWalletHistoryKind,
+  language: "zh" | "en",
+): string | undefined {
+  if (!status) return undefined;
+  if (kind === "topups" || kind === "withdrawals") {
+    return walletFundStatus(status, kind === "topups" ? "topup" : "withdraw", language);
+  }
+  return dealStatuses.get(status)?.[language === "zh" ? 0 : 1] ?? status;
 }

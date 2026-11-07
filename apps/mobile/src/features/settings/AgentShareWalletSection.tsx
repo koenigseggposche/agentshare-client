@@ -10,7 +10,11 @@ import type {
   AgentShareWalletReadResult,
   AgentShareWalletCommandInput,
 } from "@t3tools/contracts";
-import { formatWalletAmount, walletMinorFactor } from "@t3tools/client-runtime/agentShareWallet";
+import {
+  formatWalletAmount,
+  walletMinorFactor,
+  walletRecordStatus,
+} from "@t3tools/client-runtime/agentShareWallet";
 import { AppText as Text } from "../../components/ui/AppText";
 import { ListActionRow } from "../../components/ui/ListActionRow";
 import { SettingsSection } from "./components/SettingsSection";
@@ -105,6 +109,7 @@ export function AgentShareWalletView({
     ["withdrawals", t("提现记录", "Withdrawals")],
     ["operator_credits", t("额度调整", "Balance adjustments")],
   ];
+  const recordKind = selection.action === "history" ? selection.kind : "spending";
   const record = (item: AgentShareWalletRecord, index: number) => (
     <ListActionRow
       key={item.request_id ?? item.id ?? index}
@@ -126,7 +131,7 @@ export function AgentShareWalletView({
             (item.amount_minor ?? 0) * (walletMinorFactor(item.currency ?? "USD") ?? 0),
           item.currency ?? "USD",
         ),
-        item.status,
+        walletRecordStatus(item.status, recordKind, language),
         item.started_at ?? item.created_at,
       ]
         .filter(Boolean)
@@ -312,7 +317,8 @@ export function AgentShareWalletView({
             {detail.request_id}
           </Text>
           <Text className="px-5 py-2" textRole="body">
-            {detail.model ?? detail.rate.model ?? ""} · {detail.status}
+            {detail.model ?? detail.rate.model ?? ""} ·{" "}
+            {walletRecordStatus(detail.status, "spending", language)}
           </Text>
           <Text className="px-5 py-2" textRole="body">
             {t("扣费", "Charge")}: {money(detail.charged_micros, detail.currency)}

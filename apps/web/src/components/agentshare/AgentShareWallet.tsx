@@ -8,7 +8,11 @@ import type {
   AgentShareWalletRecord,
   EnvironmentId,
 } from "@t3tools/contracts";
-import { formatWalletAmount, walletMinorFactor } from "@t3tools/client-runtime/agentShareWallet";
+import {
+  formatWalletAmount,
+  walletMinorFactor,
+  walletRecordStatus,
+} from "@t3tools/client-runtime/agentShareWallet";
 import { agentShareEnvironment } from "../../state/agentShare";
 import { useEnvironmentQuery } from "../../state/query";
 import { useAtomCommand } from "../../state/use-atom-command";
@@ -52,6 +56,7 @@ export function AgentShareWallet({
   ];
   const money = (micros: number, currency: string) =>
     formatWalletAmount(micros, currency, language);
+  const recordKind = selection.action === "history" ? selection.kind : "spending";
   const record = (item: AgentShareWalletRecord, index: number) => (
     <SettingsRow
       key={item.request_id ?? item.id ?? index}
@@ -63,7 +68,11 @@ export function AgentShareWallet({
         item.id ??
         t("记录", "Record")
       }
-      description={[item.status, item.started_at ?? item.created_at, item.request_id]
+      description={[
+        walletRecordStatus(item.status, recordKind, language),
+        item.started_at ?? item.created_at,
+        item.request_id,
+      ]
         .filter(Boolean)
         .join(" · ")}
       control={
@@ -302,7 +311,10 @@ export function AgentShareWallet({
             title={t("模型", "Model")}
             description={details.model ?? details.rate.model ?? ""}
           />
-          <SettingsRow title={t("状态", "Status")} description={details.status} />
+          <SettingsRow
+            title={t("状态", "Status")}
+            description={walletRecordStatus(details.status, "spending", language)}
+          />
           <SettingsRow
             title={t("扣费", "Charge")}
             control={<span>{money(details.charged_micros, details.currency)}</span>}
