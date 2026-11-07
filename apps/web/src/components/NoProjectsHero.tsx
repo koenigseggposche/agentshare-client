@@ -1,17 +1,38 @@
 import { workspaceAreaProps } from "../lib/workspaceFocus";
 import { MessageSquareDashedIcon, PlusIcon } from "lucide-react";
+import { workbenchLabels } from "@t3tools/shared/workbenchLabels";
 
 import { openCommandPalette } from "../commandPaletteBus";
 import { isElectron } from "../env";
 import { useScratchProject } from "../hooks/useScratchProject";
+import { useClientSettings } from "../hooks/useSettings";
 import { usePrimaryEnvironmentId } from "../state/environments";
 import { Button } from "./ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "./ui/empty";
 import { SidebarInset } from "./ui/sidebar";
 import { WorkspacePageHeader } from "./WorkspacePageHeader";
 
+const homeLabels = {
+  en: {
+    home: "Home",
+    heading: "What should we work on?",
+    addFirstProject: "Add a project to start your first thread.",
+    chooseHowToStart: "Add a project, or start without one.",
+    startWithoutProject: "Start without a project",
+  },
+  zh: {
+    home: "首页",
+    heading: "今天想做什么？",
+    addFirstProject: "添加项目，开始第一次会话。",
+    chooseHowToStart: "添加项目，也可以直接开始会话。",
+    startWithoutProject: "直接开始会话",
+  },
+} as const;
+
 export function NoProjectsHero() {
-  const contentArea = workspaceAreaProps("home", 1, "Home");
+  const language = useClientSettings((settings) => settings.uiLanguage);
+  const labels = homeLabels[language];
+  const contentArea = workspaceAreaProps("home", 1, labels.home);
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const { scratchEnvironmentId, startScratchThread } = useScratchProject();
   const scratchTargetEnvironmentId = scratchEnvironmentId(primaryEnvironmentId);
@@ -28,16 +49,16 @@ export function NoProjectsHero() {
         <Empty size="hero" className="flex-1">
           <div className="w-full max-w-lg px-8 py-12">
             <EmptyHeader className="max-w-none">
-              <EmptyTitle>What should we work on?</EmptyTitle>
+              <EmptyTitle>{labels.heading}</EmptyTitle>
               <EmptyDescription>
                 {scratchTargetEnvironmentId === null
-                  ? "Add a project to start your first thread."
-                  : "Add a project, or start without one."}
+                  ? labels.addFirstProject
+                  : labels.chooseHowToStart}
               </EmptyDescription>
               <div className="mt-6 flex justify-center gap-2">
                 <Button size="sm" onClick={() => openCommandPalette({ open: "add-project" })}>
                   <PlusIcon className="size-4" />
-                  Add project
+                  {workbenchLabels[language].addProject}
                 </Button>
                 {scratchTargetEnvironmentId === null ? null : (
                   <Button
@@ -46,7 +67,7 @@ export function NoProjectsHero() {
                     onClick={() => void startScratchThread(scratchTargetEnvironmentId)}
                   >
                     <MessageSquareDashedIcon className="size-4" />
-                    Start without a project
+                    {labels.startWithoutProject}
                   </Button>
                 )}
               </div>
