@@ -1,5 +1,6 @@
 import * as CoreClient from "@agentshare/core-client/CoreClient";
 import { AgentShareCoreError, type AgentShareModel } from "@t3tools/contracts";
+import { agentShareTaskId } from "@t3tools/shared/agentShareTaskId";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -31,13 +32,17 @@ export const layer = Layer.effect(
     const core = yield* CoreClient.CoreClient;
     return NativeSessions.of({
       acquire: Effect.fn("NativeSessions.acquire")(function* (input) {
-        const launch = yield* Effect.acquireRelease(core.acquireNative(input), (lease) =>
+        const request =
+          input.workbench_task_id === undefined
+            ? input
+            : { ...input, workbench_task_id: agentShareTaskId(input.workbench_task_id) };
+        const launch = yield* Effect.acquireRelease(core.acquireNative(request), (lease) =>
           core.releaseModel(lease.id).pipe(Effect.ignore),
         );
         if (
           launch.owner !== input.owner ||
           launch.service !== input.model.runtime ||
-          launch.workbench_task_id !== input.workbench_task_id
+          launch.workbench_task_id !== request.workbench_task_id
         )
           return yield* new AgentShareCoreError({ operation: "acquireNative", category: "denied" });
         const keepAlive = Effect.forever(

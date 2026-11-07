@@ -1,3 +1,4 @@
+import { agentShareTaskId } from "@t3tools/shared/agentShareTaskId";
 import { AgentShareWallet } from "../agentshare/AgentShareWallet";
 import { agentShareEnvironment } from "../../state/agentShare";
 import { useEnvironmentQuery } from "../../state/query";
@@ -198,7 +199,7 @@ function AssistantTaskCharges({
               environmentId={environmentId}
               owner={host.owner}
               language={language}
-              taskId={support.run.id}
+              taskId={agentShareTaskId(support.run.id)}
             />
           ) : (
             <p role="status">

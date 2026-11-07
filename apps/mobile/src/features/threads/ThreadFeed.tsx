@@ -1,3 +1,4 @@
+import { agentShareTaskId } from "@t3tools/shared/agentShareTaskId";
 import { AgentShareWalletSection } from "../settings/AgentShareWalletSection";
 import { agentShareEnvironment } from "../../state/agentShare";
 import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
@@ -469,7 +470,7 @@ function AssistantTaskCharges(props: {
                 environmentId={environmentId}
                 owner={host.owner}
                 language={language}
-                taskId={support.run.id}
+                taskId={agentShareTaskId(support.run.id)}
               />
             ) : (
               <Text className="px-5 py-2">

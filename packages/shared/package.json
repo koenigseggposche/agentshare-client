@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./agentShareTaskId": {
+      "types": "./src/agentShareTaskId.ts",
+      "import": "./src/agentShareTaskId.ts"
+    },
     "./workbenchLabels": {
       "types": "./src/workbenchLabels.ts",
       "import": "./src/workbenchLabels.ts"

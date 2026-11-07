@@ -1,5 +1,6 @@
 import * as CoreClient from "@agentshare/core-client/CoreClient";
 import { AgentShareCoreError } from "@t3tools/contracts";
+import { agentShareTaskId } from "@t3tools/shared/agentShareTaskId";
 import { assert, describe, it } from "@effect/vitest";
 import * as TestClock from "effect/testing/TestClock";
 import * as Effect from "effect/Effect";
@@ -61,6 +62,8 @@ describe("native model sessions", () => {
     () =>
       Effect.gen(function* () {
         let renewals = 0;
+        const runId = "run:thread:mcp%3Agenerated:ordinal:1";
+        const billingId = agentShareTaskId(runId);
         const releases: string[] = [];
         yield* Effect.scoped(
           Effect.gen(function* () {
@@ -69,6 +72,7 @@ describe("native model sessions", () => {
               owner: "generated-owner",
               model: { id: "generated", service: "codex", source: "community", runtime: "codex" },
               directory: "/generated/work",
+              workbench_task_id: runId,
             });
             assert.equal(
               lease.launch.environment.AGENTSHARE_APPLICATION_KEY,
@@ -85,7 +89,10 @@ describe("native model sessions", () => {
               NativeSessions.layer.pipe(
                 Layer.provide(
                   Layer.mock(CoreClient.CoreClient)({
-                    acquireNative: () => Effect.succeed(launch),
+                    acquireNative: (request) => {
+                      assert.equal(request.workbench_task_id, billingId);
+                      return Effect.succeed({ ...launch, workbench_task_id: billingId });
+                    },
                     renewModel: () =>
                       Effect.sync(() => {
                         renewals++;
