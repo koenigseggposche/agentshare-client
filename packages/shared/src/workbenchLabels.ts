@@ -68,3 +68,38 @@ export const modelSourceLabels = {
   en: { all: "All sources", community: "Community", owned: "My devices", local: "This host" },
   zh: { all: "全部来源", community: "社区", owned: "我的设备", local: "本机" },
 } as const;
+
+export const runtimePermissionLabels = {
+  en: {
+    heading: "Permissions",
+    "approval-required": {
+      label: "Supervised",
+      description: "Ask before commands and file changes.",
+    },
+    "auto-accept-edits": {
+      label: "Auto-accept edits",
+      description: "Auto-approve edits, ask before other actions.",
+    },
+    auto: {
+      label: "Auto",
+      description: "Supported providers approve routine actions; others still ask.",
+    },
+    "full-access": {
+      label: "Full access",
+      description: "Allow commands and edits without prompts.",
+    },
+  },
+  zh: {
+    heading: "权限",
+    "approval-required": { label: "修改前询问", description: "运行命令或修改文件前先询问。" },
+    "auto-accept-edits": {
+      label: "自动批准编辑",
+      description: "自动批准文件编辑，其他操作先询问。",
+    },
+    auto: {
+      label: "自动",
+      description: "支持自动模式的提供方会批准常规操作，其他提供方仍会询问。",
+    },
+    "full-access": { label: "完全访问", description: "运行命令和编辑文件时无需逐项确认。" },
+  },
+} as const;

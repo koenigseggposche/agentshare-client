@@ -4,6 +4,7 @@ import { expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
 import { render } from "../../../test/render";
+import { __setClientSettingsForTests, getClientSettings } from "../../hooks/useSettings";
 import { ComposerHandleContext, type ComposerHandleRef } from "../../composerHandleContext";
 import { ComposerContextPermissions } from "../ComposerContextPermissions";
 import { Menu, MenuPopup, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "../ui/menu";
@@ -16,6 +17,14 @@ import { ComposerFooterModeControls, ComposerPermissionsSection } from "./Compos
 import { runtimeModeConfig, runtimeModeOptions } from "./runtimeModeConfig";
 
 const options = runtimeModeOptions.map((mode) => ({ mode, ...runtimeModeConfig[mode] }));
+
+function setTestLanguage(language: "en" | "zh") {
+  const stack = new DisposableStack();
+  const previousSettings = getClientSettings();
+  stack.defer(() => __setClientSettingsForTests(previousSettings));
+  __setClientSettingsForTests({ ...previousSettings, uiLanguage: language });
+  return stack;
+}
 
 // Mirrors the overflow menu: mode radio items first, then the Permissions section.
 function OverflowMenu() {
@@ -45,6 +54,7 @@ function OverflowMenu() {
 }
 
 it("reaches Permissions from the mode items with arrow keys, previews, and picks with Enter", async () => {
+  using _language = setTestLanguage("en");
   await using screen = await render(<OverflowMenu />, { router: false }); // no routes involved
   const trigger = screen.getByRole("button", { name: "More" });
   await userEvent.tab();
@@ -78,6 +88,7 @@ it("reaches Permissions from the mode items with arrow keys, previews, and picks
 });
 
 it("marks the current mode as checked and closes on Escape", async () => {
+  using _language = setTestLanguage("en");
   await using screen = await render(<OverflowMenu />, { router: false }); // no routes involved
   await userEvent.tab();
   await userEvent.keyboard("{ArrowDown}");
@@ -96,6 +107,7 @@ function withComposer(children: ReactNode) {
 }
 
 it("returns focus to the editor after a pick", async () => {
+  using _language = setTestLanguage("en");
   const { handle, ui } = withComposer(<OverflowMenu />);
   await using screen = await render(ui, { router: false }); // no routes involved
   await userEvent.tab();
@@ -107,6 +119,7 @@ it("returns focus to the editor after a pick", async () => {
 });
 
 it("opens on the checked permission when composer.mode marked the trigger", async () => {
+  using _language = setTestLanguage("en");
   await using screen = await render(<OverflowMenu />, { router: false }); // no routes involved
   const trigger = screen.getByRole("button", { name: "More" });
   markOpenToPermissions(trigger.element() as HTMLElement);
@@ -143,6 +156,7 @@ function PermissionsChip() {
 }
 
 it("returns focus to the editor when picking the default hides the chip", async () => {
+  using _language = setTestLanguage("en");
   const { handle, ui } = withComposer(<PermissionsChip />);
   await using screen = await render(ui, { router: false }); // no routes involved
   await userEvent.click(screen.getByRole("button", { name: "Permissions: Supervised" }));
@@ -163,25 +177,38 @@ function ContextPermissions() {
   );
 }
 
-it("opens permissions directly from the context strip and applies a supported mode", async () => {
-  await using screen = await render(<ContextPermissions />, { router: false }); // no routes involved
-  await userEvent.click(screen.getByRole("button", { name: "Permissions: Full access" }));
-  await expect
-    .element(page.getByRole("menuitemradio", { name: "Full access" }))
-    .toHaveAttribute("aria-checked", "true");
-  await expect
-    .element(page.getByRole("menuitemradio", { name: "Auto", exact: true }))
-    .not.toBeInTheDocument();
-  await userEvent.click(page.getByRole("menuitemradio", { name: "Supervised" }));
-  const trigger = screen.getByRole("button", { name: "Permissions: Supervised" });
-  await expect.element(trigger).toBeVisible();
-  await expect
-    .element(page.getByRole("menuitemradio", { name: "Supervised" }))
-    .not.toBeInTheDocument();
-  await userEvent.click(trigger);
-  await expect
-    .element(page.getByRole("menuitemradio", { name: "Supervised" }))
-    .toHaveAttribute("aria-checked", "true");
-  await userEvent.keyboard("{Escape}");
-  await expect.element(trigger).toHaveFocus();
-});
+it.each([
+  {
+    language: "en",
+    heading: "Permissions",
+    full: "Full access",
+    supervised: "Supervised",
+    auto: "Auto",
+  },
+  { language: "zh", heading: "权限", full: "完全访问", supervised: "修改前询问", auto: "自动" },
+] as const)(
+  "changes a supported permission from the $language context menu",
+  async ({ language, heading, full, supervised, auto }) => {
+    using _settings = setTestLanguage(language);
+    await using screen = await render(<ContextPermissions />, { router: false }); // no routes involved
+    await userEvent.click(screen.getByRole("button", { name: `${heading}: ${full}` }));
+    await expect
+      .element(page.getByRole("menuitemradio", { name: full }))
+      .toHaveAttribute("aria-checked", "true");
+    await expect
+      .element(page.getByRole("menuitemradio", { name: auto, exact: true }))
+      .not.toBeInTheDocument();
+    await userEvent.click(page.getByRole("menuitemradio", { name: supervised }));
+    const trigger = screen.getByRole("button", { name: `${heading}: ${supervised}` });
+    await expect.element(trigger).toBeVisible();
+    await expect
+      .element(page.getByRole("menuitemradio", { name: supervised }))
+      .not.toBeInTheDocument();
+    await userEvent.click(trigger);
+    await expect
+      .element(page.getByRole("menuitemradio", { name: supervised }))
+      .toHaveAttribute("aria-checked", "true");
+    await userEvent.keyboard("{Escape}");
+    await expect.element(trigger).toHaveFocus();
+  },
+);

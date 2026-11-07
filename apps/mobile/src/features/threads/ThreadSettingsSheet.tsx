@@ -1,3 +1,5 @@
+import { runtimePermissionLabels } from "@t3tools/shared/workbenchLabels";
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import {
   getPromptControlledTraits,
   getTraitSelectChange,
@@ -833,6 +835,7 @@ function ThreadSettingsOptionsItem(props: {
 }) {
   const insets = useSafeAreaInsets();
   const session = useThreadSettingsSession();
+  const permissionLabels = runtimePermissionLabels[useWorkbenchLanguage()];
   const configs = useAtomValue(environmentServerConfigsAtom);
   const selectedProvider = session.environmentId
     ? (configs
@@ -896,11 +899,8 @@ function ThreadSettingsOptionsItem(props: {
         <Animated.View layout={THREAD_SETTINGS_OPTIONS_LAYOUT_TRANSITION}>
           <DisclosureRow
             isLast
-            label="Runtime"
-            value={
-              session.runtimeModeChoices.find((choice) => choice.mode === session.runtimeMode)
-                ?.label
-            }
+            label={permissionLabels.heading}
+            value={permissionLabels[session.runtimeMode].label}
             onPress={() => props.onOpenSubmenu({ kind: "runtime" })}
           />
         </Animated.View>
@@ -1088,6 +1088,7 @@ function ThreadSettingsChoiceContent(props: {
 }) {
   const insets = useSafeAreaInsets();
   const session = useThreadSettingsSession();
+  const permissionLabels = runtimePermissionLabels[useWorkbenchLanguage()];
   const descriptorId = props.submenu.kind === "descriptor" ? props.submenu.id : null;
 
   const activeDescriptor =
@@ -1102,8 +1103,8 @@ function ThreadSettingsChoiceContent(props: {
       ? {
           rows: session.runtimeModeChoices.map((choice) => ({
             id: choice.mode,
-            label: choice.label,
-            description: choice.disabledReason ?? choice.description,
+            label: permissionLabels[choice.mode].label,
+            description: choice.disabledReason ?? permissionLabels[choice.mode].description,
             disabled: choice.disabledReason !== undefined,
             selected: choice.mode === session.runtimeMode,
             onPress: () => {
@@ -1217,6 +1218,7 @@ function useThreadSettingsMailSearchToolbar() {
 
 function ThreadSettingsModelsScreen() {
   const session = useThreadSettingsSession();
+  const permissionLabels = runtimePermissionLabels[useWorkbenchLanguage()];
   const presentation = useThreadSettingsPickerPresentation();
   const navigation = useNavigation<NativeStackNavigationProp<ThreadSettingsPickerStackParams>>();
   const usesNativeMailSearchToolbar = useThreadSettingsMailSearchToolbar();
@@ -1355,7 +1357,7 @@ function ThreadSettingsModelsScreen() {
           onOpenSubmenu={(submenu) => {
             const title =
               submenu.kind === "runtime"
-                ? "Runtime"
+                ? permissionLabels.heading
                 : (session.displayedDescriptors.find(
                     (descriptor) => descriptor.type === "select" && descriptor.id === submenu.id,
                   )?.label ?? "Option");
