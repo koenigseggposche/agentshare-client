@@ -10,6 +10,8 @@ The inherited release workflow remains restricted to the upstream repository. Co
 
 The release repository is `koenigseggposche/agentshare-client`. CLI downloads and the npm launcher use its versioned release archives and `SHA256SUMS`. Desktop updater configuration requires an explicit repository; preview builds carry no update feed. Keep preview artifacts separate from stable and nightly updates. The example environment leaves cloud identity, relay and diagnostics destinations unset; configure only your own deployment’s public identifiers before building. Cloud CLI login requires an explicit `T3CODE_HOSTED_APP_URL`; the build shares that destination with the web client. Without a hosted web service, copied thread and prompt links use the AgentShare Client app scheme, and pairing links use the execution host.
 
+With provider update checks enabled, the workbench refreshes its native-tool model and compatibility manifest from the AgentShare Client release repository. Each build includes a bundled copy for offline use. Community and device catalogs come from Core.
+
 ## Build and verify
 
 1. Use the Node and package-manager versions pinned by the root package. Run `vp run check:changed`.
@@ -39,5 +41,3 @@ Use distinct development and production app identifiers and account-service URLs
 Use a developer team with the required signing and distribution capabilities for store builds. The Personal Team variant is for device testing and omits remote push, Apple sign-in, universal links, widgets and the share extension. Keep simulator signing enabled when testing upgrades so existing secure-storage entries remain available.
 
 Before distribution, verify host pairing, reconnects, permissions, independent personal-wallet access and supported older host/client versions. Complete the platform-specific review and payment setup for each distribution channel.
-
-With provider update checks enabled, the workbench refreshes its native-tool model and compatibility manifest from the AgentShare Client release repository. Each build includes a bundled copy for offline use. Community and device catalogs come from Core.
