@@ -15,6 +15,11 @@ on:
         description: "Client preview version; empty generates one from the run number"
         required: false
         type: string
+      macos_distribution:
+        description: "Build only Developer ID-signed and notarized macOS previews"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -32,6 +37,7 @@ jobs:
       version: ${{ steps.plan.outputs.version }}
       core_ref: ${{ steps.plan.outputs.core_ref }}
       core_version: ${{ steps.plan.outputs.core_version }}
+      matrix: ${{ steps.plan.outputs.matrix }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -46,6 +52,8 @@ jobs:
           CORE_REF: ${{ inputs.core_ref }}
           CORE_VERSION: ${{ inputs.core_version }}
           CLIENT_VERSION: ${{ inputs.version }}
+          MACOS_DISTRIBUTION: ${{ inputs.macos_distribution }}
+          MACOS_SIGNING_CONFIGURED: ${{ secrets.CSC_LINK != '' && secrets.CSC_KEY_PASSWORD != '' && secrets.APPLE_API_KEY != '' && secrets.APPLE_API_KEY_ID != '' && secrets.APPLE_API_ISSUER != '' }}
           CORE_READ_KEY_CONFIGURED: ${{ secrets.AGENTSHARE_CORE_READ_KEY != '' }}
         run: |
           python3 - <<'PY'
@@ -60,8 +68,21 @@ jobs:
           preview = r'(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)-preview\.[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*'
           if not all(re.fullmatch(preview, v) for v in [version, os.environ['CORE_VERSION']]):
               raise SystemExit('Both versions must use the preview channel.')
+          signed = os.environ['MACOS_DISTRIBUTION'] == 'true'
+          if signed and os.environ['MACOS_SIGNING_CONFIGURED'] != 'true':
+              raise SystemExit('Signed macOS builds require CSC_LINK, CSC_KEY_PASSWORD, APPLE_API_KEY, APPLE_API_KEY_ID, and APPLE_API_ISSUER.')
+          targets = [
+              ('macos-15', 'mac', 'arm64', 'dmg', 'darwin-arm64'),
+              ('macos-15-intel', 'mac', 'x64', 'dmg', 'darwin-x64'),
+              ('windows-2025', 'win', 'x64', 'nsis', 'win32-x64'),
+              ('windows-11-arm', 'win', 'arm64', 'nsis', 'win32-arm64'),
+              ('ubuntu-24.04', 'linux', 'x64', 'AppImage', 'linux-x64'),
+              ('ubuntu-24.04-arm', 'linux', 'arm64', 'AppImage', 'linux-arm64'),
+          ]
+          fields = ('runner', 'platform', 'arch', 'target', 'core_target')
+          matrix = {'include': [dict(zip(fields, row)) for row in targets if not signed or row[1] == 'mac']}
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
-              for key, value in [('version', version), ('core_ref', os.environ['CORE_REF']), ('core_version', os.environ['CORE_VERSION'])]:
+              for key, value in [('version', version), ('core_ref', os.environ['CORE_REF']), ('core_version', os.environ['CORE_VERSION']), ('matrix', json.dumps(matrix, separators=(',', ':')))]:
                   output.write(f'{key}={value}\n')
           PY
 
@@ -70,38 +91,7 @@ jobs:
     name: Preview ${{ matrix.core_target }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - runner: macos-15
-            platform: mac
-            arch: arm64
-            target: dmg
-            core_target: darwin-arm64
-          - runner: macos-15-intel
-            platform: mac
-            arch: x64
-            target: dmg
-            core_target: darwin-x64
-          - runner: windows-2025
-            platform: win
-            arch: x64
-            target: nsis
-            core_target: win32-x64
-          - runner: windows-11-arm
-            platform: win
-            arch: arm64
-            target: nsis
-            core_target: win32-arm64
-          - runner: ubuntu-24.04
-            platform: linux
-            arch: x64
-            target: AppImage
-            core_target: linux-x64
-          - runner: ubuntu-24.04-arm
-            platform: linux
-            arch: arm64
-            target: AppImage
-            core_target: linux-arm64
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     defaults:
@@ -115,6 +105,7 @@ jobs:
       DESKTOP_PLATFORM: ${{ matrix.platform }}
       DESKTOP_ARCH: ${{ matrix.arch }}
       DESKTOP_TARGET: ${{ matrix.target }}
+      MACOS_DISTRIBUTION: ${{ inputs.macos_distribution }}
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       CARGO_BUILD_JOBS: "2"
     steps:
@@ -185,10 +176,59 @@ jobs:
           go-version: "1.27.3"
           cache: false
       - name: Build verified Core artifact
+        if: ${{ !inputs.macos_distribution }}
         run: |
           python3 "$RUNNER_TEMP/core-source/scripts/build_core_artifact.py" \
             --target "$CORE_TARGET" --version "$CORE_VERSION" \
             --expected-revision "$CORE_REF" --output "$RUNNER_TEMP/core-artifact"
+      - name: Build Developer ID-signed Core artifact
+        if: inputs.macos_distribution
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import base64, os, pathlib, secrets, shlex, subprocess, tempfile
+
+          def security(*args):
+              result = subprocess.run(['security', *args], capture_output=True, text=True)
+              if result.returncode:
+                  raise SystemExit(f'macOS keychain operation failed: {args[0]}')
+              return result.stdout
+
+          env = dict(os.environ)
+          certificate = base64.b64decode(''.join(env.pop('CSC_LINK').split()), validate=True)
+          certificate_password = env.pop('CSC_KEY_PASSWORD')
+          runner_temp = pathlib.Path(env['RUNNER_TEMP'])
+          search_list = shlex.split(security('list-keychains', '-d', 'user'))
+          with tempfile.TemporaryDirectory(dir=runner_temp) as temporary:
+              directory = pathlib.Path(temporary)
+              keychain = str(directory / 'signing.keychain-db')
+              password = secrets.token_hex(24)
+              certificate_file = directory / 'certificate.p12'
+              certificate_file.write_bytes(certificate)
+              security('create-keychain', '-p', password, keychain)
+              try:
+                  security('unlock-keychain', '-p', password, keychain)
+                  security('import', str(certificate_file), '-k', keychain, '-P', certificate_password, '-T', '/usr/bin/codesign')
+                  certificate_file.unlink()
+                  security('set-key-partition-list', '-S', 'apple-tool:,apple:', '-s', '-k', password, keychain)
+                  security('list-keychains', '-d', 'user', '-s', keychain, *search_list)
+                  identities = [line.split()[1] for line in security('find-identity', '-v', '-p', 'codesigning', keychain).splitlines() if '"Developer ID Application:' in line]
+                  if len(identities) != 1:
+                      raise SystemExit('The signing certificate must contain one Developer ID Application identity.')
+                  subprocess.run([
+                      'python3', str(runner_temp / 'core-source/scripts/build_core_artifact.py'),
+                      '--target', env['CORE_TARGET'], '--version', env['CORE_VERSION'],
+                      '--expected-revision', env['CORE_REF'], '--output', str(runner_temp / 'core-artifact'),
+                      '--macos-signing-identity', identities[0],
+                  ], env=env, check=True)
+              finally:
+                  try:
+                      security('list-keychains', '-d', 'user', '-s', *search_list)
+                  finally:
+                      security('delete-keychain', keychain)
+          PY
       - name: Setup client dependencies
         uses: ./.github/actions/setup-ci-deps
       - name: Select Rust toolchain
@@ -206,11 +246,31 @@ jobs:
           if (process.arch !== process.env.DESKTOP_ARCH) throw new Error('Runner architecture differs from the artifact target.');
           JS
       - name: Build desktop preview
+        if: ${{ !inputs.macos_distribution }}
         run: |
           node scripts/build-desktop-artifact.ts \
             --platform "$DESKTOP_PLATFORM" --arch "$DESKTOP_ARCH" --target "$DESKTOP_TARGET" \
             --build-version "$CLIENT_VERSION" --output-dir "$RUNNER_TEMP/client-artifacts" \
             --core-manifest "$RUNNER_TEMP/core-artifact/manifest.json"
+      - name: Build signed and notarized desktop preview
+        if: inputs.macos_distribution
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_PEM: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          umask 077
+          key_dir="$(mktemp -d "$RUNNER_TEMP/notarization.XXXXXXXX")"
+          trap 'rm -rf -- "$key_dir"' EXIT
+          export APPLE_API_KEY="$key_dir/key.p8"
+          printf '%s\n' "$APPLE_API_KEY_PEM" > "$APPLE_API_KEY"
+          unset APPLE_API_KEY_PEM
+          node scripts/build-desktop-artifact.ts \
+            --platform "$DESKTOP_PLATFORM" --arch "$DESKTOP_ARCH" --target "$DESKTOP_TARGET" \
+            --build-version "$CLIENT_VERSION" --output-dir "$RUNNER_TEMP/client-artifacts" \
+            --core-manifest "$RUNNER_TEMP/core-artifact/manifest.json" --signed
       - name: Record artifact hashes and source commits
         run: |
           python3 - <<'PY'
@@ -233,12 +293,12 @@ jobs:
           (root / 'build.json').write_text(json.dumps(dict(
               client_version=os.environ['CLIENT_VERSION'], client_revision=os.environ['GITHUB_SHA'],
               core_version=os.environ['CORE_VERSION'], core_revision=os.environ['CORE_REF'],
-              target=os.environ['CORE_TARGET'], distribution_signing=False, files=files), indent=2) + '\n')
+              target=os.environ['CORE_TARGET'], distribution_signing=os.environ['MACOS_DISTRIBUTION'] == 'true', files=files), indent=2) + '\n')
           PY
       - name: Upload preview artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: agentshare-preview-${{ matrix.core_target }}
+          name: ${{ inputs.macos_distribution && 'agentshare-signed-preview' || 'agentshare-preview' }}-${{ matrix.core_target }}
           path: |
             ${{ runner.temp }}/client-artifacts/*.dmg
             ${{ runner.temp }}/client-artifacts/*.zip
