@@ -65,14 +65,26 @@ describe("desktop update button state", () => {
 });
 
 describe("desktop update UI helpers", () => {
+  it("uses the AgentShare Client release history without a repository override", () => {
+    expect(getDesktopUpdateReleaseHistoryUrl("")).toBe(
+      "https://github.com/koenigseggposche/agentshare-client/releases",
+    );
+  });
+
+  it("uses a valid explicitly configured repository", () => {
+    expect(getDesktopUpdateReleaseUrl("1.2.3", "example/mirror")).toBe(
+      "https://github.com/example/mirror/releases/tag/v1.2.3",
+    );
+  });
+
   it.each(["owner/repo/extra", "owner#notes/repo", "owner/repo?tab=notes"])(
-    "falls back to upstream for an invalid configured repository: %s",
+    "falls back to the AgentShare Client repository for an invalid configured repository: %s",
     (repository) => {
       expect(getDesktopUpdateReleaseHistoryUrl(repository)).toBe(
-        "https://github.com/pingdotgg/t3code/releases",
+        "https://github.com/koenigseggposche/agentshare-client/releases",
       );
       expect(getDesktopUpdateReleaseUrl("1.2.3", repository)).toBe(
-        "https://github.com/pingdotgg/t3code/releases/tag/v1.2.3",
+        "https://github.com/koenigseggposche/agentshare-client/releases/tag/v1.2.3",
       );
     },
   );
