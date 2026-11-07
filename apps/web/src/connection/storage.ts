@@ -12,6 +12,7 @@ import {
   removeCatalogValue,
   removeConnectionFromCatalog,
   setConnectionEnabledInCatalog,
+  setEnvironmentCacheHidden,
   setRoutesInCatalog,
   replaceCatalogValue,
   Persistence,
@@ -84,25 +85,7 @@ function catalogError(operation: string, cause: unknown) {
 }
 
 function persistenceError(
-  operation:
-    | "list-targets"
-    | "list-disabled-targets"
-    | "register-connection"
-    | "set-connection-routes"
-    | "remove-connection"
-    | "set-connection-enabled"
-    | "load-shell"
-    | "save-shell"
-    | "load-thread"
-    | "save-thread"
-    | "remove-thread"
-    | "load-server-config"
-    | "save-server-config"
-    | "load-vcs-refs"
-    | "save-vcs-refs"
-    | "remove-vcs-refs"
-    | "clear-vcs-refs"
-    | "clear-environment",
+  operation: Persistence.ConnectionPersistenceError["operation"],
   cause: unknown,
 ) {
   return new Persistence.ConnectionPersistenceError({
@@ -963,6 +946,19 @@ export const layer = Layer.effectContext(
 
     return Context.make(Persistence.ConnectionTargetStore, targetStore).pipe(
       Context.add(PullRequestRoutingPermissions, pullRequestRoutingPermissions),
+      Context.add(Persistence.EnvironmentCacheAccess, {
+        isHidden: (environmentId) =>
+          catalog.read.pipe(
+            Effect.map(
+              (document) => document.hiddenCacheEnvironmentIds?.includes(environmentId) ?? false,
+            ),
+            Effect.mapError((error) => persistenceError("load-cache-access", error)),
+          ),
+        setHidden: (environmentId, hidden) =>
+          catalog
+            .update((document) => setEnvironmentCacheHidden(document, environmentId, hidden))
+            .pipe(Effect.mapError((error) => persistenceError("save-cache-access", error))),
+      }),
       Context.add(Persistence.ConnectionRegistrationStore, registrationStore),
       Context.add(ProfileStore.ConnectionProfileStore, profileStore),
       Context.add(CredentialStore.ConnectionCredentialStore, credentialStore),

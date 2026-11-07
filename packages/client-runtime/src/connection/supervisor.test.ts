@@ -529,6 +529,23 @@ describe("EnvironmentSupervisor", () => {
       }),
   );
 
+  it.effect("restores hidden cache state before connecting on a reopened client", () =>
+    Effect.gen(function* () {
+      const harness = yield* makeHarness();
+      const visible = yield* Deferred.make<boolean>();
+      const supervisor = yield* EnvironmentSupervisor.make(TARGET_ENTRY, {
+        initiallyHideCachedData: true,
+        persistCacheVisibility: (hidden) => Deferred.succeed(visible, hidden).pipe(Effect.asVoid),
+      }).pipe(Effect.provide(harness.dependencies));
+      const initial = yield* SubscriptionRef.get(supervisor.state);
+      expect(initial.cachedDataHidden).toBe(true);
+      expect(initial.phase).toBe("available");
+      yield* supervisor.connect;
+      expect(yield* Deferred.await(visible)).toBe(false);
+      expect((yield* SubscriptionRef.get(supervisor.state)).cachedDataHidden).toBeUndefined();
+    }),
+  );
+
   it.effect("retries a blocked connection when platform credentials change", () =>
     Effect.gen(function* () {
       const harness = yield* makeHarness({

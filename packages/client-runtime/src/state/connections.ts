@@ -7,7 +7,6 @@ import { AsyncResult, Atom } from "effect/reactivity";
 
 import * as EnvironmentRegistry from "../connection/registry.ts";
 import type { ConnectionCatalogEntry } from "../connection/catalog.ts";
-import { AVAILABLE_CONNECTION_STATE } from "../connection/model.ts";
 import * as EnvironmentSupervisor from "../connection/supervisor.ts";
 import {
   PullRequestRoutingPermissions,
@@ -133,14 +132,13 @@ export function createEnvironmentCatalogAtoms<R, E>(
           ),
         ),
       ),
-      { initialValue: AVAILABLE_CONNECTION_STATE },
     ),
   );
 
   const cachedDataHiddenAtom = Atom.family((environmentId: EnvironmentIdType) =>
     Atom.make((get) =>
       AsyncResult.value(get(stateAtom(environmentId))).pipe(
-        Option.exists((state) => state.cachedDataHidden === true),
+        Option.match({ onNone: () => true, onSome: (state) => state.cachedDataHidden === true }),
       ),
     ),
   );

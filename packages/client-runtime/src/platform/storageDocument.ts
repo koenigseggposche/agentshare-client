@@ -23,6 +23,7 @@ export const ConnectionCatalogDocument = Schema.Struct({
   profiles: Schema.Array(ConnectionProfile),
   credentials: Schema.Array(StoredConnectionCredential),
   remoteDpopTokens: Schema.Array(TokenStore.RemoteDpopAccessToken),
+  hiddenCacheEnvironmentIds: Schema.optionalKey(Schema.Array(EnvironmentId)),
   // Pull request routing grants. The field name predates the rename and stays, so older and
   // newer clients sharing this document keep reading and revoking the same grants.
   githubRoutingPermissions: Schema.optionalKey(Schema.Array(StoredPullRequestRoutingPermission)),
@@ -168,6 +169,13 @@ export function removeConnectionFromCatalog(
       (value) => value,
       environmentId,
     ),
+    ...(next.hiddenCacheEnvironmentIds === undefined
+      ? {}
+      : {
+          hiddenCacheEnvironmentIds: next.hiddenCacheEnvironmentIds.filter(
+            (id) => id !== environmentId,
+          ),
+        }),
     ...(next.githubRoutingPermissions === undefined
       ? {}
       : {
@@ -175,6 +183,21 @@ export function removeConnectionFromCatalog(
             (permission) => permission.environmentId !== environmentId,
           ),
         }),
+  };
+}
+
+export function setEnvironmentCacheHidden(
+  document: ConnectionCatalogDocument,
+  environmentId: EnvironmentId,
+  hidden: boolean,
+): ConnectionCatalogDocument {
+  const current = document.hiddenCacheEnvironmentIds ?? [];
+  if (current.includes(environmentId) === hidden) return document;
+  return {
+    ...document,
+    hiddenCacheEnvironmentIds: hidden
+      ? [...current, environmentId]
+      : current.filter((id) => id !== environmentId),
   };
 }
 

@@ -3,6 +3,7 @@ import {
   registerConnectionInCatalog,
   removeConnectionFromCatalog,
   setConnectionEnabledInCatalog,
+  setEnvironmentCacheHidden,
   setRoutesInCatalog,
   removeCatalogValue,
   replaceCatalogValue,
@@ -24,13 +25,7 @@ import * as Option from "effect/Option";
 import * as CatalogStore from "./catalog-store";
 
 function targetPersistenceError(
-  operation:
-    | "list-targets"
-    | "list-disabled-targets"
-    | "register-connection"
-    | "set-connection-routes"
-    | "remove-connection"
-    | "set-connection-enabled",
+  operation: Persistence.ConnectionPersistenceError["operation"],
   error: ConnectionTransientError,
 ) {
   return new Persistence.ConnectionPersistenceError({
@@ -151,6 +146,19 @@ export const layer = Layer.effectContext(
     });
     return Context.make(Persistence.ConnectionTargetStore, targetStore).pipe(
       Context.add(PullRequestRoutingPermissions, githubRoutingPermissions),
+      Context.add(Persistence.EnvironmentCacheAccess, {
+        isHidden: (environmentId) =>
+          catalog.read.pipe(
+            Effect.map(
+              (document) => document.hiddenCacheEnvironmentIds?.includes(environmentId) ?? false,
+            ),
+            Effect.mapError((error) => targetPersistenceError("load-cache-access", error)),
+          ),
+        setHidden: (environmentId, hidden) =>
+          catalog
+            .update((document) => setEnvironmentCacheHidden(document, environmentId, hidden))
+            .pipe(Effect.mapError((error) => targetPersistenceError("save-cache-access", error))),
+      }),
       Context.add(Persistence.ConnectionRegistrationStore, registrationStore),
       Context.add(ProfileStore.ConnectionProfileStore, profileStore),
       Context.add(CredentialStore.ConnectionCredentialStore, credentialStore),

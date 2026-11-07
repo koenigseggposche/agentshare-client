@@ -25,6 +25,8 @@ export class ConnectionPersistenceError extends Schema.TaggedError<ConnectionPer
       "set-connection-routes",
       "remove-connection",
       "set-connection-enabled",
+      "load-cache-access",
+      "save-cache-access",
       "load-shell",
       "save-shell",
       "load-thread",
@@ -76,6 +78,18 @@ export class ConnectionRegistrationStore extends Context.Service<
     ) => Effect.Effect<void, ConnectionPersistenceError>;
   }
 >()("@t3tools/client-runtime/platform/persistence/ConnectionRegistrationStore") {}
+
+export class EnvironmentCacheAccess extends Context.Reference<{
+  readonly isHidden: (
+    environmentId: EnvironmentId,
+  ) => Effect.Effect<boolean, ConnectionPersistenceError>;
+  readonly setHidden: (
+    environmentId: EnvironmentId,
+    hidden: boolean,
+  ) => Effect.Effect<void, ConnectionPersistenceError>;
+}>("@t3tools/client-runtime/platform/persistence/EnvironmentCacheAccess", {
+  defaultValue: () => ({ isHidden: () => Effect.succeed(false), setHidden: () => Effect.void }),
+}) {}
 
 export class EnvironmentCacheStore extends Context.Service<
   EnvironmentCacheStore,

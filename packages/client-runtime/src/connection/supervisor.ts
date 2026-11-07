@@ -137,6 +137,8 @@ function exitUnlessInterrupted<A, E, R>(
 
 export interface EnvironmentSupervisorOptions {
   readonly initiallyDesired?: boolean;
+  readonly initiallyHideCachedData?: boolean;
+  readonly persistCacheVisibility?: (hidden: boolean) => Effect.Effect<void>;
   readonly learnRoutes?: (input: {
     readonly activeRoute: ConnectionRoute;
     readonly reported: ReadonlyArray<ReportedEndpoint>;
@@ -301,12 +303,13 @@ export const make = Effect.fn("EnvironmentSupervisor.make")(function* (
   const signals = yield* Queue.unbounded<SupervisorSignal>();
   const resetRetryState = yield* Ref.make(false);
   const probeUnanswered = yield* Ref.make(false);
+  const initialState = !initialIntent.desired
+    ? availableState(initialIntent, 0)
+    : initialIntent.network === "offline"
+      ? offlineState(initialIntent, 0, 0, null)
+      : connectingState(initialIntent, 0, 1, null);
   const state = yield* SubscriptionRef.make<SupervisorConnectionState>(
-    !initialIntent.desired
-      ? availableState(initialIntent, 0)
-      : initialIntent.network === "offline"
-        ? offlineState(initialIntent, 0, 0, null)
-        : connectingState(initialIntent, 0, 1, null),
+    options?.initiallyHideCachedData ? { ...initialState, cachedDataHidden: true } : initialState,
   );
   const session = yield* SubscriptionRef.make<Option.Option<RpcSession.RpcSession>>(Option.none());
   const prepared = yield* SubscriptionRef.make<Option.Option<PreparedConnection>>(Option.none());
@@ -431,15 +434,17 @@ export const make = Effect.fn("EnvironmentSupervisor.make")(function* (
   const setState = Effect.fn("EnvironmentSupervisor.setState")(function* (
     next: SupervisorConnectionState,
   ) {
-    yield* SubscriptionRef.update(state, (current) => {
-      const cause = next.lastFailure?.failureCause;
-      const hidden =
-        next.phase !== "connected" &&
-        (current.cachedDataHidden ||
-          (next.phase === "blocked" &&
-            (cause === "credential_rejected" || cause === "environment_identity_changed")));
-      return hidden ? { ...next, cachedDataHidden: true } : next;
-    });
+    const wasHidden = (yield* SubscriptionRef.get(state)).cachedDataHidden === true;
+    const cause = next.lastFailure?.failureCause;
+    const hidden =
+      next.phase !== "connected" &&
+      (wasHidden ||
+        (next.phase === "blocked" &&
+          (cause === "credential_rejected" || cause === "environment_identity_changed")));
+    yield* SubscriptionRef.set(state, hidden ? { ...next, cachedDataHidden: true } : next);
+    if (hidden !== wasHidden && options?.persistCacheVisibility) {
+      yield* options.persistCacheVisibility(hidden);
+    }
   });
 
   const signal = Effect.fn("EnvironmentSupervisor.signal")(function* (next: SupervisorSignal) {

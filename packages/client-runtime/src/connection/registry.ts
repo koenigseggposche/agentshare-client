@@ -214,6 +214,7 @@ export const make = Effect.gen(function* () {
   const storage = yield* Persistence.ConnectionTargetStore;
   const registrations = yield* Persistence.ConnectionRegistrationStore;
   const cache = yield* Persistence.EnvironmentCacheStore;
+  const cacheAccess = yield* Persistence.EnvironmentCacheAccess;
   const ownedDataCleanup = yield* Persistence.EnvironmentOwnedDataCleanup;
   const profiles = yield* ConnectionProfileStore.ConnectionProfileStore;
   const credentials = yield* ConnectionCredentialStore.ConnectionCredentialStore;
@@ -334,6 +335,23 @@ export const make = Effect.gen(function* () {
             // Seed the intent to avoid publishing a false switched-off state
             // before an enabled, compatible environment starts connecting.
             initiallyDesired: entry.enabled && entry.unsupportedReason === undefined,
+            initiallyHideCachedData: yield* cacheAccess.isHidden(environmentId).pipe(
+              Effect.catch((error) =>
+                Effect.logWarning("Could not read cached workbench access.", {
+                  environmentId,
+                  error,
+                }).pipe(Effect.as(true)),
+              ),
+            ),
+            persistCacheVisibility: (hidden) =>
+              cacheAccess.setHidden(environmentId, hidden).pipe(
+                Effect.catch((error) =>
+                  Effect.logWarning("Could not save cached workbench access.", {
+                    environmentId,
+                    error,
+                  }),
+                ),
+              ),
             learnRoutes: (input) => learnRoutes({ environmentId, ...input }),
           }).pipe(
             Effect.provideService(Connectivity.Connectivity, connectivity),

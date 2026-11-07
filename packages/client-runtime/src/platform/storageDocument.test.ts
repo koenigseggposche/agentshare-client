@@ -33,12 +33,14 @@ import {
   registerConnectionInCatalog,
   removeConnectionFromCatalog,
   setConnectionEnabledInCatalog,
+  setEnvironmentCacheHidden,
 } from "./storageDocument.ts";
 
 const decodeConnectionCatalogDocument = Schema.decodeUnknownEffect(ConnectionCatalogDocument);
 
 const ENVIRONMENT_ID = EnvironmentId.make("environment-1");
 const decodeCatalogDocument = Schema.decodeUnknownSync(ConnectionCatalogDocument);
+const encodeCatalogDocument = Schema.encodeSync(ConnectionCatalogDocument);
 
 const RELAY_TARGET = new RelayConnectionTarget({
   environmentId: ENVIRONMENT_ID,
@@ -297,6 +299,23 @@ describe("ConnectionCatalogDocument", () => {
     });
 
     expect(decoded.disabledEnvironmentIds).toEqual([]);
+  });
+
+  it("restores a blocked cache after serialization and drops the block on removal", () => {
+    const hidden = setEnvironmentCacheHidden(
+      EMPTY_CONNECTION_CATALOG_DOCUMENT,
+      ENVIRONMENT_ID,
+      true,
+    );
+    const reopened = decodeCatalogDocument(encodeCatalogDocument(hidden));
+    expect(reopened.hiddenCacheEnvironmentIds).toEqual([ENVIRONMENT_ID]);
+    expect(setEnvironmentCacheHidden(reopened, ENVIRONMENT_ID, true)).toBe(reopened);
+    expect(
+      setEnvironmentCacheHidden(reopened, ENVIRONMENT_ID, false).hiddenCacheEnvironmentIds,
+    ).toEqual([]);
+    expect(removeConnectionFromCatalog(reopened, ENVIRONMENT_ID).hiddenCacheEnvironmentIds).toEqual(
+      [],
+    );
   });
 
   it("switches a saved environment off and back on without touching its records", () => {
