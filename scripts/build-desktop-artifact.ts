@@ -3562,6 +3562,38 @@ export class MacPackagedAppMissingError extends Schema.TaggedError<MacPackagedAp
   }
 }
 
+const verifyWindowsDistributionSignature = (
+  executable: string,
+  publisher: string,
+  verbose: boolean,
+) => {
+  const script = `
+    $ErrorActionPreference = 'Stop'
+    $signature = Get-AuthenticodeSignature -LiteralPath $env:AGENTSHARE_SIGNED_FILE
+    if ($signature.Status -ne 'Valid' -or $signature.SignatureType -ne 'Authenticode' -or !$signature.TimeStamperCertificate) {
+      throw "Expected a valid, timestamped Authenticode signature (status: $($signature.Status))."
+    }
+    $name = $signature.SignerCertificate.GetNameInfo(
+      [System.Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false)
+    if ($name -cne $env:AGENTSHARE_SIGNED_PUBLISHER) {
+      throw 'The Authenticode publisher differs from the configured publisher.'
+    }
+  `;
+  return runCommand(
+    ChildProcess.make(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-EncodedCommand",
+        Buffer.from(script, "utf16le").toString("base64"),
+      ],
+      { env: { AGENTSHARE_SIGNED_FILE: executable, AGENTSHARE_SIGNED_PUBLISHER: publisher } },
+    ),
+    { label: `Verify Windows Authenticode signature: ${executable}`, verbose },
+  );
+};
+
 const DEVELOPER_ID_APPLICATION_REQUIREMENT =
   "anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists";
 
@@ -3649,7 +3681,18 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
     }
     yield* preflightMacDesktopBuild(options.arch);
   }
+  const windowsDistributionPublisher =
+    hostPlatform === "win32" && options.platform === "win" && options.signed
+      ? yield* Config.String("AZURE_TRUSTED_SIGNING_PUBLISHER_NAME")
+      : undefined;
   if (hostPlatform === "win32" && options.platform === "win") {
+    if (windowsDistributionPublisher !== undefined && options.coreManifest) {
+      yield* verifyWindowsDistributionSignature(
+        path.join(path.dirname(options.coreManifest), coreArtifact.manifest.binary),
+        windowsDistributionPublisher,
+        options.verbose,
+      );
+    }
     yield* preflightWindowsDesktopBuild({
       arch: options.arch,
       bundlesWslRuntime: bundlesWslRuntime({
@@ -4131,9 +4174,10 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
   });
 
   if (options.platform === "win") {
-    yield* validateWindowsPackagedPayload({
+    const appExecutableName = `${resolveDesktopProductName(appVersion)}.exe`;
+    const { packagedAppDir } = yield* validateWindowsPackagedPayload({
       stageDistDir,
-      appExecutableName: `${resolveDesktopProductName(appVersion)}.exe`,
+      appExecutableName,
       targetArch: options.arch,
       appVersion,
       expectWslRuntime: bundlesWslRuntime({
@@ -4142,6 +4186,28 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
       }),
       verbose: options.verbose,
     });
+    if (windowsDistributionPublisher !== undefined) {
+      const installers = (yield* fs.readDirectory(stageDistDir)).filter((file) =>
+        file.toLowerCase().endsWith(".exe"),
+      );
+      if (options.target === "nsis" && installers.length === 0) {
+        return yield* new DesktopBuildNoArtifactsProducedError({
+          distPath: stageDistDir,
+          platform: options.platform,
+          arch: options.arch,
+        });
+      }
+      for (const executable of [
+        path.join(packagedAppDir, appExecutableName),
+        ...installers.map((file) => path.join(stageDistDir, file)),
+      ]) {
+        yield* verifyWindowsDistributionSignature(
+          executable,
+          windowsDistributionPublisher,
+          options.verbose,
+        );
+      }
+    }
   }
   if (
     options.platform === "mac" &&

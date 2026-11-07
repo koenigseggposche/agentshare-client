@@ -22,7 +22,7 @@ With provider update checks enabled, the workbench refreshes its native-tool mod
 4. Install the resulting packages and verify preserved account state, connections, wallet reads, shutdown and background behavior. An artifact hash or successful compilation does not replace installed-client acceptance.
 5. Record the client, workbench, Core and tool versions together with full artifact hashes. Use separate staging paths and verify transferred artifacts before replacing an installed build.
 
-For macOS distribution, build Core with `--macos-signing-identity` before handing its manifest to desktop packaging. Desktop packaging preserves those verified Core bytes. A desktop build with `--signed` requires Developer ID Application signatures on Core and the app, plus a stapled notarization ticket on the app. Configure an Associated Domains profile only for builds with cloud passkeys. Windows distribution requires its configured signing identity.
+For macOS distribution, build Core with `--macos-signing-identity` before handing its manifest to desktop packaging. Desktop packaging preserves those verified Core bytes. A desktop build with `--signed` requires Developer ID Application signatures on Core and the app, plus a stapled notarization ticket on the app. Configure an Associated Domains profile only for builds with cloud passkeys. On Windows, a desktop build with `--signed` checks the timestamped Authenticode signatures on Core, the desktop executable, and the installer against `AZURE_TRUSTED_SIGNING_PUBLISHER_NAME`. Supply a Core manifest generated after signing. Verify cross-built installers and their executables on Windows before distribution.
 
 ## npm launcher
 
