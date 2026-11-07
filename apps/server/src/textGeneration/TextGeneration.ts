@@ -117,6 +117,7 @@ export const make = Effect.gen(function* () {
             const provider = snapshots.find((candidate) => candidate.instanceId === instanceId);
             return (
               instanceId !== selection.instanceId &&
+              !isAgentShareConnection(settings.providerInstances[instanceId]?.config) &&
               provider?.enabled === true &&
               resolveProjectProviderInstanceEnabled(settings, null, instanceId) &&
               provider.installed &&

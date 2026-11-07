@@ -447,6 +447,7 @@ it.layer(layerCodexTextGenerationTest)("CodexTextGeneration", (it) => {
 it.effect.each([false, true])("text generation preflight: exhausted=%s", (exhausted) =>
   Effect.gen(function* () {
     const primary = ProviderInstanceId.make("codex");
+    const community = ProviderInstanceId.make("as_generated");
     const fallback = ProviderInstanceId.make("claude_work");
     const selection = {
       instanceId: primary,
@@ -454,8 +455,8 @@ it.effect.each([false, true])("text generation preflight: exhausted=%s", (exhaus
       options: [{ id: "effort", value: "high" }],
     };
     const calls: ModelSelection[] = [];
-    const instances: ProviderInstance[] = [primary, fallback].map((instanceId) => {
-      const driver = ProviderDriverKind.make(instanceId === primary ? "codex" : "claudeAgent");
+    const instances: ProviderInstance[] = [primary, community, fallback].map((instanceId) => {
+      const driver = ProviderDriverKind.make(instanceId === fallback ? "claudeAgent" : "codex");
       const snapshot: ServerProvider = {
         instanceId,
         driver,
@@ -508,6 +509,18 @@ it.effect.each([false, true])("text generation preflight: exhausted=%s", (exhaus
           }),
           ServerSettings.layerTest({
             providerInstances: {
+              [community]: {
+                driver: ProviderDriverKind.make("codex"),
+                config: {
+                  agentShareOwner: "generated-owner",
+                  agentShareModel: {
+                    id: "generated",
+                    source: "community",
+                    service: "codex",
+                    runtime: "codex",
+                  },
+                },
+              },
               [fallback]: { driver: ProviderDriverKind.make("claudeAgent"), config: {} },
             },
           }),

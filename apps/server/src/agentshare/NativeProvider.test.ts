@@ -52,6 +52,7 @@ describe.each(["codex", "claude"] as const)("AgentShare %s inventory", (runtime)
       [selected.id],
     );
     assert.equal(ready.auth.status, "authenticated");
+    assert.isFalse(ready.supportsTextGeneration);
     assert.deepEqual(snapshot({ ...identity, owner: "different-owner" }, [model]).models, []);
     assert.deepEqual(
       snapshot(identity, [

@@ -84,6 +84,7 @@ export const Driver: ProviderDriver<
           presentation: {
             displayName: "AgentShare Text",
             supportsConversationRollback: false,
+            supportsTextGeneration: false,
             supportedRuntimeModes: ["approval-required"],
           },
           enabled: input.enabled,

@@ -52,6 +52,7 @@ export function nativeModelSnapshot(input: {
     presentation: {
       displayName: input.selected.runtime === "claude" ? "AgentShare Claude" : "AgentShare Codex",
       supportsConversationRollback: true,
+      supportsTextGeneration: false,
       reportsContextWindow: true,
       supportedRuntimeModes: ["approval-required", "full-access"],
     },
@@ -141,7 +142,7 @@ export const makeAgentShareNativeProvider = Effect.fn("AgentShare.makeNativeProv
   const pending = Effect.map(DateTime.now, (now) =>
     stamp(
       buildServerProvider({
-        presentation: { displayName: label },
+        presentation: { displayName: label, supportsTextGeneration: false },
         enabled: input.enabled,
         checkedAt: DateTime.formatIso(now),
         models: [],
