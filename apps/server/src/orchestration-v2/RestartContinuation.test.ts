@@ -235,14 +235,67 @@ it.effect.each(["completed", "waiting", "cancelled"] as const)(
     }),
 );
 
+const communityProviderInstances = {
+  [instanceId]: {
+    driver,
+    config: {
+      agentShareOwner: "generated-owner",
+      agentShareModel: {
+        id: "generated",
+        source: "community",
+        service: "codex",
+        runtime: "codex",
+      },
+    },
+  },
+};
+
+it.effect("does not dispatch a queued restart continuation for a community model", () =>
+  Effect.gen(function* () {
+    const base = makeProjection();
+    const projection = {
+      ...base,
+      runs: [
+        {
+          ...base.runs[0]!,
+          status: "completed",
+          restartCancelledBackgroundWork: [{ kind: "monitor", label: "Watch CI", awaited: true }],
+        },
+      ],
+      providerTurns: [{ ...base.providerTurns[0]!, status: "completed" }],
+    } as unknown as OrchestrationV2ThreadProjection;
+    const dispatched: string[] = [];
+    yield* continueRestartedRun({ threadId, sourceRunId: runId }).pipe(
+      Effect.provide(
+        Layer.merge(
+          Layer.mock(ThreadManagementService.ThreadManagementService)({
+            getThreadRecords: () => Effect.succeed(projection),
+            recoverDelegatedTask: () => Effect.void,
+            dispatch: (command) => {
+              dispatched.push(command.type);
+              return Effect.succeed({} as never);
+            },
+          }),
+          ServerSettings.layerTest({
+            continueThreadsAfterServerUpdate: true,
+            providerInstances: communityProviderInstances,
+          }),
+        ),
+      ),
+    );
+    assert.isEmpty(dispatched);
+  }),
+);
+
 it.effect.each([
-  [false, undefined],
-  [true, undefined],
-  [false, true],
-  [true, false],
+  [false, undefined, false],
+  [true, undefined, false],
+  [false, true, false],
+  [true, false, false],
+  [true, true, true],
 ] as const)(
-  "atomically records restart intent with cancellation when opt-in is %s and project override is %s",
-  ([enabled, projectOverride]) =>
+  "atomically records restart intent with cancellation when opt-in is %s and project override is %s and community is %s",
+  ([enabled, projectOverride, community]) =>
     Effect.gen(function* () {
       let committed: Parameters<EventSink.EventSinkV2["Service"]["commitCommand"]>[0] | undefined;
       const recovery = yield* ProviderRuntimeRecovery.make.pipe(
@@ -250,6 +303,7 @@ it.effect.each([
           Layer.mergeAll(
             ServerSettings.layerTest({
               continueThreadsAfterServerUpdate: enabled,
+              ...(community ? { providerInstances: communityProviderInstances } : {}),
               projectSettingsOverrides:
                 projectOverride === undefined
                   ? {}
@@ -286,8 +340,9 @@ it.effect.each([
           (event) => event.type === "run.updated" && event.payload.status === "cancelled",
         ),
       );
-      assert.lengthOf(committed!.effects, (projectOverride ?? enabled) ? 1 : 0);
-      if (projectOverride ?? enabled)
+      const shouldContinue = !community && (projectOverride ?? enabled);
+      assert.lengthOf(committed!.effects, shouldContinue ? 1 : 0);
+      if (shouldContinue)
         assert.deepEqual(committed!.effects[0]?.request, {
           type: "provider-runtime.continue",
           sourceRunId: runId,

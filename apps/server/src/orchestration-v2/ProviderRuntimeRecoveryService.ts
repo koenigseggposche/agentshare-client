@@ -1,5 +1,4 @@
 import { runRanAfter } from "@t3tools/shared/orchestrationV2ThreadError";
-import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import {
   CommandId,
   isProviderNativeSubagentThread,
@@ -23,7 +22,7 @@ import * as EventSink from "./EventSink.ts";
 import * as IdAllocator from "@t3tools/provider-core/server/IdAllocator";
 import * as ProjectionStore from "./ProjectionStore.ts";
 import * as ServerSettings from "../serverSettings.ts";
-import { restartContinuationRun } from "./RestartContinuation.ts";
+import { allowsRestartContinuation, restartContinuationRun } from "./RestartContinuation.ts";
 import { isBufferedProviderNotification } from "./NotificationMailbox.ts";
 import { queuedRunsInDeliveryOrder } from "./QueuedRunOrder.ts";
 import {
@@ -837,8 +836,7 @@ export const make = Effect.gen(function* () {
       );
       const enabled =
         continueAfterRestart !== null &&
-        resolveProjectSettings(continueAfterRestart, projection.thread.projectId).settings
-          .continueThreadsAfterServerUpdate;
+        allowsRestartContinuation(continueAfterRestart, projection.thread);
       const result = yield* reconcileProjection(projection, trigger, enabled, stoppedThisPass);
       for (const session of projection.providerSessions) {
         if (session.status !== "stopped" && session.status !== "error") {
@@ -871,11 +869,7 @@ export const make = Effect.gen(function* () {
     for (const threadId of threadIds) {
       yield* Effect.gen(function* () {
         const projection = yield* projections.getRuntimeRecoveryProjection(threadId);
-        if (
-          !resolveProjectSettings(enabled, projection.thread.projectId).settings
-            .continueThreadsAfterServerUpdate
-        )
-          return;
+        if (!allowsRestartContinuation(enabled, projection.thread)) return;
         const run = restartContinuationRun(projection, yield* DateTime.now);
         if (!run) return;
         const commandId = CommandId.make(`command:restart-prepare:${run.id}`);
