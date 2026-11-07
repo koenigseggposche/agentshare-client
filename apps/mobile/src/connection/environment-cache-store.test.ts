@@ -259,33 +259,31 @@ function makeDatabase() {
 }
 
 describe("mobile SQLite environment cache store", () => {
-  it.effect(
-    "loads the current full record and compacts it on the next save without losing items",
-    () =>
-      Effect.gen(function* () {
-        const memory = makeDatabase();
-        const store = yield* make().pipe(
-          Effect.provideService(MobileDatabase.MobileDatabase, memory.database),
-        );
-        const snapshot = threadSnapshotWithItems();
-        const id = cacheId(ENVIRONMENT_ID, "thread", THREAD_ID);
-        const raw = yield* encodeLegacyThreadSnapshot({
-          schemaVersion: ORCHESTRATION_THREAD_CACHE_SCHEMA_VERSION,
-          environmentId: ENVIRONMENT_ID,
-          threadId: THREAD_ID,
-          snapshot,
-        });
-        memory.values.set(id, raw);
-        const loaded = Option.getOrThrow(yield* store.loadThread(ENVIRONMENT_ID, THREAD_ID));
-        expect(loaded).toEqual(snapshot);
-        expect(memory.values.get(id)).toBe(raw);
-        yield* store.saveThread(ENVIRONMENT_ID, loaded);
-        expect(memory.schemaVersions.get(id)).toBe(COMPACT_THREAD_CACHE_SCHEMA_VERSION);
-        expect(Option.getOrThrow(yield* store.loadThread(ENVIRONMENT_ID, THREAD_ID))).toEqual(
-          snapshot,
-        );
-        expect(memory.removed).toEqual([]);
-      }),
+  it.effect("loads full records and saves them in the compact format", () =>
+    Effect.gen(function* () {
+      const memory = makeDatabase();
+      const store = yield* make().pipe(
+        Effect.provideService(MobileDatabase.MobileDatabase, memory.database),
+      );
+      const snapshot = threadSnapshotWithItems();
+      const id = cacheId(ENVIRONMENT_ID, "thread", THREAD_ID);
+      const raw = yield* encodeLegacyThreadSnapshot({
+        schemaVersion: ORCHESTRATION_THREAD_CACHE_SCHEMA_VERSION,
+        environmentId: ENVIRONMENT_ID,
+        threadId: THREAD_ID,
+        snapshot,
+      });
+      memory.values.set(id, raw);
+      const loaded = Option.getOrThrow(yield* store.loadThread(ENVIRONMENT_ID, THREAD_ID));
+      expect(loaded).toEqual(snapshot);
+      expect(memory.values.get(id)).toBe(raw);
+      yield* store.saveThread(ENVIRONMENT_ID, loaded);
+      expect(memory.schemaVersions.get(id)).toBe(COMPACT_THREAD_CACHE_SCHEMA_VERSION);
+      expect(Option.getOrThrow(yield* store.loadThread(ENVIRONMENT_ID, THREAD_ID))).toEqual(
+        snapshot,
+      );
+      expect(memory.removed).toEqual([]);
+    }),
   );
 
   it.effect("discards corrupt or partial thread records so they can be refetched", () =>
@@ -373,103 +371,101 @@ describe("mobile SQLite environment cache store", () => {
     }),
   );
 
-  it.effect(
-    "round-trips the compact format and restores shared items before returning to a consumer",
-    () =>
-      Effect.gen(function* () {
-        const memory = makeDatabase();
-        const store = yield* make().pipe(
-          Effect.provideService(MobileDatabase.MobileDatabase, memory.database),
-        );
-        const original = threadSnapshotWithItems();
-        const local = original.projection.visibleTurnItems[1]!;
-        const inherited = original.projection.visibleTurnItems[0]!;
-        const synthetic = { ...local.item, id: TurnItemId.make("synthetic-notice"), ordinal: 12 };
-        const fork = {
-          id: TurnItemId.make("fork-marker"),
-          threadId: THREAD_ID,
-          runId: null,
-          nodeId: null,
-          providerTurnId: null,
-          nativeItemRef: null,
-          parentItemId: null,
-          ordinal: 0,
-          status: "completed" as const,
-          title: null,
-          startedAt: null,
-          completedAt: NOW,
-          updatedAt: NOW,
-          type: "fork" as const,
-          source: {
-            type: "run" as const,
-            threadId: ThreadId.make("parent-thread"),
-            runId: RunId.make("parent-run"),
-          },
-          targetThreadId: THREAD_ID,
-        };
-        const snapshot = {
-          ...original,
-          projection: {
-            ...original.projection,
-            turnItems: [local.item, synthetic, original.projection.turnItems[1]!],
-            visibleTurnItems: [
-              { ...local, position: 0 },
-              {
-                ...inherited,
-                position: 1,
-                sourceItemId: local.sourceItemId,
-                item: { ...inherited.item, id: local.item.id },
-              },
-              {
-                ...local,
-                position: 2,
-                visibility: "synthetic" as const,
-                sourceItemId: synthetic.id,
-                item: synthetic,
-              },
-              {
-                position: 3,
-                visibility: "synthetic" as const,
-                sourceThreadId: fork.source.threadId,
-                sourceItemId: fork.id,
-                item: fork,
-              },
-            ],
-          },
-        };
-        yield* store.saveThread(ENVIRONMENT_ID, snapshot);
-        const id = cacheId(ENVIRONMENT_ID, "thread", THREAD_ID);
-        const encoded = JSON.parse(memory.values.get(id)!);
-        expect(encoded.schemaVersion).toBe(COMPACT_THREAD_CACHE_SCHEMA_VERSION);
-        expect(memory.schemaVersions.get(id)).toBe(COMPACT_THREAD_CACHE_SCHEMA_VERSION);
-        expect(encoded.snapshot.turnItemsOmitLocalVisible).toBe(true);
-        expect(encoded.snapshot.turnItemCount).toBe(3);
-        expect(encoded.snapshot.visibleTurnItemCount).toBe(4);
-        expect(
-          encoded.snapshot.projection.turnItems.map((item: { id: string }) => item.id),
-        ).toEqual(["hidden-notice"]);
+  it.effect("restores shared items from compact records", () =>
+    Effect.gen(function* () {
+      const memory = makeDatabase();
+      const store = yield* make().pipe(
+        Effect.provideService(MobileDatabase.MobileDatabase, memory.database),
+      );
+      const original = threadSnapshotWithItems();
+      const local = original.projection.visibleTurnItems[1]!;
+      const inherited = original.projection.visibleTurnItems[0]!;
+      const synthetic = { ...local.item, id: TurnItemId.make("synthetic-notice"), ordinal: 12 };
+      const fork = {
+        id: TurnItemId.make("fork-marker"),
+        threadId: THREAD_ID,
+        runId: null,
+        nodeId: null,
+        providerTurnId: null,
+        nativeItemRef: null,
+        parentItemId: null,
+        ordinal: 0,
+        status: "completed" as const,
+        title: null,
+        startedAt: null,
+        completedAt: NOW,
+        updatedAt: NOW,
+        type: "fork" as const,
+        source: {
+          type: "run" as const,
+          threadId: ThreadId.make("parent-thread"),
+          runId: RunId.make("parent-run"),
+        },
+        targetThreadId: THREAD_ID,
+      };
+      const snapshot = {
+        ...original,
+        projection: {
+          ...original.projection,
+          turnItems: [local.item, synthetic, original.projection.turnItems[1]!],
+          visibleTurnItems: [
+            { ...local, position: 0 },
+            {
+              ...inherited,
+              position: 1,
+              sourceItemId: local.sourceItemId,
+              item: { ...inherited.item, id: local.item.id },
+            },
+            {
+              ...local,
+              position: 2,
+              visibility: "synthetic" as const,
+              sourceItemId: synthetic.id,
+              item: synthetic,
+            },
+            {
+              position: 3,
+              visibility: "synthetic" as const,
+              sourceThreadId: fork.source.threadId,
+              sourceItemId: fork.id,
+              item: fork,
+            },
+          ],
+        },
+      };
+      yield* store.saveThread(ENVIRONMENT_ID, snapshot);
+      const id = cacheId(ENVIRONMENT_ID, "thread", THREAD_ID);
+      const encoded = JSON.parse(memory.values.get(id)!);
+      expect(encoded.schemaVersion).toBe(COMPACT_THREAD_CACHE_SCHEMA_VERSION);
+      expect(memory.schemaVersions.get(id)).toBe(COMPACT_THREAD_CACHE_SCHEMA_VERSION);
+      expect(encoded.snapshot.turnItemsOmitLocalVisible).toBe(true);
+      expect(encoded.snapshot.turnItemCount).toBe(3);
+      expect(encoded.snapshot.visibleTurnItemCount).toBe(4);
+      expect(encoded.snapshot.projection.turnItems.map((item: { id: string }) => item.id)).toEqual([
+        "hidden-notice",
+      ]);
 
-        const duplicate = JSON.parse(memory.values.get(id)!);
-        duplicate.snapshot.projection.visibleTurnItems.push({
-          ...duplicate.snapshot.projection.visibleTurnItems[1],
-          position: 4,
-        });
-        duplicate.snapshot.visibleTurnItemCount += 1;
-        memory.values.set(id, JSON.stringify(duplicate));
-        expect(yield* store.loadThread(ENVIRONMENT_ID, THREAD_ID)).toEqual(Option.none());
-        expect(memory.values.has(id)).toBe(false);
-        expect(memory.removed).toEqual([id]);
-        yield* store.saveThread(ENVIRONMENT_ID, snapshot);
+      const duplicate = JSON.parse(memory.values.get(id)!);
+      duplicate.snapshot.projection.visibleTurnItems.push({
+        ...duplicate.snapshot.projection.visibleTurnItems[1],
+        position: 4,
+      });
+      duplicate.snapshot.visibleTurnItemCount += 1;
+      memory.values.set(id, JSON.stringify(duplicate));
+      expect(yield* store.loadThread(ENVIRONMENT_ID, THREAD_ID)).toEqual(Option.none());
+      expect(memory.values.has(id)).toBe(false);
+      expect(memory.removed).toEqual([id]);
+      yield* store.saveThread(ENVIRONMENT_ID, snapshot);
 
-        const loaded = Option.getOrThrow(yield* store.loadThread(ENVIRONMENT_ID, THREAD_ID));
-        expect(loaded).toEqual(snapshot);
-        expect(loaded).not.toHaveProperty("turnItemsOmitLocalVisible");
-        expect(loaded).not.toHaveProperty("turnItemCount");
-        expect(loaded).not.toHaveProperty("visibleTurnItemCount");
-        expect(loaded.projection.turnItems[0]).toBe(loaded.projection.visibleTurnItems[0]!.item);
-        expect(loaded.projection.turnItems[1]).toBe(loaded.projection.visibleTurnItems[2]!.item);
-        expect(snapshot.projection.turnItems).toHaveLength(3);
-      }),
+      const loaded = Option.getOrThrow(yield* store.loadThread(ENVIRONMENT_ID, THREAD_ID));
+      expect(loaded).toEqual(snapshot);
+      expect(loaded).not.toHaveProperty("turnItemsOmitLocalVisible");
+      expect(loaded).not.toHaveProperty("turnItemCount");
+      expect(loaded).not.toHaveProperty("visibleTurnItemCount");
+      expect(loaded.projection.turnItems[0]).toBe(loaded.projection.visibleTurnItems[0]!.item);
+      expect(loaded.projection.turnItems[1]).toBe(loaded.projection.visibleTurnItems[2]!.item);
+      expect(snapshot.projection.turnItems).toHaveLength(3);
+    }),
   );
 
   it.effect("keeps a full projection when visible rows cannot reproduce the original items", () =>
