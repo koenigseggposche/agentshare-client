@@ -626,6 +626,7 @@ export function CommandPalette(props: {
               style={{
                 width: Math.min(600, width - 32 - bounds.left - bounds.right),
                 height: Math.min(520, height - 80),
+                flexShrink: 1,
                 borderRadius: 20,
               }}
             >
