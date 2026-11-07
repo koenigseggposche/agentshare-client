@@ -1,7 +1,6 @@
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
-import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as NetService from "@t3tools/shared/Net";
 import * as Cause from "effect/Cause";
 import * as ConfigProvider from "effect/ConfigProvider";
@@ -19,6 +18,7 @@ import packageJson from "../../package.json" with { type: "json" };
 import * as BootService from "../cloud/bootService.ts";
 import { upsertServiceEnv } from "./service.ts";
 import { connectEnabled, planRoutes, upCommand } from "./up.ts";
+import { withCliAccountFixture } from "./WorkspaceAccount.testkit.ts";
 
 const none = Option.none<boolean>();
 
@@ -317,12 +317,11 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
       );
 
       if (input.answer !== undefined) yield* asTerminal;
-      const { exit, lines } = yield* Command.runWith(upCommand, { version: packageJson.version })([
-        "--base-dir",
-        baseDir,
-        ...input.args,
-      ]).pipe(
-        Effect.provideService(HostProcess.Environment, {}),
+      const args = ["--base-dir", baseDir, ...input.args];
+      const { exit, lines } = yield* withCliAccountFixture(
+        Command.runWith(upCommand, { version: packageJson.version })(args),
+        args,
+      ).pipe(
         input.answer === undefined
           ? (effect) => effect
           : Effect.provideService(Terminal.Terminal, answering(input.answer)),

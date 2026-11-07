@@ -82,10 +82,7 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("CLI deferred imp
       const fs = yield* FileSystem.FileSystem;
       const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-deferred-project-" });
       const baseDir = NodePath.join(root, "state");
-      const runtimeStatePath = NodePath.join(
-        testAccountProfilePath(baseDir),
-        "server-runtime.json",
-      );
+      const runtimeStatePath = NodePath.join(baseDir, "userdata", "server-runtime.json");
       yield* persistServerRuntimeState({
         path: runtimeStatePath,
         state: yield* makePersistedServerRuntimeState({
