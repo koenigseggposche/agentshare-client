@@ -8357,6 +8357,18 @@ const layerQueueResumeDisabledInstanceTest = Layer.mergeAll(
   Layer.provide(
     ServerSettings.layerTest({
       providerInstances: {
+        [modelSelection.instanceId]: {
+          driver: "codex",
+          config: {
+            agentShareOwner: "generated-owner",
+            agentShareModel: {
+              id: "generated",
+              source: "community",
+              service: "codex",
+              runtime: "codex",
+            },
+          },
+        },
         [alternateInstanceId]: { driver: "codex", enabled: true },
       },
       projectSettingsOverrides: {
@@ -8375,6 +8387,43 @@ const layerQueueResumeDisabledInstanceTest = Layer.mergeAll(
 it.layer(layerQueueResumeDisabledInstanceTest)(
   "queue.resume on a project-disabled instance",
   (it) => {
+    it.effect("rejects automation on the current community model before creating a run", () =>
+      Effect.gen(function* () {
+        const orchestrator = yield* Orchestrator.OrchestratorV2;
+        const threadId = ThreadId.make("community-automation-target");
+        yield* orchestrator.dispatch({
+          type: "thread.create",
+          createdBy: "user",
+          creationSource: "web",
+          commandId: CommandId.make("community-automation-create"),
+          threadId,
+          projectId: queueResumeDisabledInstanceProjectId,
+          title: "Community automation target",
+          modelSelection,
+          runtimeMode: "full-access",
+          interactionMode: "default",
+          branch: null,
+          worktreePath: null,
+        });
+        const result = yield* orchestrator
+          .dispatch({
+            type: "message.dispatch",
+            createdBy: "user",
+            creationSource: "web",
+            commandId: CommandId.make("community-automation-dispatch"),
+            threadId,
+            messageId: MessageId.make("community-automation-message"),
+            scheduledTaskId: ScheduledTaskId.make("generated-task"),
+            text: "Check progress",
+            attachments: [],
+            dispatchMode: { type: "defer_start" },
+          })
+          .pipe(Effect.result);
+        assert.equal(result._tag, "Failure");
+        assert.isNull((yield* orchestrator.getThreadShell(threadId))?.latestRunId);
+      }),
+    );
+
     it.effect(
       "holds a queued run instead of starting it on an instance the project turned off",
       () =>

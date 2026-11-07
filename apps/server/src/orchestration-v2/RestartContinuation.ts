@@ -1,7 +1,6 @@
 import { runRanAfter } from "@t3tools/shared/orchestrationV2ThreadError";
 import { resolveProjectSettings } from "@t3tools/shared/projectSettings";
 import {
-  AgentShareModel,
   CommandId,
   isOrchestrationV2WorkActive,
   latestProviderTurnForAttempt,
@@ -13,9 +12,9 @@ import {
 } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
-import * as Schema from "effect/Schema";
 import type { ProjectionRuntimeRecoveryState } from "./ProjectionStore.ts";
 
+import { modelConnectionSource } from "../agentshare/ModelConnectionPolicy.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import { isNativeMaintenanceCommand } from "./CommandPolicy.ts";
 import * as ThreadManagementService from "./ThreadManagementService.ts";
@@ -39,15 +38,13 @@ const CONTINUE_PROMPT =
 const MAX_CONTINUATION_CHAIN = 3;
 const CONTINUATION_LOOP_WINDOW_MS = 5 * 60 * 1_000;
 
-const isCommunityModelConfig = Schema.is(Schema.Struct({ agentShareModel: AgentShareModel }));
-
 export function allowsRestartContinuation(
   settings: ServerSettingsValue,
   thread: Pick<ProjectionRuntimeRecoveryState["thread"], "projectId" | "providerInstanceId">,
 ): boolean {
   const config = settings.providerInstances[thread.providerInstanceId]?.config;
   // A restart sends a new prompt, which can charge the account again.
-  if (isCommunityModelConfig(config) && config.agentShareModel.source === "community") return false;
+  if (modelConnectionSource(config) === "community") return false;
   return resolveProjectSettings(settings, thread.projectId).settings
     .continueThreadsAfterServerUpdate;
 }

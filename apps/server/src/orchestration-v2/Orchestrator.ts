@@ -190,6 +190,7 @@ import {
 } from "./ThreadForkService.ts";
 import { planThreadDeletion } from "./ThreadDeletion.ts";
 import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
+import { isPaidModelConnection } from "../agentshare/ModelConnectionPolicy.ts";
 import * as ServerSettings from "../serverSettings.ts";
 
 const isMessageQuestionAnswer = Schema.is(
@@ -1711,6 +1712,8 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
       if (
         worktreeMissing ||
         instanceDisabledForProject ||
+        (queuedMessage?.scheduledTaskId !== undefined &&
+          isPaidModelConnection(machineInstance?.config)) ||
         (failureClass !== undefined &&
           failureClass !== "validation_error" &&
           failedRun?.providerInstanceId === queuedRun.providerInstanceId)
@@ -5469,6 +5472,17 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
     effects: Ref.Ref<Array<PendingOrchestrationEffectV2>>,
   ) {
     let projection = yield* getProjectionWithPendingEvents(command.threadId, events);
+    if (command.scheduledTaskId !== undefined) {
+      const selection = command.modelSelection ?? projection.thread.modelSelection;
+      const settings = yield* serverSettings.getSettings.pipe(Effect.orDie);
+      if (isPaidModelConnection(settings.providerInstances[selection.instanceId]?.config)) {
+        return yield* new OrchestratorDispatchError({
+          commandId: command.commandId,
+          commandType: command.type,
+          cause: "Scheduled tasks and webhooks cannot use paid AgentShare model connections.",
+        });
+      }
+    }
     if (command.manualContinuationOfRunId !== undefined) {
       const source = projection.runs.find((run) => run.id === command.manualContinuationOfRunId);
       const limited = latestRootProviderFailure(source ?? null, projection.turnItems);
