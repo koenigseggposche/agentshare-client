@@ -8,13 +8,18 @@ on:
         required: true
         type: string
       core_version:
-        description: "Core preview version, for example 0.6.30-preview.20261107.1"
+        description: "Core version for the selected build mode"
         required: true
         type: string
       version:
-        description: "Client preview version; empty generates one from the run number"
+        description: "Client version; empty generates a preview version"
         required: false
         type: string
+      release_candidate:
+        description: "Build stable-version installers for release acceptance"
+        required: false
+        default: false
+        type: boolean
       macos_distribution:
         description: "Build Developer ID-signed and notarized macOS previews"
         required: false
@@ -57,6 +62,7 @@ jobs:
           CORE_REF: ${{ inputs.core_ref }}
           CORE_VERSION: ${{ inputs.core_version }}
           CLIENT_VERSION: ${{ inputs.version }}
+          RELEASE_CANDIDATE: ${{ inputs.release_candidate }}
           MACOS_DISTRIBUTION: ${{ inputs.macos_distribution }}
           WINDOWS_DISTRIBUTION: ${{ inputs.windows_distribution }}
           WINDOWS_SIGNING_CONFIGURED: ${{ secrets.AZURE_TENANT_ID != '' && secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_CLIENT_SECRET != '' && secrets.AZURE_TRUSTED_SIGNING_ENDPOINT != '' && secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME != '' && secrets.AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME != '' && secrets.AZURE_TRUSTED_SIGNING_PUBLISHER_NAME != '' }}
@@ -72,8 +78,15 @@ jobs:
           base = json.loads(pathlib.Path('apps/desktop/package.json').read_text())['version']
           date = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d')
           version = os.environ['CLIENT_VERSION'] or f"{base}-preview.{date}.{os.environ['GITHUB_RUN_NUMBER']}"
-          preview = r'(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)-preview\.[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*'
-          if not all(re.fullmatch(preview, v) for v in [version, os.environ['CORE_VERSION']]):
+          release_candidate = os.environ['RELEASE_CANDIDATE'] == 'true'
+          stable = r'(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)'
+          preview = stable + r'-preview\.[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*'
+          if release_candidate:
+              if os.environ['MACOS_DISTRIBUTION'] != 'true' or os.environ['WINDOWS_DISTRIBUTION'] != 'true':
+                  raise SystemExit('Release candidates require both distribution signing options.')
+              if not all(re.fullmatch(stable, v) for v in [os.environ['CLIENT_VERSION'], os.environ['CORE_VERSION']]):
+                  raise SystemExit('Release candidates require explicit stable client and Core versions.')
+          elif not all(re.fullmatch(preview, v) for v in [version, os.environ['CORE_VERSION']]):
               raise SystemExit('Both versions must use the preview channel.')
           platforms = set()
           if os.environ['MACOS_DISTRIBUTION'] == 'true':
@@ -124,6 +137,7 @@ jobs:
       DESKTOP_ARCH: ${{ matrix.arch }}
       DESKTOP_TARGET: ${{ matrix.target }}
       DISTRIBUTION_SIGNING: ${{ matrix.distribution_signing }}
+      RELEASE_CANDIDATE: ${{ inputs.release_candidate }}
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       CARGO_BUILD_JOBS: "2"
     steps:
@@ -189,6 +203,15 @@ jobs:
           }
       - name: Isolate Core source from client packaging
         run: mv .core-source "$RUNNER_TEMP/core-source"
+      - name: Check the committed Core release version
+        if: inputs.release_candidate
+        run: |
+          python3 - <<'PY'
+          import os, pathlib
+          source = pathlib.Path(os.environ['RUNNER_TEMP']) / 'core-source'
+          if (source / 'deploy/release-version.txt').read_text().strip() != os.environ['CORE_VERSION']:
+              raise SystemExit('Core candidate version differs from the pinned source release version.')
+          PY
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
           go-version: "1.27.3"
@@ -360,7 +383,7 @@ jobs:
           (root / 'build.json').write_text(json.dumps(dict(
               client_version=os.environ['CLIENT_VERSION'], client_revision=os.environ['GITHUB_SHA'],
               core_version=os.environ['CORE_VERSION'], core_revision=os.environ['CORE_REF'],
-              workflow_run_id=int(os.environ['GITHUB_RUN_ID']),
+              workflow_run_id=int(os.environ['GITHUB_RUN_ID']), release_candidate=os.environ['RELEASE_CANDIDATE'] == 'true',
               target=os.environ['CORE_TARGET'], distribution_signing=os.environ['DISTRIBUTION_SIGNING'] == 'true', files=files), indent=2) + '\n')
           PY
       - name: Upload preview artifacts
