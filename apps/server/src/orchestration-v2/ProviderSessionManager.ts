@@ -161,6 +161,7 @@ export interface ProviderSessionManagerV2Shape {
     readonly resumeFromSession?: OrchestrationV2ProviderSession;
     readonly initialNativeThreadId?: string;
     readonly initialProviderItemIdentityVersion?: 2;
+    readonly workbenchTaskId?: string;
   }) => Effect.Effect<
     ProviderAdapter.ProviderAdapterV2SessionRuntime,
     ProviderSessionManagerV2Error
@@ -216,6 +217,7 @@ export class ProviderSessionManagerV2 extends Context.Service<
 >()("t3/orchestration-v2/ProviderSessionManager/ProviderSessionManagerV2") {}
 
 interface LiveSessionEntry {
+  readonly workbenchTaskId: string | undefined;
   readonly attachedThreadIds: ReadonlySet<ThreadId>;
   readonly loadedProviderThreadKeyByThread: ReadonlyMap<ThreadId, string>;
   /** Scope revocation to recorded credential ids so superseded sessions cannot revoke replacements opened before detach. */
@@ -1695,9 +1697,33 @@ export const layerWithOptions = (
         eventSubscribers: Ref.Ref<
           ReadonlyMap<number, Queue.Queue<ProviderSessionEventSignal, Cause.Done>>
         >,
+        task: { readonly id: string; readonly threadId: ThreadId } | undefined,
       ): ProviderAdapter.ProviderAdapterV2SessionRuntime => {
         const providerSessionId = runtime.providerSessionId;
         const subscribeEvents = makeEventSubscription(eventSubscribers);
+        const checkTaskScope = (threadId: ThreadId | null | undefined, runId?: string) =>
+          task !== undefined &&
+          (threadId !== task.threadId || (runId !== undefined && runId !== task.id))
+            ? Effect.fail(
+                new ProviderAdapter.ProviderAdapterProtocolError({
+                  driver: runtime.driver,
+                  detail: "The provider session belongs to a different workbench task",
+                }),
+              )
+            : Effect.void;
+        const attachForRuntime = (threadId: ThreadId, runId?: string) =>
+          checkTaskScope(threadId, runId).pipe(
+            Effect.andThen(
+              observeActivity(
+                providerSessionId,
+                ensureThreadAttached({
+                  providerSessionId,
+                  threadId,
+                  providerInstanceId: runtime.instanceId,
+                }),
+              ),
+            ),
+          );
         const turnMetrics = (operation: string, model?: string) =>
           withMetrics({
             counter: providerTurnsTotal,
@@ -1715,14 +1741,7 @@ export const layerWithOptions = (
             subscribeEvents.pipe(Effect.map((subscription) => subscription.events)),
           ),
           ensureThread: (input) =>
-            observeActivity(
-              providerSessionId,
-              ensureThreadAttached({
-                providerSessionId,
-                threadId: input.threadId,
-                providerInstanceId: runtime.instanceId,
-              }),
-            ).pipe(
+            attachForRuntime(input.threadId).pipe(
               Effect.andThen(runtime.ensureThread(input)),
               Effect.tap((providerThread) =>
                 markProviderThreadLoaded({
@@ -1739,7 +1758,7 @@ export const layerWithOptions = (
           resumeThread: (input) => {
             const threadId = input.threadId ?? input.providerThread.appThreadId;
             if (threadId === null || threadId === undefined) {
-              return runtime.resumeThread(input);
+              return checkTaskScope(threadId).pipe(Effect.andThen(runtime.resumeThread(input)));
             }
             const providerThreadKey = providerThreadLoadKey({
               providerThread: input.providerThread,
@@ -1748,14 +1767,7 @@ export const layerWithOptions = (
                 : { modelSelection: input.modelSelection }),
               ...(input.runtimePolicy === undefined ? {} : { runtimePolicy: input.runtimePolicy }),
             });
-            return observeActivity(
-              providerSessionId,
-              ensureThreadAttached({
-                providerSessionId,
-                threadId,
-                providerInstanceId: runtime.instanceId,
-              }),
-            ).pipe(
+            return attachForRuntime(threadId).pipe(
               Effect.andThen(
                 holdThreadLoaded({
                   providerSessionId,
@@ -1787,14 +1799,7 @@ export const layerWithOptions = (
             );
           },
           forkThread: (input) =>
-            observeActivity(
-              providerSessionId,
-              ensureThreadAttached({
-                providerSessionId,
-                threadId: input.targetThreadId,
-                providerInstanceId: runtime.instanceId,
-              }),
-            ).pipe(
+            attachForRuntime(input.targetThreadId).pipe(
               Effect.andThen(runtime.forkThread(input)),
               Effect.tap((providerThread) =>
                 markProviderThreadLoaded({
@@ -1813,14 +1818,7 @@ export const layerWithOptions = (
               ),
             ),
           startTurn: (input) =>
-            observeActivity(
-              providerSessionId,
-              ensureThreadAttached({
-                providerSessionId,
-                threadId: input.threadId,
-                providerInstanceId: runtime.instanceId,
-              }),
-            ).pipe(
+            attachForRuntime(input.threadId, input.runId).pipe(
               // Failed or stopped starts may omit turn.terminal; clear their turns so sessions can idle.
               Effect.andThen(
                 holdThreadLoaded({
@@ -1871,7 +1869,8 @@ export const layerWithOptions = (
               ),
             ),
           steerTurn: (input) =>
-            observeActivity(providerSessionId, touchActivity(providerSessionId)).pipe(
+            checkTaskScope(input.threadId, input.runId).pipe(
+              Effect.andThen(observeActivity(providerSessionId, touchActivity(providerSessionId))),
               Effect.andThen(runtime.steerTurn(input).pipe(turnMetrics("steer"))),
             ),
           // A provider starved of memory can stop answering, so no caller may wait on it unbounded.
@@ -2137,6 +2136,13 @@ export const layerWithOptions = (
               const key = sessionKey(input.providerSessionId);
               const existing = (yield* Ref.get(sessions)).get(key);
               if (existing !== undefined) {
+                if (existing.workbenchTaskId !== input.workbenchTaskId) {
+                  return yield* new ProviderSessionOpenError({
+                    instanceId: input.modelSelection.instanceId,
+                    providerSessionId: input.providerSessionId,
+                    cause: "The provider session is bound to a different workbench task.",
+                  });
+                }
                 const attached = existing.attachedThreadIds.has(input.threadId);
                 if (!attached && !existing.supportsMultipleProviderThreads) {
                   return yield* new ProviderSessionOpenError({
@@ -2185,6 +2191,9 @@ export const layerWithOptions = (
                   providerSessionId: input.providerSessionId,
                   modelSelection: input.modelSelection,
                   runtimePolicy: input.runtimePolicy,
+                  ...(input.workbenchTaskId === undefined
+                    ? {}
+                    : { workbenchTaskId: input.workbenchTaskId }),
                   ...(input.resumeFromSession === undefined
                     ? {}
                     : { resumeFromSession: input.resumeFromSession }),
@@ -2232,8 +2241,15 @@ export const layerWithOptions = (
               const eventSubscribers = yield* Ref.make<
                 ReadonlyMap<number, Queue.Queue<ProviderSessionEventSignal, Cause.Done>>
               >(new Map());
-              const exposedRuntime = decorateRuntime(runtime, eventSubscribers);
+              const exposedRuntime = decorateRuntime(
+                runtime,
+                eventSubscribers,
+                input.workbenchTaskId === undefined
+                  ? undefined
+                  : { id: input.workbenchTaskId, threadId: input.threadId },
+              );
               const entry: LiveSessionEntry = {
+                workbenchTaskId: input.workbenchTaskId,
                 attachedThreadIds: new Set([input.threadId]),
                 loadedProviderThreadKeyByThread: new Map(),
                 mcpCredentialIdByThread:
@@ -2241,6 +2257,7 @@ export const layerWithOptions = (
                     ? new Map()
                     : new Map([[input.threadId, mcpCredentialId]]),
                 supportsMultipleProviderThreads:
+                  input.workbenchTaskId === undefined &&
                   runtime.providerSession.capabilities.sessions
                     .supportsMultipleProviderThreadsPerSession,
                 runtime,

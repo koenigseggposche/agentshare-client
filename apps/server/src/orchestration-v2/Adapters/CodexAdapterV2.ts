@@ -1355,6 +1355,7 @@ export interface CodexAppServerClientFactoryShape {
     readonly runtimePolicy: ProviderAdapter.ProviderAdapterV2RuntimePolicy;
     readonly settings: CodexSettings;
     readonly environment: NodeJS.ProcessEnv;
+    readonly workbenchTaskId?: string;
   }) => Effect.Effect<
     CodexClient.CodexAppServerClient["Service"],
     ProviderAdapter.ProviderAdapterOpenSessionError,
@@ -1574,8 +1575,11 @@ export const layerAppServerClientFactory: Layer.Layer<
         const scope = yield* Scope.Scope;
         const managed = input.settings.agentShareModel;
         if (
-          managed !== undefined &&
-          (Option.isNone(nativeSessions) || input.settings.agentShareOwner === undefined)
+          (managed !== undefined &&
+            (Option.isNone(nativeSessions) || input.settings.agentShareOwner === undefined)) ||
+          (input.workbenchTaskId !== undefined &&
+            managed?.source !== "community" &&
+            managed?.source !== "owned")
         ) {
           return yield* new ProviderAdapter.ProviderAdapterOpenSessionError({
             driver: CODEX_PROVIDER,
@@ -1591,6 +1595,9 @@ export const layerAppServerClientFactory: Layer.Layer<
                   model: managed,
                   owner: input.settings.agentShareOwner ?? "",
                   directory: input.runtimePolicy.cwd ?? "",
+                  ...(input.workbenchTaskId === undefined
+                    ? {}
+                    : { workbench_task_id: input.workbenchTaskId }),
                 })
                 .pipe(
                   Effect.mapError(
@@ -1779,6 +1786,9 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
           runtimePolicy: input.runtimePolicy,
           settings: resolvedRuntime?.config ?? adapterOptions.settings,
           environment: resolvedRuntime?.environment ?? adapterOptions.environment,
+          ...(input.workbenchTaskId === undefined
+            ? {}
+            : { workbenchTaskId: input.workbenchTaskId }),
         });
         const additionalContextByThread = yield* Ref.make(
           new Map<

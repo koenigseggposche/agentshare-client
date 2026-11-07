@@ -172,12 +172,21 @@ export const makeAgentShareClaudeAdapter = Effect.fn("AgentShare.makeClaudeAdapt
       function* (session) {
         const selected = input.config.agentShareModel;
         const owner = input.config.agentShareOwner;
-        if (selected?.runtime !== "claude" || owner === undefined)
+        if (
+          selected?.runtime !== "claude" ||
+          owner === undefined ||
+          (session.workbenchTaskId !== undefined &&
+            selected.source !== "community" &&
+            selected.source !== "owned")
+        )
           return yield* new AgentShareCoreError({ operation: "acquireNative", category: "denied" });
         const lease = yield* native.acquire({
           owner,
           model: selected,
           directory: session.runtimePolicy.cwd ?? "",
+          ...(session.workbenchTaskId === undefined
+            ? {}
+            : { workbench_task_id: session.workbenchTaskId }),
         });
         const args = parseCliArgs(lease.launch.args);
         const settingsPath = args.flags.settings;

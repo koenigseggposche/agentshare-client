@@ -1179,6 +1179,53 @@ it.effect(
     }),
 );
 
+it.effect(
+  "ProviderSessionManagerV2 isolates task-scoped processes from other tasks and threads",
+  () =>
+    Effect.gen(function* () {
+      const state = yield* Ref.make(emptyState);
+      yield* Effect.gen(function* () {
+        const eventSink = yield* EventSink.EventSinkV2;
+        const idAllocator = yield* IdAllocator.IdAllocatorV2;
+        const manager = yield* ProviderSessionManager.ProviderSessionManagerV2;
+        const now = yield* DateTime.now;
+        const threadId = ThreadId.make("thread-task-session-owner");
+        const otherThreadId = ThreadId.make("thread-task-session-other");
+        const providerSessionId = yield* idAllocator.allocate.providerSession({
+          providerInstanceId: modelSelection.instanceId,
+          threadId,
+        });
+        yield* eventSink.write({
+          events: [
+            yield* makeThreadCreatedEvent({ idAllocator, threadId, now }),
+            yield* makeThreadCreatedEvent({ idAllocator, threadId: otherThreadId, now }),
+          ],
+        });
+        const input = { threadId, providerSessionId, modelSelection, runtimePolicy };
+        const runtime = yield* manager.open({ ...input, workbenchTaskId: "task:first" });
+        const reopened = yield* manager.open({ ...input, workbenchTaskId: "task:first" });
+        assert.equal(reopened, runtime);
+        for (const rejected of [
+          input,
+          { ...input, workbenchTaskId: "task:second" },
+          { ...input, threadId: otherThreadId, workbenchTaskId: "task:first" },
+        ]) {
+          const error = yield* manager.open(rejected).pipe(Effect.flip);
+          assert.equal(error._tag, "ProviderSessionOpenError");
+        }
+        const attachError = yield* runtime
+          .ensureThread({
+            threadId: otherThreadId,
+            modelSelection,
+            runtimePolicy,
+          })
+          .pipe(Effect.flip);
+        assert.equal(attachError._tag, "ProviderAdapterProtocolError");
+        assert.equal((yield* Ref.get(state)).openCount, 1);
+      }).pipe(Effect.provide(layerTest({ state, idleTimeoutMs: 60_000 })));
+    }),
+);
+
 it.effect("ProviderSessionManagerV2 cleans up an open interrupted mid-handshake", () =>
   Effect.gen(function* () {
     const state = yield* Ref.make(emptyState);
