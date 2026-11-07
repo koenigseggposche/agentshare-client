@@ -72,6 +72,7 @@ export function createAgentShareEnvironmentAtoms<R, E>(
     wallet: createEnvironmentQueryAtomFamily(runtime, {
       label: "agentshare:wallet",
       staleTimeMs: 5_000,
+      idleTtlMs: 0,
       execute: (input: AgentShareWalletReadInput) =>
         requestGuarded(WS_METHODS.agentShareWalletRead, input).pipe(
           withRpcPermissionGuard(runtime),

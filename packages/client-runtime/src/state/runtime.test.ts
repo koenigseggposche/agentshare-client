@@ -32,7 +32,9 @@ import {
 import * as EnvironmentRegistry from "../connection/registry.ts";
 import * as EnvironmentSupervisor from "../connection/supervisor.ts";
 import { EnvironmentRpcUnavailableError } from "../rpc/client.ts";
+import { layerRemoteHttpClient } from "../rpc/http.ts";
 import type * as RpcSession from "../rpc/session.ts";
+import { createAgentShareEnvironmentAtoms } from "./agentShare.ts";
 import { createPreviewEnvironmentAtoms } from "./preview.ts";
 import type { QueryPersistence } from "./queryPersistence.ts";
 import { createTerminalEnvironmentAtoms } from "./terminal.ts";
@@ -93,6 +95,7 @@ const makeEnvironmentQueryHarness = Effect.fn("TestEnvironmentQuery.makeHarness"
     persistence,
     initialState,
     rpcSession,
+    prepared,
     isFinal,
     onAnswer,
   }: {
@@ -103,6 +106,7 @@ const makeEnvironmentQueryHarness = Effect.fn("TestEnvironmentQuery.makeHarness"
     readonly persistence?: QueryPersistence<A>;
     readonly initialState?: SupervisorConnectionState;
     readonly rpcSession?: RpcSession.RpcSession;
+    readonly prepared?: PreparedConnection;
   } = {},
 ) {
   const supervisorState = yield* SubscriptionRef.make(initialState ?? queryConnectionState());
@@ -114,7 +118,7 @@ const makeEnvironmentQueryHarness = Effect.fn("TestEnvironmentQuery.makeHarness"
     target: QUERY_ENVIRONMENT,
     state: supervisorState,
     session: supervisorSession,
-    prepared: yield* SubscriptionRef.make<Option.Option<PreparedConnection>>(Option.none()),
+    prepared: yield* SubscriptionRef.make(Option.fromNullishOr(prepared)),
     connect: Effect.void,
     disconnect: Effect.void,
     retryNow: Effect.void,
@@ -136,7 +140,21 @@ const makeEnvironmentQueryHarness = Effect.fn("TestEnvironmentQuery.makeHarness"
     stateChanges: () => SubscriptionRef.changes(supervisorState),
   } as unknown as EnvironmentRegistry.EnvironmentRegistry["Service"]);
   const runtime = Atom.runtime(
-    Layer.succeed(EnvironmentRegistry.EnvironmentRegistry, environmentRegistry),
+    Layer.merge(
+      Layer.succeed(EnvironmentRegistry.EnvironmentRegistry, environmentRegistry),
+      layerRemoteHttpClient(async () =>
+        Response.json({
+          authenticated: true,
+          auth: {
+            policy: "remote-reachable",
+            bootstrapMethods: [],
+            sessionMethods: [],
+            sessionCookieName: "t3_session",
+          },
+          scopes: ["access:write"],
+        }),
+      ),
+    ),
   );
   const family = createEnvironmentQueryAtomFamily(runtime, {
     label: "test.environment-query",
@@ -183,6 +201,68 @@ const mountEnvironmentQuery = Effect.fn("TestEnvironmentQuery.mount")(function* 
   );
   return registry;
 });
+
+it.effect("reopens task charges with the current settlement state", () =>
+  Effect.gen(function* () {
+    let status = "charged";
+    const harness = yield* makeEnvironmentQueryHarness(Effect.void, {
+      prepared: {
+        environmentId: QUERY_ENVIRONMENT.environmentId,
+        label: QUERY_ENVIRONMENT.label,
+        httpBaseUrl: QUERY_ENVIRONMENT.httpBaseUrl,
+        socketUrl: QUERY_ENVIRONMENT.wsBaseUrl,
+        httpAuthorization: { _tag: "Bearer", token: "generated-token" },
+        target: QUERY_ENVIRONMENT,
+      },
+      rpcSession: {
+        client: {
+          [WS_METHODS.agentShareWalletRead]: () =>
+            Effect.sync(() => ({
+              action: "history",
+              data: { items: [{ status }], next_cursor: "" },
+            })),
+        },
+      } as unknown as RpcSession.RpcSession,
+    });
+    const wallet = createAgentShareEnvironmentAtoms(harness.runtime).wallet({
+      environmentId: QUERY_ENVIRONMENT.environmentId,
+      input: {
+        action: "history",
+        owner: "generated-owner",
+        kind: "spending",
+        cursor: "",
+        workbench_task_id: "generated-task",
+      },
+    });
+    let cleanup: Array<() => void> | undefined;
+    const registry = AtomRegistry.make({
+      scheduleTask: (task) => {
+        let active = true;
+        const run = () => {
+          if (active) task();
+        };
+        if (cleanup === undefined) queueMicrotask(run);
+        else cleanup.push(run);
+        return () => {
+          active = false;
+        };
+      },
+    });
+    yield* Effect.addFinalizer(() => Effect.sync(() => registry.dispose()));
+    const close = registry.mount(wallet);
+    expect(yield* readEnvironmentQuery(registry, wallet)).toMatchObject({
+      data: { items: [{ status: "charged" }] },
+    });
+    cleanup = [];
+    close();
+    for (const task of cleanup) task();
+    cleanup = undefined;
+    status = "settled";
+    expect(yield* readEnvironmentQuery(registry, wallet)).toMatchObject({
+      data: { items: [{ status: "settled" }] },
+    });
+  }).pipe(Effect.scoped),
+);
 
 describe("preview event subscriptions", () => {
   it.effect("delivers every open and close when RPC events arrive in batches", () =>
