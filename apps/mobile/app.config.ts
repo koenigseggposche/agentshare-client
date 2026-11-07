@@ -9,6 +9,16 @@ const repoEnv = loadRepoEnv();
 Object.assign(process.env, repoEnv);
 
 const APP_VARIANT = resolveAppVariant(repoEnv.APP_VARIANT);
+const easOwner = repoEnv.AGENTSHARE_EAS_OWNER?.trim();
+const easProjectId = repoEnv.AGENTSHARE_EAS_PROJECT_ID?.trim();
+const easProjectIdPattern = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+if (
+  (easOwner || easProjectId) &&
+  (!easOwner || !easProjectId || !easProjectIdPattern.test(easProjectId))
+) {
+  throw new Error("Set both AGENTSHARE_EAS_OWNER and AGENTSHARE_EAS_PROJECT_ID (a UUID).");
+}
+
 const isIosPersonalTeamBuild = repoEnv.T3CODE_IOS_PERSONAL_TEAM === "1";
 const runtimeVersionPolicy =
   process.env.MOBILE_VERSION_POLICY ??
@@ -217,11 +227,12 @@ const sharingPlugin: NonNullable<ExpoConfig["plugins"]>[number] = [
 const config: ExpoConfig = {
   name: variant.appName,
   slug: "agentshare-client",
+  ...(easOwner ? { owner: easOwner } : {}),
   platforms: ["ios", "android"],
   scheme: variant.scheme,
   version: repoEnv.T3CODE_MOBILE_VERSION ?? "2.2.0",
   runtimeVersion: {
-    // Skip costly fingerprinting on dev launches; preview and production OTAs require matching native projects.
+    // Skip costly fingerprinting on Metro development launches.
     policy: runtimeVersionPolicy,
   },
   orientation: "portrait",
@@ -430,6 +441,7 @@ const config: ExpoConfig = {
   ],
   extra: {
     appVariant: APP_VARIANT,
+    ...(easProjectId ? { eas: { projectId: easProjectId } } : {}),
     iosPersonalTeamBuild: isIosPersonalTeamBuild,
     relay: {
       url: repoEnv.T3CODE_RELAY_URL ?? null,

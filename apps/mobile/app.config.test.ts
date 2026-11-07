@@ -4,6 +4,12 @@ import { afterEach, expect, it, vi } from "vite-plus/test";
 vi.mock("../../scripts/lib/public-config.ts", () => ({
   loadRepoEnv: () => ({
     APP_VARIANT: process.env.APP_VARIANT,
+    ...(process.env.AGENTSHARE_EAS_OWNER !== undefined
+      ? { AGENTSHARE_EAS_OWNER: process.env.AGENTSHARE_EAS_OWNER }
+      : {}),
+    ...(process.env.AGENTSHARE_EAS_PROJECT_ID !== undefined
+      ? { AGENTSHARE_EAS_PROJECT_ID: process.env.AGENTSHARE_EAS_PROJECT_ID }
+      : {}),
     T3CODE_IOS_PERSONAL_TEAM: process.env.T3CODE_IOS_PERSONAL_TEAM,
     T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID: process.env.T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID,
   }),
@@ -62,4 +68,25 @@ it.each([
   expect(config.updates).toEqual({ enabled: false, checkAutomatically: "NEVER" });
   expect(config.extra?.eas?.projectId).toBeUndefined();
   expect(config.owner).toBeUndefined();
+});
+
+it("links a configured EAS project without enabling over-the-air updates", async () => {
+  vi.stubEnv("AGENTSHARE_EAS_OWNER", "example-owner");
+  vi.stubEnv("AGENTSHARE_EAS_PROJECT_ID", " 7f6c0158-018a-43a2-91ef-0a231f77e73f ");
+  const config = await loadConfig("preview");
+  expect(config.owner).toBe("example-owner");
+  expect(config.extra?.eas?.projectId).toBe("7f6c0158-018a-43a2-91ef-0a231f77e73f");
+  expect(config.updates).toEqual({ enabled: false, checkAutomatically: "NEVER" });
+});
+
+it.each([
+  ["example-owner", undefined],
+  [undefined, "7f6c0158-018a-43a2-91ef-0a231f77e73f"],
+  ["example-owner", "invalid"],
+])("rejects incomplete or malformed EAS project configuration", async (owner, projectId) => {
+  vi.stubEnv("AGENTSHARE_EAS_OWNER", owner);
+  vi.stubEnv("AGENTSHARE_EAS_PROJECT_ID", projectId);
+  await expect(loadConfig("preview")).rejects.toThrow(
+    "Set both AGENTSHARE_EAS_OWNER and AGENTSHARE_EAS_PROJECT_ID (a UUID).",
+  );
 });

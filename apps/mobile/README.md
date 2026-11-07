@@ -151,13 +151,17 @@ The native lint task runs SwiftLint for Swift plus ktlint and detekt for Kotlin.
 
 ## EAS Builds
 
-Preview and production variants use Expo fingerprinting so OTA updates only reach binaries with matching native dependencies, config plugins, and patches. CI uses the `preview:dev` profile to reuse a compatible native build when possible.
+Create an Expo project named `agentshare-client` in your distribution account. Set
+`AGENTSHARE_EAS_OWNER` and `AGENTSHARE_EAS_PROJECT_ID` (the project's UUID) in
+the build shell or root `.env`. Use the same values in the corresponding EAS
+build environment. Configure signing for each variant's package identifiers and
+set `EXPO_PUBLIC_AGENTSHARE_CONSOLE_URL` to the Console used by the host Core.
+For cloud connections, configure your own `T3CODE_CLERK_PUBLISHABLE_KEY`,
+`T3CODE_CLERK_JWT_TEMPLATE`, and `T3CODE_RELAY_URL` in that environment.
 
-The development variant uses `appVersion` to avoid recalculating the native fingerprint for each Metro launch manifest. `MOBILE_VERSION_POLICY` can override either default. If you distribute a custom Release build with the development identity and publish OTA updates to it, set `MOBILE_VERSION_POLICY=fingerprint` for both its build and updates. Changing the runtime policy requires a native rebuild for OTA matching; an existing dev client can still load local Metro bundles.
-
-For preview or production EAS environments, set `T3CODE_CLERK_PUBLISHABLE_KEY`,
-`T3CODE_CLERK_JWT_TEMPLATE`, and `T3CODE_RELAY_URL`
-as EAS environment variables. Expo config maps the canonical values into the mobile build.
+Preview and production builds use native fingerprints. Development uses
+`appVersion` to avoid recalculating the fingerprint for each Metro launch.
+The native app loads its bundled release code with Expo Updates disabled.
 
 Create a PR preview dev-client build manually:
 
