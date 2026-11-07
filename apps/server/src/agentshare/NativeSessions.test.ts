@@ -20,9 +20,11 @@ const launch: CoreClient.NativeLaunch = {
 
 describe("native model sessions", () => {
   it.effect.each([
-    { field: "owner", response: { ...launch, owner: "different-owner" } },
-    { field: "runtime", response: { ...launch, service: "claude" as const } },
-  ])("rejects a launch for a different $field and releases its lease", ({ response }) =>
+    { field: "owner", response: { ...launch, owner: "different-owner" }, task: undefined },
+    { field: "runtime", response: { ...launch, service: "claude" as const }, task: undefined },
+    { field: "task", response: { ...launch, workbench_task_id: "different-task" }, task: "task:1" },
+    { field: "task on an older Core", response: launch, task: "task:1" },
+  ])("rejects a launch for a different $field and releases its lease", ({ response, task }) =>
     Effect.gen(function* () {
       const releases: string[] = [];
       const failure = yield* Effect.scoped(
@@ -30,6 +32,7 @@ describe("native model sessions", () => {
           const service = yield* NativeSessions.NativeSessions;
           return yield* service.acquire({
             owner: launch.owner,
+            ...(task === undefined ? {} : { workbench_task_id: task }),
             model: { id: "generated", service: "codex", source: "community", runtime: "codex" },
             directory: launch.directory,
           });

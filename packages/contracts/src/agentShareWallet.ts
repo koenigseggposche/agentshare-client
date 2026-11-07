@@ -7,6 +7,9 @@ const Amount = Schema.Int.check(
 const Count = Amount.check(Schema.isGreaterThanOrEqualTo(0));
 const Currency = Schema.String.check(Schema.isPattern(/^[A-Z]{3}$/));
 const Cursor = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{0,512}$/));
+export const AgentShareWorkbenchTaskId = Schema.String.check(
+  Schema.isPattern(/^[A-Za-z0-9_.:-]{1,160}$/),
+);
 const RequestId = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{1,128}$/));
 
 export const AgentShareWalletRecord = Schema.Struct({
@@ -137,6 +140,7 @@ export const AgentShareWalletReadInput = Schema.Union([
     owner: Schema.String,
     kind: AgentShareWalletHistoryKind,
     cursor: Cursor,
+    workbench_task_id: Schema.optionalKey(AgentShareWorkbenchTaskId),
   }),
   Schema.Struct({ action: Schema.Literal("detail"), owner: Schema.String, request_id: RequestId }),
 ]);

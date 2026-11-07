@@ -11,6 +11,7 @@ export class NativeSessions extends Context.Service<
   {
     readonly acquire: (input: {
       readonly owner: string;
+      readonly workbench_task_id?: string;
       readonly model: AgentShareModel;
       readonly directory: string;
     }) => Effect.Effect<
@@ -33,7 +34,11 @@ export const layer = Layer.effect(
         const launch = yield* Effect.acquireRelease(core.acquireNative(input), (lease) =>
           core.releaseModel(lease.id).pipe(Effect.ignore),
         );
-        if (launch.owner !== input.owner || launch.service !== input.model.runtime)
+        if (
+          launch.owner !== input.owner ||
+          launch.service !== input.model.runtime ||
+          launch.workbench_task_id !== input.workbench_task_id
+        )
           return yield* new AgentShareCoreError({ operation: "acquireNative", category: "denied" });
         const keepAlive = Effect.forever(
           Effect.sleep("15 seconds").pipe(Effect.andThen(core.renewModel(launch.id))),

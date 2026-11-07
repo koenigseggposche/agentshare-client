@@ -27,7 +27,7 @@ const Me = Schema.Struct({
 });
 const History = Schema.Struct({
   items: AgentShareWalletOverview.fields.spending,
-  next_cursor: Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{0,512}$/)),
+  next_cursor: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{0,512}$/))),
 });
 const isAccountError = Schema.is(AgentShareAccountError);
 const decodeReadInput = Schema.decodeEffect(AgentShareWalletReadInput);
@@ -281,8 +281,21 @@ const make = Effect.gen(function* () {
           data: { ...data, current_device_id: session.identity.deviceId },
         };
       } else if (decoded.action === "history") {
-        const query = new URLSearchParams({ kind: decoded.kind, cursor: decoded.cursor });
-        const data = yield* json(session, `/v1/market/history?${query}`).pipe(
+        const query = new URLSearchParams({ cursor: decoded.cursor });
+        let route = "/v1/market/history";
+        if (decoded.workbench_task_id !== undefined) {
+          if (decoded.kind !== "spending") {
+            return yield* new AgentShareAccountError({
+              operation: "history",
+              category: "rejected",
+            });
+          }
+          route = "/v1/market/workbench-task-deals";
+          query.set("task", decoded.workbench_task_id);
+        } else {
+          query.set("kind", decoded.kind);
+        }
+        const data = yield* json(session, `${route}?${query}`).pipe(
           Effect.flatMap(Schema.decodeUnknownEffect(History)),
           Effect.mapError((cause) =>
             isAccountError(cause)
@@ -294,7 +307,12 @@ const make = Effect.gen(function* () {
                 }),
           ),
         );
-        result = { action: "history", owner: decoded.owner, kind: decoded.kind, data };
+        result = {
+          action: "history",
+          owner: decoded.owner,
+          kind: decoded.kind,
+          data: { items: data.items, next_cursor: data.next_cursor ?? "" },
+        };
       } else {
         const data = yield* json(
           session,

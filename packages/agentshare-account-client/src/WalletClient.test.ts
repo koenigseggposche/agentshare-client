@@ -89,6 +89,12 @@ const fixture = Effect.fn("WalletClient.test.fixture")(function* (options?: {
           csrf: "generated-private-value",
           checkout_url: "https://private.example.invalid",
         };
+      } else if (path.endsWith("/v1/market/workbench-task-deals")) {
+        const query = new URL(request.url).searchParams;
+        assert.equal(query.get("task"), "task:generated");
+        assert.equal(query.get("cursor"), "generated-cursor");
+        assert.include(cookie, "generated-session-secret");
+        body = { items: [{ request_id: "generated-request", status: "settled" }] };
       } else if (path.endsWith("/v1/market/payment-preference")) {
         assert.equal(request.headers["x-csrf-token"], "b".repeat(64));
         assert.equal(request.method, "POST");
@@ -316,3 +322,20 @@ describe("account wallet", () => {
     }),
   );
 });
+
+it.effect("reads task transactions from the account-scoped endpoint", () =>
+  Effect.gen(function* () {
+    const { client } = yield* fixture();
+    const result = yield* client.read({
+      action: "history",
+      owner: owner.owner,
+      kind: "spending",
+      cursor: "generated-cursor",
+      workbench_task_id: "task:generated",
+    });
+    assert.equal(result.action, "history");
+    if (result.action !== "history") return;
+    assert.equal(result.data.items[0]?.request_id, "generated-request");
+    assert.equal(result.data.next_cursor, "");
+  }),
+);

@@ -2,6 +2,7 @@ import {
   AgentShareCoreError,
   AgentShareHostIdentity,
   AgentShareModelCatalog,
+  AgentShareWorkbenchTaskId,
   type AgentShareModel,
   type AgentShareReadResource,
   type AgentShareCommandOperation,
@@ -121,6 +122,7 @@ export type ModelLease = typeof ModelLease.Type;
 const NativeLaunch = Schema.Struct({
   id: Schema.String,
   owner: Schema.String,
+  workbench_task_id: Schema.optionalKey(AgentShareWorkbenchTaskId),
   service: Schema.Literals(["codex", "claude"]),
   model: Schema.String,
   binary: Schema.String,
@@ -148,6 +150,7 @@ export class CoreClient extends Context.Service<
     }) => Effect.Effect<ModelLease, AgentShareCoreError>;
     readonly acquireNative: (input: {
       readonly owner: string;
+      readonly workbench_task_id?: string;
       readonly model: AgentShareModel;
       readonly directory: string;
     }) => Effect.Effect<NativeLaunch, AgentShareCoreError>;
@@ -323,6 +326,7 @@ const make = Effect.gen(function* () {
     acquireNative: Effect.fn("CoreClient.acquireNative")(
       (input: {
         readonly owner: string;
+        readonly workbench_task_id?: string;
         readonly model: AgentShareModel;
         readonly directory: string;
       }) =>
