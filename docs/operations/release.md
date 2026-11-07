@@ -4,7 +4,7 @@ For local setup and artifact commands, see [development](development.md). End us
 
 ## Current publication boundary
 
-The `AgentShare preview builds` workflow is manually dispatched from this repository’s `main` branch. It builds macOS arm64, Windows x64 and Linux arm64 previews against a complete, pinned Core commit. Configure `AGENTSHARE_CORE_READ_KEY` with a read-only deploy key scoped to `koenigseggposche/agentshare` before dispatching. The workflow keeps private Core source outside client packaging, builds Core from clean source and uploads installers, hashes and source metadata as workflow artifacts. These artifacts use development signing; install and verify them before promotion.
+The `AgentShare preview builds` workflow is manually dispatched from this repository’s `main` branch. It builds x64 and arm64 previews for macOS, Windows and Linux against a complete, pinned Core commit. Configure `AGENTSHARE_CORE_READ_KEY` with a read-only deploy key scoped to `koenigseggposche/agentshare` before dispatching. The workflow keeps private Core source outside client packaging, builds Core from clean source and uploads installers, hashes and source metadata as workflow artifacts. These artifacts use development signing; install and verify them before promotion.
 
 The inherited release workflow remains restricted to the upstream repository. Configure AgentShare distribution signing, package ownership and trusted publishers for a publishing workflow. Verify the destination of every upload and update feed; development builds alone do not establish a distribution release.
 
