@@ -23,7 +23,7 @@ import { ProviderCompatibilityPolicy } from "./providerCompatibility.ts";
 import * as ModelCatalog from "@t3tools/provider-core/server/ModelCatalog";
 
 const MODEL_MANIFEST_URL =
-  "https://raw.githubusercontent.com/pingdotgg/t3code/main/apps/server/src/provider/model-manifest.json";
+  "https://raw.githubusercontent.com/koenigseggposche/agentshare-client/main/apps/server/src/provider/model-manifest.json";
 
 const MANIFEST_TTL_MS = 60 * 60 * 1000;
 
@@ -196,7 +196,7 @@ export const make = Effect.gen(function* () {
   const httpClient = yield* HttpClient.HttpClient;
   const serviceScope = yield* Effect.scope;
 
-  const cachePath = path.join(config.stateDir, "model-manifest.json");
+  const cachePath = path.join(config.stateDir, "agentshare-model-manifest.json");
   let manifest = BUNDLED_MODEL_MANIFEST;
   let fetchedAtMs: number | null = null;
   let lastAttemptMs: number | null = null;

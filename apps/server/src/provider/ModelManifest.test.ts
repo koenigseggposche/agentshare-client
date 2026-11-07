@@ -247,15 +247,17 @@ const INVALID_REMOTE_MANIFESTS: ReadonlyArray<ModelManifest.ModelManifestData> =
   }),
 ];
 
-const layerHttpClient = (handler: () => Response) =>
+const layerHttpClient = (handler: (url: string) => Response) =>
   Layer.succeed(
     HttpClient.HttpClient,
-    HttpClient.make((request) => Effect.succeed(HttpClientResponse.fromWeb(request, handler()))),
+    HttpClient.make((request) =>
+      Effect.succeed(HttpClientResponse.fromWeb(request, handler(request.url))),
+    ),
   );
 
 const layerService = (input: {
   readonly prefix: string;
-  readonly response: () => Response;
+  readonly response: (url: string) => Response;
   readonly settings?: Parameters<typeof ServerSettings.layerTest>[0];
 }) =>
   ServerConfig.layerTest(process.cwd(), { prefix: input.prefix }).pipe(
@@ -278,7 +280,13 @@ describe("ModelManifest service", () => {
       Effect.provide(
         layerService({
           prefix: "model-manifest-fetch-test",
-          response: () => Response.json(REMOTE_MANIFEST),
+          response: (url) => {
+            assert.strictEqual(
+              url,
+              "https://raw.githubusercontent.com/koenigseggposche/agentshare-client/main/apps/server/src/provider/model-manifest.json",
+            );
+            return Response.json(REMOTE_MANIFEST);
+          },
         }),
       ),
     ),
@@ -335,12 +343,19 @@ describe("ModelManifest service", () => {
     );
   });
 
-  it.live("drops a disk cache of a manifest older than the bundled one", () =>
+  it.live("ignores the upstream disk cache and manifests older than the bundle", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const config = yield* ServerConfig.ServerConfig;
-      const cachePath = path.join(config.stateDir, "model-manifest.json");
+      const cachePath = path.join(config.stateDir, "agentshare-model-manifest.json");
+      yield* fs.writeFileString(
+        path.join(config.stateDir, "model-manifest.json"),
+        yield* ModelManifest.encodeManifestCache({ fetchedAtMs: 0, manifest: REMOTE_MANIFEST }),
+      );
+      const first = yield* ModelManifest.make;
+      assert.deepStrictEqual(yield* first.current, ModelManifest.BUNDLED_MODEL_MANIFEST);
+
       const { updatedAt: _undated, ...undatedManifest } = REMOTE_MANIFEST;
       for (const stale of [
         undatedManifest,

@@ -39,3 +39,5 @@ Use distinct development and production app identifiers and account-service URLs
 Use a developer team with the required signing and distribution capabilities for store builds. The Personal Team variant is for device testing and omits remote push, Apple sign-in, universal links, widgets and the share extension. Keep simulator signing enabled when testing upgrades so existing secure-storage entries remain available.
 
 Before distribution, verify host pairing, reconnects, permissions, independent personal-wallet access and supported older host/client versions. Complete the platform-specific review and payment setup for each distribution channel.
+
+With provider update checks enabled, the workbench refreshes its native-tool model and compatibility manifest from the AgentShare Client release repository. Each build includes a bundled copy for offline use. Community and device catalogs come from Core.
