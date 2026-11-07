@@ -23,6 +23,7 @@ import {
   OrchestrationV2DomainEvent,
 } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
+import * as ConfigProvider from "effect/ConfigProvider";
 import * as DateTime from "effect/DateTime";
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
@@ -67,11 +68,14 @@ const normalize = (target: string) => {
   }
   return `/${parts.join("/")}`;
 };
-const layerWorktreeLocation = (worktreesDir = managedWorktreesDir) =>
+const layerWorktreeLocation = (
+  worktreesDir = managedWorktreesDir,
+  settings = ServerSettings.layerTest(),
+) =>
   Layer.mergeAll(
     Path.layer,
     Layer.mock(ServerConfig.ServerConfig)({ worktreesDir } as ServerConfig.ServerConfig["Service"]),
-    ServerSettings.layerTest(),
+    settings,
   );
 
 function startWithMissingWorktree(
@@ -275,6 +279,7 @@ function makeLocalCommandHarness(input: {
   readonly gitWorkflow?: GitWorkflow.GitWorkflowService["Service"];
   readonly fileSystem?: FileSystem.FileSystem;
   readonly previousNativeSession?: boolean;
+  readonly taskBilling?: "idle" | "busy";
   readonly previousMessages?: ReadonlyArray<string>;
   readonly logoutFailure?: string;
   readonly openFailure?: unknown;
@@ -802,37 +807,42 @@ function makeLocalCommandHarness(input: {
     forkThread,
     startTurn,
   };
-  const open = vi.fn(() =>
-    input.sideChat !== undefined
-      ? Effect.succeed(sideChatSession as never)
-      : input.interruptOpen === true
-        ? Effect.interrupt
-        : "historyReadFailureAfterFallback" in input || "resumeFailure" in input
-          ? Effect.succeed(resumeFallbackSession as never)
-          : "ensureThreadFailure" in input
-            ? Effect.succeed({ driver: providerThread.driver, ensureThread } as never)
-            : "openFailure" in input
-              ? Effect.sync(() => {
-                  if (input.interruptRunBeforeOpenFailure === true) interruptRun();
-                }).pipe(
-                  Effect.andThen(
-                    Effect.fail(
-                      new ProviderSessionManager.ProviderSessionOpenError({
-                        instanceId: newInstanceId,
-                        providerSessionId,
-                        cause: input.openFailure,
-                      }),
+  const releaseUnlessBusy = vi.fn(() => Effect.succeed(true));
+  const open = vi.fn(
+    (sessionInput?: Parameters<ProviderSessionManager.ProviderSessionManagerV2Shape["open"]>[0]) =>
+      input.sideChat !== undefined
+        ? Effect.succeed(sideChatSession as never)
+        : input.interruptOpen === true
+          ? Effect.interrupt
+          : "historyReadFailureAfterFallback" in input || "resumeFailure" in input
+            ? Effect.succeed(resumeFallbackSession as never)
+            : "ensureThreadFailure" in input
+              ? Effect.succeed({ driver: providerThread.driver, ensureThread } as never)
+              : "openFailure" in input
+                ? Effect.sync(() => {
+                    if (input.interruptRunBeforeOpenFailure === true) interruptRun();
+                  }).pipe(
+                    Effect.andThen(
+                      Effect.fail(
+                        new ProviderSessionManager.ProviderSessionOpenError({
+                          instanceId: newInstanceId,
+                          providerSessionId,
+                          cause: input.openFailure,
+                        }),
+                      ),
                     ),
-                  ),
-                )
-              : input.failReadsAfterRunning === true || input.previousTurn !== undefined
-                ? Effect.succeed({
-                    driver: providerThread.driver,
-                    providerSession,
-                    ensureThread: () => Effect.succeed(providerThread),
-                    resumeThread: () => Effect.succeed(projection.providerThreads[0]),
-                  } as never)
-                : Effect.die("A local command must not open a native session."),
+                  )
+                : input.failReadsAfterRunning === true || input.previousTurn !== undefined
+                  ? Effect.succeed({
+                      driver: providerThread.driver,
+                      providerSession: {
+                        ...providerSession,
+                        id: sessionInput?.providerSessionId ?? providerSession.id,
+                      },
+                      ensureThread: () => Effect.succeed(providerThread),
+                      resumeThread: () => Effect.succeed(projection.providerThreads[0]),
+                    } as never)
+                  : Effect.die("A local command must not open a native session."),
   );
   const startRootRun = vi.fn<
     (input: RunExecutionService.RunExecutionServiceV2StartRootRunInput) => Effect.Effect<void>
@@ -940,7 +950,27 @@ function makeLocalCommandHarness(input: {
             }),
         }),
         IdAllocator.layer,
-        layerWorktreeLocation(input.worktreesDir),
+        layerWorktreeLocation(
+          input.worktreesDir,
+          input.taskBilling === undefined
+            ? ServerSettings.layerTest()
+            : ServerSettings.layerTest({
+                providerInstances: {
+                  [newInstanceId]: {
+                    driver: "codex",
+                    config: {
+                      agentShareOwner: "generated-owner",
+                      agentShareModel: {
+                        id: "generated",
+                        source: "community",
+                        service: "codex",
+                        runtime: "codex",
+                      },
+                    },
+                  },
+                },
+              }),
+        ),
         input.fileSystem === undefined
           ? FileSystem.layerNoop({ exists: () => Effect.succeed(true) })
           : Layer.succeed(FileSystem.FileSystem, input.fileSystem),
@@ -981,6 +1011,9 @@ function makeLocalCommandHarness(input: {
         }),
         Layer.mock(ProviderSessionManager.ProviderSessionManagerV2)({
           open,
+          releaseUnlessBusy,
+          isLive: () => Effect.succeed(true),
+          otherWorkingThreads: () => Effect.succeed([]),
           get: () =>
             Effect.succeed(
               input.previousTurn?.liveSession === false
@@ -989,6 +1022,7 @@ function makeLocalCommandHarness(input: {
                     driver: providerThread.driver,
                     providerSessionId,
                     interruptTurn,
+                    hasPendingBackgroundWork: Effect.succeed(input.taskBilling === "busy"),
                   } as unknown as ProviderAdapter.ProviderAdapterV2SessionRuntime),
             ),
         }),
@@ -1015,6 +1049,7 @@ function makeLocalCommandHarness(input: {
     resolveRuntimePolicy,
     createWorktree,
     open,
+    releaseUnlessBusy,
     fallbackEnsureThread,
     writeIfRunCurrent,
     startRootRun,
@@ -1029,7 +1064,18 @@ function makeLocalCommandHarness(input: {
     projection: () => projection,
     start: Effect.gen(function* () {
       yield* (yield* ProviderTurnStart.ProviderTurnStartServiceV2).start({ threadId, runId });
-    }).pipe(Effect.provide(layer)),
+    }).pipe(
+      Effect.provide(
+        Layer.merge(
+          layer,
+          ConfigProvider.layer(
+            ConfigProvider.fromUnknown({
+              AGENTSHARE_WORKBENCH_TASK_BILLING: input.taskBilling === undefined ? "0" : "1",
+            }),
+          ),
+        ),
+      ),
+    ),
     startWithRetry: Effect.gen(function* () {
       yield* (yield* ProviderTurnStart.ProviderTurnStartServiceV2).start({
         threadId,
@@ -1235,6 +1281,47 @@ effectIt.effect(
       ]);
       expect(JSON.stringify(harness.events)).not.toContain("private git diagnostic");
     }).pipe(Effect.scoped, Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
+);
+
+effectIt.effect.each(["idle", "busy"] as const)(
+  "opens a separate paid task session only when the previous session is idle (%s)",
+  (taskBilling) =>
+    Effect.gen(function* () {
+      const harness = makeLocalCommandHarness({
+        text: "Continue",
+        taskBilling,
+        previousTurn: { runStatus: "completed", turnStatus: "completed" },
+      });
+      const runId = harness.projection().runs.at(-1)!.id;
+      yield* harness.start;
+      if (taskBilling === "busy") {
+        expect(harness.releaseUnlessBusy).not.toHaveBeenCalled();
+        expect(harness.open).not.toHaveBeenCalled();
+        expect(harness.projection().runs.at(-1)?.status).toBe("failed");
+        return;
+      }
+      const sessionId = `provider-session:workbench-task:${runId}`;
+      expect(harness.releaseUnlessBusy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerSessionId: "new-provider-session",
+          ownProviderThreadIds: [],
+        }),
+      );
+      expect(harness.open).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerSessionId: sessionId,
+          workbenchTaskId: runId,
+          initialNativeThreadId: "existing-native-conversation",
+        }),
+      );
+      expect(harness.events).toContainEqual(
+        expect.objectContaining({
+          type: "provider-thread.updated",
+          payload: expect.objectContaining({ providerSessionId: sessionId, status: "not_loaded" }),
+        }),
+      );
+      expect(harness.startRootRun).toHaveBeenCalledOnce();
+    }),
 );
 
 effectIt.effect("recovers an abandoned failed turn before continuing its native conversation", () =>

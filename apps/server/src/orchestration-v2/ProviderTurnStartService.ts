@@ -2,6 +2,7 @@ import { modelSelectionsEqual } from "@t3tools/shared/model";
 import { projectComposerContextForProvider } from "@t3tools/shared/composerContextReferences";
 import {
   CommandId,
+  ProviderSessionId,
   latestProviderTurnForAttempt,
   type OrchestrationV2DomainEvent,
   type OrchestrationV2ContextHandoff,
@@ -15,6 +16,7 @@ import {
   RunId,
   ThreadId,
 } from "@t3tools/contracts";
+import * as Config from "effect/Config";
 import * as Context from "effect/Context";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -26,6 +28,7 @@ import * as Predicate from "effect/Predicate";
 import * as Schema from "effect/Schema";
 
 import * as ServerConfig from "../config.ts";
+import { isPaidModelConnection } from "../agentshare/ModelConnectionPolicy.ts";
 import { withWorkspaceLease } from "../workspace/workspaceLease.ts";
 import * as GitWorkflowService from "../git/GitWorkflowService.ts";
 import * as ProjectService from "../project/ProjectService.ts";
@@ -161,6 +164,7 @@ export const layer: Layer.Layer<
     const providerSessions = yield* ProviderSessionManager.ProviderSessionManagerV2;
     const runExecution = yield* RunExecutionService.RunExecutionServiceV2;
     const runtimePolicy = yield* RuntimePolicy.RuntimePolicyV2;
+    const settings = yield* ServerSettings.ServerSettingsService;
     const isManagedWorktreePath = yield* makeIsManagedWorktreePath;
 
     const resolveRecreateBase = Effect.fn("ProviderTurnStartService.resolveRecreateBase")(
@@ -352,7 +356,7 @@ export const layer: Layer.Layer<
       }
       const rootNode = projection.nodes.find((candidate) => candidate.id === run.rootNodeId);
       const attempt = projection.attempts.find((candidate) => candidate.id === run.activeAttemptId);
-      const providerThread = projection.providerThreads.find(
+      const priorProviderThread = projection.providerThreads.find(
         (candidate) => candidate.id === run.providerThreadId,
       );
       const message = projection.messages.find((candidate) => candidate.id === run.userMessageId);
@@ -412,8 +416,8 @@ export const layer: Layer.Layer<
       if (
         rootNode === undefined ||
         attempt === undefined ||
-        providerThread === undefined ||
-        providerThread.providerSessionId === null ||
+        priorProviderThread === undefined ||
+        priorProviderThread.providerSessionId === null ||
         message === undefined ||
         checkpointScope === undefined
       ) {
@@ -422,6 +426,26 @@ export const layer: Layer.Layer<
           cause: `Run ${runId} is missing its execution projection state.`,
         });
       }
+      const taskSessionPrefix = "provider-session:workbench-task:";
+      const taskSessionId = ProviderSessionId.make(taskSessionPrefix + runId);
+      const taskBillingEnabled = yield* Config.String("AGENTSHARE_WORKBENCH_TASK_BILLING").pipe(
+        Config.withDefault("0"),
+        Effect.orDie,
+      );
+      const scopedTask =
+        priorProviderThread.providerSessionId === taskSessionId ||
+        ((taskBillingEnabled === "1" ||
+          priorProviderThread.providerSessionId.startsWith(taskSessionPrefix)) &&
+          (priorProviderThread.driver === "codex" ||
+            priorProviderThread.driver === "claudeAgent") &&
+          isPaidModelConnection(
+            (yield* settings.getSettings.pipe(Effect.orDie)).providerInstances[
+              run.providerInstanceId
+            ]?.config,
+          ));
+      const providerThread = scopedTask
+        ? { ...priorProviderThread, providerSessionId: taskSessionId }
+        : priorProviderThread;
       const settleRunBeforeStart = Effect.fn("orchestrationV2.providerTurnStart.settleBeforeStart")(
         function* (input: {
           readonly signal: string;
@@ -689,7 +713,8 @@ export const layer: Layer.Layer<
       const inheritedBackgroundTurnItems = yield* projectionStore
         .getRuntimeRecoveryProjection(projection.thread.id)
         .pipe(Effect.map(selectInheritedBackgroundItems));
-      const providerSessionId = providerThread.providerSessionId;
+      const previousSessionId = priorProviderThread.providerSessionId;
+      const providerSessionId = scopedTask ? taskSessionId : previousSessionId;
       const runControls = makeRunControls({
         threadId: projection.thread.id,
         runId: run.id,
@@ -725,9 +750,11 @@ export const layer: Layer.Layer<
       }
       const resolvedRuntimePolicy = resolvedPolicy.success;
       if (!(yield* isCurrentAttemptInStatus("starting"))) return;
-      const existingSessionProjection = projection.providerSessions.find(
-        (candidate) => candidate.id === providerSessionId,
-      );
+      const existingSessionProjection =
+        projection.providerSessions.find((candidate) => candidate.id === providerSessionId) ??
+        (scopedTask
+          ? projection.providerSessions.find((candidate) => candidate.id === previousSessionId)
+          : undefined);
       const failedRuns = new Map(
         projection.runs
           .filter(
@@ -749,7 +776,7 @@ export const layer: Layer.Layer<
       });
       const abandonedTurn = abandonedTurns.at(-1)?.turn;
       if (abandonedTurn !== undefined) {
-        const liveSession = yield* providerSessions.get(providerSessionId);
+        const liveSession = yield* providerSessions.get(previousSessionId);
         if (Option.isSome(liveSession)) {
           // Older versions could fail the run without stopping its provider.
           // Recover that exact turn before reusing its native conversation.
@@ -793,12 +820,66 @@ export const layer: Layer.Layer<
         });
         if (!repaired.committed) return;
       }
+      if (providerSessionId !== previousSessionId) {
+        const previous = yield* providerSessions.get(previousSessionId);
+        if (Option.isSome(previous)) {
+          const live = previous.value;
+          const pending = yield* (
+            live.hasPendingBackgroundWorkForThread?.(priorProviderThread, {
+              includeSubagents: true,
+            }) ??
+              live.hasPendingBackgroundWork ??
+              Effect.succeed(false)
+          );
+          const otherWorking = yield* providerSessions.otherWorkingThreads({
+            providerSessionId: previousSessionId,
+            threadId: projection.thread.id,
+          });
+          const released =
+            !pending &&
+            otherWorking.length === 0 &&
+            (yield* providerSessions.releaseUnlessBusy({
+              providerSessionId: previousSessionId,
+              ownProviderThreadIds: [],
+              reason: "manual_shutdown",
+              detail: "Opening the next task with a separate billing connection.",
+            }));
+          if (!released && (yield* providerSessions.isLive(previousSessionId))) {
+            yield* settleStartFailure({
+              signal: "workbench-task-previous-session-active",
+              title: "Previous task still running",
+              error: new Error("The previous task is still using this provider session."),
+              message: "Wait for the previous task and its background work to finish.",
+            });
+            return;
+          }
+        }
+        const now = yield* DateTime.now;
+        const persisted = yield* eventSink.writeIfRunCurrent({
+          threadId: projection.thread.id,
+          runId,
+          activeAttemptId: attempt.id,
+          expectedStatus: "starting",
+          events: [
+            {
+              id: yield* idAllocator.allocate.event({ threadId: projection.thread.id }),
+              type: "provider-thread.updated",
+              threadId: projection.thread.id,
+              providerInstanceId: run.providerInstanceId,
+              occurredAt: now,
+              payload: { ...providerThread, status: "not_loaded", updatedAt: now },
+            },
+          ],
+        });
+        if (!persisted.committed) return;
+      }
       const sessionResult = yield* Effect.result(
         providerSessions.open({
           threadId: projection.thread.id,
           providerSessionId,
           modelSelection: run.modelSelection,
           runtimePolicy: resolvedRuntimePolicy,
+          ...(scopedTask ? { workbenchTaskId: runId } : {}),
           ...(existingSessionProjection === undefined
             ? {}
             : { resumeFromSession: existingSessionProjection }),
