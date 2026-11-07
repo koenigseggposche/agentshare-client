@@ -84,7 +84,18 @@ export const ChatHeader = memo(function ChatHeader({
   onOpenProjectSettings,
   onFindInThread,
 }: ChatHeaderProps) {
-  const activeProjectName = activeProject?.isScratch ? "No project" : activeProject?.title;
+  const isChinese = useClientSettings((settings) => settings.uiLanguage) === "zh";
+  const activeProjectName = activeProject?.isScratch
+    ? isChinese
+      ? "未选择项目"
+      : "No project"
+    : activeProject?.title;
+  const newThreadInProjectLabel = isChinese
+    ? activeProject?.isScratch
+      ? "新建无项目会话"
+      : `在「${activeProjectName}」中新建会话`
+    : `New thread in ${activeProjectName}`;
+  const displayedThreadTitle = !isServerThread && isChinese ? "新建会话" : activeThreadTitle;
   const activeProjectCwd = activeProject?.workspaceRoot ?? null;
   const interfaceFont = useClientSettings((settings) => settings.fontFamilySans);
   const breadcrumbContainerRef = useRef<HTMLDivElement>(null);
@@ -153,7 +164,7 @@ export const ChatHeader = memo(function ChatHeader({
   }, [
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- Title, font and rename changes resize the breadcrumb text without resizing the list, so it re-measures.
     activeProjectName,
-    activeThreadTitle,
+    displayedThreadTitle,
     parentThreadLink,
     interfaceFont,
     isRenamingTitle,
@@ -289,7 +300,7 @@ export const ChatHeader = memo(function ChatHeader({
       onContextMenu={handleHeaderContextMenu}
     >
       <WorkspaceBreadcrumb
-        ariaLabel="Thread breadcrumb"
+        ariaLabel={isChinese ? "会话导航" : "Thread breadcrumb"}
         className="flex-1 overflow-clip [overflow-clip-margin:2px]"
       >
         {activeProject ? (
@@ -300,7 +311,7 @@ export const ChatHeader = memo(function ChatHeader({
                   render={
                     <button
                       type="button"
-                      aria-label={`New thread in ${activeProjectName}`}
+                      aria-label={newThreadInProjectLabel}
                       onClick={onNewThreadInProject}
                       className="inline-flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                     />
@@ -311,7 +322,7 @@ export const ChatHeader = memo(function ChatHeader({
                     {activeProjectName}
                   </WorkspaceBreadcrumbText>
                 </TooltipTrigger>
-                <TooltipPopup side="top">New thread in {activeProjectName}</TooltipPopup>
+                <TooltipPopup side="top">{newThreadInProjectLabel}</TooltipPopup>
               </Tooltip>
             </WorkspaceBreadcrumbItem>
             <WorkspaceBreadcrumbSeparator>
@@ -407,15 +418,15 @@ export const ChatHeader = memo(function ChatHeader({
               <TooltipTrigger
                 render={
                   <h2
-                    aria-label={activeThreadTitle}
+                    aria-label={displayedThreadTitle}
                     className="min-w-0 flex-1"
-                    dir={textDirection(activeThreadTitle)}
+                    dir={textDirection(displayedThreadTitle)}
                   />
                 }
               >
-                <WorkspaceBreadcrumbText>{activeThreadTitle}</WorkspaceBreadcrumbText>
+                <WorkspaceBreadcrumbText>{displayedThreadTitle}</WorkspaceBreadcrumbText>
               </TooltipTrigger>
-              <TooltipPopup side="top">{activeThreadTitle}</TooltipPopup>
+              <TooltipPopup side="top">{displayedThreadTitle}</TooltipPopup>
             </Tooltip>
           )}
           {renamingTitle === null && activeThreadLinkOrigin ? (
