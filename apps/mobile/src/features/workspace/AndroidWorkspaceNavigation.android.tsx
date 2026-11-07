@@ -24,7 +24,11 @@ import { useAppearancePreferences } from "../settings/appearance/AppearancePrefe
 import { useSoftKeyboardShowing } from "../keyboard/useSoftKeyboardShowing";
 import { useAdaptiveWorkspaceLayout } from "../layout/adaptive-workspace-context";
 import { useAndroidWorkspaceRoot } from "./AndroidWorkspaceTabsProvider";
-import { useNavigationTabOrder, useHiddenNavigationTabs } from "./navigation-tabs";
+import {
+  useNavigationTabOrder,
+  useHiddenNavigationTabs,
+  useWorkbenchLanguage,
+} from "./navigation-tabs";
 import { useWorkspaceTabs } from "./WorkspaceTabsContext";
 import { FLOATING_TABS, floatingTabsMetrics } from "./floating-workspace-tabs";
 
@@ -35,6 +39,7 @@ interface NativeNavigationProps extends ViewProps {
   readonly rail: boolean;
   readonly floating: boolean;
   readonly tabs: readonly string[];
+  readonly language: "zh" | "en";
   readonly selectedTab: AndroidWorkspaceNavigationTab;
   readonly dark: boolean;
   readonly textScale: number;
@@ -73,6 +78,7 @@ export function AndroidWorkspaceNavigation(props: {
   readonly onOverlayChange?: (overlay: boolean) => void;
 }) {
   const workspace = useWorkspaceTabs()!;
+  const language = useWorkbenchLanguage();
   const order = useNavigationTabOrder();
   const hidden = useHiddenNavigationTabs();
   const root = useAndroidWorkspaceRoot();
@@ -121,6 +127,7 @@ export function AndroidWorkspaceNavigation(props: {
         rail={rail}
         floating={floating}
         tabs={tabs}
+        language={language}
         selectedTab={selectedTab}
         dark={themeAppearance === "dark"}
         textScale={scale}

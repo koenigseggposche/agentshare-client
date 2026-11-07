@@ -68,6 +68,7 @@ class T3WorkspaceNavigationModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("T3WorkspaceNavigation")
     View(T3WorkspaceNavigationView::class) {
+      Prop("language") { view: T3WorkspaceNavigationView, value: String -> view.language = value }
       Prop("tabs") { view: T3WorkspaceNavigationView, value: List<String> -> view.tabs = value }
       Prop("selectedTab") { view: T3WorkspaceNavigationView, value: String ->
         view.selectedTab = value
@@ -127,6 +128,7 @@ class T3WorkspaceNavigationView(
   private val onNewThread by EventDispatcher()
   private val onOverlayChange by EventDispatcher()
   var tabs by mutableStateOf(listOf("threads", "pullRequests", "usage", "settings"))
+  var language by mutableStateOf("en")
   var selectedTab by mutableStateOf("threads")
   var rail by mutableStateOf(false)
   var floating by mutableStateOf(false)
@@ -344,6 +346,7 @@ class T3WorkspaceNavigationView(
   /** The collapsed FAB widens with the rail and reveals its label as it goes. */
   @Composable
   private fun newThreadButton(fraction: Float, onClick: () -> Unit) {
+    val title = if (language == "zh") "新建会话" else "New thread"
     Surface(
       onClick = onClick,
       enabled = newEnabled,
@@ -356,7 +359,7 @@ class T3WorkspaceNavigationView(
         .height(FAB_SIZE)
         .width(lerp(FAB_SIZE, EXPANDED_RAIL_WIDTH - RAIL_INSET * 2, fraction))
         .alpha(if (newEnabled) 1f else DISABLED_ALPHA)
-        .semantics { contentDescription = "New thread" },
+        .semantics { contentDescription = title },
     ) {
       Row(
         Modifier.padding(start = (FAB_SIZE - ICON_SIZE) / 2).clipToBounds(),
@@ -364,7 +367,7 @@ class T3WorkspaceNavigationView(
       ) {
         Icon(painterResource(R.drawable.t3_new_thread), contentDescription = null)
         Text(
-          "New thread",
+          title,
           Modifier.padding(start = 12.dp).alpha(labelAlpha(fraction)).clearAndSetSemantics {},
           style = MaterialTheme.typography.labelLarge,
           fontSize = (14 * textScale).sp,
@@ -413,14 +416,14 @@ class T3WorkspaceNavigationView(
   }
 
   private fun tabTitle(tab: String) = when (tab) {
-    "threads" -> "Chats"
-    "pullRequests" -> "Pulls"
-    "usage" -> "Usage"
-    else -> "Settings"
+    "threads" -> if (language == "zh") "会话" else "Chats"
+    "pullRequests" -> if (language == "zh") "拉取请求" else "Pulls"
+    "usage" -> if (language == "zh") "用量" else "Usage"
+    else -> if (language == "zh") "设置" else "Settings"
   }
 
   private fun expandedTabTitle(tab: String) =
-    if (tab == "pullRequests") "Pull Requests" else tabTitle(tab)
+    if (tab == "pullRequests" && language != "zh") "Pull Requests" else tabTitle(tab)
 
   @Composable
   private fun tabIconPainter(tab: String) = painterResource(

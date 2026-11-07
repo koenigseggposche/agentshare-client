@@ -1,5 +1,5 @@
 import { WorkspaceNoTabs } from "./WorkspaceNoTabs";
-import { WORKSPACE_TAB_LABELS, useEnabledNavigationTabs } from "./navigation-tabs";
+import { useWorkbenchLabels, useEnabledNavigationTabs } from "./navigation-tabs";
 import { WorkspaceExtraTab } from "./WorkspaceExtraTab";
 import { SettingsRouteScreen } from "../settings/SettingsRouteScreen";
 import { WorkspaceSectionToolbar } from "./WorkspaceSectionToolbar";
@@ -46,20 +46,19 @@ import {
 import { openSettings } from "../settings/settings-navigation";
 import { useSelectWorkspaceTab } from "./useSelectWorkspaceTab";
 
-const TAB_TITLES = WORKSPACE_TAB_LABELS;
-
 function WorkspaceRootTitle(props: {
   readonly columnWidth: number;
   readonly onOpenEnvironments: () => void;
 }) {
   const { state, settingsOpen } = useWorkspaceTabs()!;
   const maxWidth = Math.max(0, props.columnWidth - (use(HeaderItemsWidthContext) ?? 160));
+  const labels = useWorkbenchLabels();
   const enabled = useEnabledNavigationTabs();
   const tabTitle = settingsOpen
-    ? "Settings"
+    ? labels.settings
     : enabled.length
-      ? TAB_TITLES[state.selectedTab]
-      : "Navigation";
+      ? labels[state.selectedTab]
+      : labels.navigation;
   return (
     <View style={{ width: maxWidth, minHeight: 32, justifyContent: "center" }}>
       <WorkspaceConnectionTitle
@@ -82,6 +81,7 @@ function WorkspaceRootContent() {
   const deviceType = useDeviceType();
   const systemTabBar = useSystemWorkspaceTabBar();
   const compactTabs = useCompactWorkspaceTabs();
+  const labels = useWorkbenchLabels();
   const enabled = useEnabledNavigationTabs();
   const sidebarTabs = useSidebarWorkspaceTabs();
   const sidebarPicker = sidebarTabs === "picker" || (deviceType === "pad" && layout.usesSplitView);
@@ -136,13 +136,14 @@ function WorkspaceRootContent() {
               width,
               sidebarNavigation,
               enabled.length,
+              labels.settings,
             ]}
             options={{
               title: settingsOpen
-                ? "Settings"
+                ? labels.settings
                 : enabled.length
-                  ? TAB_TITLES[state.selectedTab]
-                  : "Navigation",
+                  ? labels[state.selectedTab]
+                  : labels.navigation,
               headerShown: true,
               headerTransparent: NATIVE_LIQUID_GLASS_SUPPORTED,
               headerStyle: NATIVE_LIQUID_GLASS_SUPPORTED
@@ -171,7 +172,9 @@ function WorkspaceRootContent() {
                 ? [
                     {
                       accessibilityLabel:
-                        state.selectedTab === "threads" ? "Search threads" : "Search pull requests",
+                        state.selectedTab === "threads"
+                          ? labels.searchThreads
+                          : labels.searchPullRequests,
                       icon: "magnifyingglass" as const,
                       onPress: () => {
                         dispatchHardwareKeyboardCommand("focusSearch");
@@ -180,7 +183,7 @@ function WorkspaceRootContent() {
                   ]
                 : []),
               {
-                accessibilityLabel: "Settings",
+                accessibilityLabel: labels.settings,
                 icon: "gearshape",
                 onPress: () => selectTab("settings"),
               },

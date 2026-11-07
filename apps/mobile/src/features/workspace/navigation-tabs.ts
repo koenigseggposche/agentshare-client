@@ -1,3 +1,4 @@
+import { workbenchLabels } from "@t3tools/shared/workbenchLabels";
 import { useAtomValue } from "@effect/atom-react";
 import { AsyncResult } from "effect/reactivity";
 import { Platform } from "react-native";
@@ -23,6 +24,15 @@ export const NAVIGATION_TAB_ICONS = {
   pullRequests: PullRequestGlyph.pullRequest,
   usage: "chart.bar.xaxis",
 } as const satisfies Readonly<Record<NavigationTab, AppSymbolName>>;
+
+export function useWorkbenchLanguage() {
+  const preferences = useAtomValue(mobilePreferencesAtom);
+  return AsyncResult.isSuccess(preferences) ? (preferences.value.uiLanguage ?? "zh") : "zh";
+}
+
+export function useWorkbenchLabels() {
+  return workbenchLabels[useWorkbenchLanguage()];
+}
 
 export function useNavigationTabOrder() {
   const preferences = useAtomValue(mobilePreferencesAtom);

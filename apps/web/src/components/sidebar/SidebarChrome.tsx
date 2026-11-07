@@ -4,7 +4,8 @@ import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 
 import { useAtomValue } from "@effect/atom-react";
-import { useEnvironmentIdentificationMode } from "../../hooks/useSettings";
+import { workbenchLabels } from "@t3tools/shared/workbenchLabels";
+import { useClientSettings, useEnvironmentIdentificationMode } from "../../hooks/useSettings";
 import { shortcutLabelForCommand } from "../../keybindings";
 import {
   navigateHistory,
@@ -219,6 +220,7 @@ function SidebarUtilityItem({
 }
 
 const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
+  const labels = workbenchLabels[useClientSettings((settings) => settings.uiLanguage)];
   const navigate = useNavigate();
   const navigateToMainApp = useNavigateToMainApp();
   const { isMobile, setOpenMobile } = useSidebar();
@@ -261,26 +263,26 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
         <SidebarMenuItem className="min-w-0 flex-1">
           <SidebarMenuButton onClick={handleBackClick}>
             <ArrowLeftIcon />
-            <span>Back</span>
+            <span>{labels.back}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       ) : (
         <>
           <SidebarUtilityItem
             icon={<SettingsIcon />}
-            label="Settings"
+            label={labels.settings}
             onClick={handleSettingsClick}
           />
           {pullRequestsSupported ? (
             <SidebarUtilityItem
               icon={<PullRequestGlyph.pullRequest />}
-              label="Pull requests"
+              label={labels.pullRequests}
               onClick={handlePullRequestsClick}
             />
           ) : null}
           <SidebarUtilityItem
             icon={<ChartNoAxesColumnIcon />}
-            label="Usage"
+            label={labels.usage}
             onClick={handleUsageClick}
           />
         </>

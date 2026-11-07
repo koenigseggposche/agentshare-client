@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./workbenchLabels": {
+      "types": "./src/workbenchLabels.ts",
+      "import": "./src/workbenchLabels.ts"
+    },
     "./changedFileKind": {
       "types": "./src/changedFileKind.ts",
       "import": "./src/changedFileKind.ts"

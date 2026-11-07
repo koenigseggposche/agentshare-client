@@ -43,12 +43,15 @@ describe("sidebar header new thread", () => {
     { mode: "boring", count: 2, shift: true, picker: false },
     { mode: "boring", count: 1, shift: false, picker: false },
     { mode: "legacy", count: 2, shift: false, picker: false },
+    { mode: "normal", count: 2, shift: false, picker: true, language: "zh" },
   ] as const)("$mode sidebar, $count projects, shift=$shift: picker=$picker", async (scenario) => {
     using stack = new DisposableStack();
     const previousSettings = getClientSettings();
     stack.defer(() => __setClientSettingsForTests(previousSettings));
+    const language = "language" in scenario ? scenario.language : "en";
     __setClientSettingsForTests({
       ...DEFAULT_CLIENT_SETTINGS,
+      uiLanguage: language,
       boringSidebarEnabled: scenario.mode === "boring",
       legacySidebarEnabled: scenario.mode === "legacy",
     });
@@ -74,9 +77,11 @@ describe("sidebar header new thread", () => {
       </SidebarProvider>,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "New thread", exact: true }), {
-      modifiers: scenario.shift ? ["Shift"] : [],
+    const newThread = screen.getByRole("button", {
+      name: language === "zh" ? "新建会话" : "New thread",
+      exact: true,
     });
+    await userEvent.click(newThread, { modifiers: scenario.shift ? ["Shift"] : [] });
 
     if (scenario.picker) {
       expect(openCommandPalette).toHaveBeenCalledExactlyOnceWith({ open: "new-thread-in" });
