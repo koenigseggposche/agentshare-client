@@ -74,14 +74,14 @@ describe("orchestration cache envelopes", () => {
     expect(decoded.visibleTurnItems.find((entry) => entry.item.id === item.id)?.item).toEqual(item);
   });
 
-  it("rejects thread snapshots saved before human history was bounded, but not shells", () => {
+  it("rejects old thread snapshots without discarding shell data", () => {
     const currentThread = encodeStoredThreadSnapshotJson({
       schemaVersion: ORCHESTRATION_THREAD_CACHE_SCHEMA_VERSION,
       environmentId,
       threadId: v2ThreadId,
       snapshot: { snapshotSequence: 4, projection: v2Projection },
     });
-    for (const staleVersion of [3, 4]) {
+    for (const staleVersion of [3, 4, 5]) {
       const staleThread = currentThread.replace(
         `"schemaVersion":${ORCHESTRATION_THREAD_CACHE_SCHEMA_VERSION}`,
         `"schemaVersion":${staleVersion}`,
