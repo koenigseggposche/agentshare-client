@@ -192,6 +192,7 @@ export const verifyPackagedCore = Effect.fn("desktop.coreArtifact.verifyPackaged
         return yield* new CoreArtifactError({ stage: "hash" });
       }
     }
+    return candidates.map((manifestPath) => path.dirname(path.dirname(manifestPath)));
   },
   Effect.mapError((cause) =>
     isArtifactError(cause) ? cause : new CoreArtifactError({ stage: "staging", cause }),

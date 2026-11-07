@@ -700,6 +700,15 @@ export class DesktopBuildDistDirectoryMissingError extends Schema.TaggedError<De
   }
 }
 
+class DesktopPayloadMismatchError extends Schema.TaggedError<DesktopPayloadMismatchError>()(
+  "DesktopPayloadMismatchError",
+  { archive: Schema.String },
+) {
+  override get message(): string {
+    return `Packaged copies of ${this.archive} differ`;
+  }
+}
+
 export class DesktopBuildNoArtifactsProducedError extends Schema.TaggedError<DesktopBuildNoArtifactsProducedError>()(
   "DesktopBuildNoArtifactsProducedError",
   {
@@ -958,6 +967,7 @@ interface ResolvedBuildOptions {
   readonly arch: typeof BuildArch.Type;
   readonly version: string | undefined;
   readonly outputDir: string;
+  readonly recordPayloadHashes: boolean;
   readonly skipBuild: boolean;
   readonly keepStage: boolean;
   readonly signed: boolean;
@@ -1666,6 +1676,9 @@ const BuildEnvConfig = Config.all({
   arch: Config.schema(BuildArch, "T3CODE_DESKTOP_ARCH").pipe(Config.option),
   version: Config.String("T3CODE_DESKTOP_VERSION").pipe(Config.option),
   outputDir: Config.String("T3CODE_DESKTOP_OUTPUT_DIR").pipe(Config.option),
+  recordPayloadHashes: Config.Boolean("AGENTSHARE_RECORD_DESKTOP_PAYLOAD_HASHES").pipe(
+    Config.withDefault(false),
+  ),
   skipBuild: Config.Boolean("T3CODE_DESKTOP_SKIP_BUILD").pipe(Config.withDefault(false)),
   keepStage: Config.Boolean("T3CODE_DESKTOP_KEEP_STAGE").pipe(Config.withDefault(false)),
   signed: Config.Boolean("T3CODE_DESKTOP_SIGNED").pipe(Config.withDefault(false)),
@@ -1773,6 +1786,7 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
     arch,
     version,
     outputDir,
+    recordPayloadHashes: env.recordPayloadHashes,
     skipBuild,
     keepStage,
     signed,
@@ -4166,7 +4180,7 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
     });
   }
 
-  yield* verifyPackagedCore({
+  const packagedResources = yield* verifyPackagedCore({
     distribution: stageDistDir,
     platform: options.platform,
     arch: options.arch,
@@ -4235,6 +4249,29 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
       platform: options.platform,
       arch: options.arch,
     });
+  }
+
+  if (options.recordPayloadHashes) {
+    const archives =
+      options.platform === "win" ? ["app.asar", WINDOWS_SERVER_ASAR_RESOURCE] : ["app.asar"];
+    const hashes: Record<string, string> = {};
+    for (const archive of archives) {
+      for (const resources of packagedResources) {
+        const hash = NodeCrypto.createHash("sha256");
+        yield* fs
+          .stream(path.join(resources, archive))
+          .pipe(Stream.runForEach((chunk) => Effect.sync(() => hash.update(chunk))));
+        const digest = hash.digest("hex");
+        if (hashes[archive] !== undefined && hashes[archive] !== digest) {
+          return yield* new DesktopPayloadMismatchError({ archive });
+        }
+        hashes[archive] = digest;
+      }
+    }
+    yield* fs.writeFileString(
+      path.join(options.outputDir, "payload-hashes.json"),
+      yield* encodeJsonString(hashes),
+    );
   }
 
   yield* Effect.log("[desktop-artifact] Done. Artifacts:").pipe(

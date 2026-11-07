@@ -138,6 +138,7 @@ jobs:
       DESKTOP_TARGET: ${{ matrix.target }}
       DISTRIBUTION_SIGNING: ${{ matrix.distribution_signing }}
       RELEASE_CANDIDATE: ${{ inputs.release_candidate }}
+      AGENTSHARE_RECORD_DESKTOP_PAYLOAD_HASHES: "true"
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       CARGO_BUILD_JOBS: "2"
     steps:
@@ -380,11 +381,12 @@ jobs:
               raise SystemExit('Core artifact is not bound to the requested clean source.')
           shutil.copyfile(pathlib.Path(os.environ['RUNNER_TEMP']) / 'core-artifact/manifest.json', root / 'core-manifest.json')
           (root / 'SHA256SUMS').write_text(''.join(f"{x['sha256']}  {x['name']}\n" for x in files))
+          payload_hashes = json.loads((root / 'payload-hashes.json').read_text())
           (root / 'build.json').write_text(json.dumps(dict(
               client_version=os.environ['CLIENT_VERSION'], client_revision=os.environ['GITHUB_SHA'],
               core_version=os.environ['CORE_VERSION'], core_revision=os.environ['CORE_REF'],
               workflow_run_id=int(os.environ['GITHUB_RUN_ID']), release_candidate=os.environ['RELEASE_CANDIDATE'] == 'true',
-              target=os.environ['CORE_TARGET'], distribution_signing=os.environ['DISTRIBUTION_SIGNING'] == 'true', files=files), indent=2) + '\n')
+              target=os.environ['CORE_TARGET'], distribution_signing=os.environ['DISTRIBUTION_SIGNING'] == 'true', payload_hashes=payload_hashes, files=files), indent=2) + '\n')
           PY
       - name: Upload preview artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
