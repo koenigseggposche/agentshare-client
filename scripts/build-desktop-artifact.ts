@@ -2702,19 +2702,12 @@ export function resolveDesktopRuntimeDependencies(
 export const resolveGitHubPublishConfig = Effect.fn("resolveGitHubPublishConfig")(function* (
   updateChannel: "latest" | "nightly",
 ) {
-  const env = yield* Config.all({
-    updateRepository: Config.String("T3CODE_DESKTOP_UPDATE_REPOSITORY").pipe(Config.option),
-    githubRepository: Config.String("GITHUB_REPOSITORY").pipe(Config.option),
-  });
-  const rawRepo = (
-    Option.getOrUndefined(env.updateRepository)?.trim() ||
-    Option.getOrUndefined(env.githubRepository)?.trim() ||
-    ""
-  ).trim();
-  if (!rawRepo) return undefined;
-
+  const configured = yield* Config.String("T3CODE_DESKTOP_UPDATE_REPOSITORY").pipe(Config.option);
+  const rawRepo = Option.getOrUndefined(configured)?.trim() ?? "";
   const [owner, repo, ...rest] = rawRepo.split("/");
-  if (!owner || !repo || rest.length > 0) return undefined;
+  const validSegment = (value: string | undefined): value is string =>
+    value !== undefined && value !== "." && value !== ".." && /^[A-Za-z0-9._-]+$/u.test(value);
+  if (!validSegment(owner) || !validSegment(repo) || rest.length > 0) return undefined;
 
   return {
     provider: "github",

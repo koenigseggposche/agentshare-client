@@ -42,6 +42,7 @@ import {
   resolveMacPasskeySigningConfiguration,
   resolveMergedStageDependencies,
   resolveBuildOptions,
+  resolveGitHubPublishConfig,
   stageWslRuntimeArchive,
   ancestorNodeModulesPaths,
   copyDirectoryPreservingSymlinks,
@@ -532,18 +533,43 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       assert.deepStrictEqual(release.publish, [
         {
           provider: "github",
-          owner: "pingdotgg",
-          repo: "t3code",
+          owner: "koenigseggposche",
+          repo: "agentshare-client",
           releaseType: "release",
         },
       ]);
     }).pipe(
       Effect.provide(
         ConfigProvider.layer(
-          ConfigProvider.fromEnv({ env: { GITHUB_REPOSITORY: "pingdotgg/t3code" } }),
+          ConfigProvider.fromEnv({
+            env: {
+              GITHUB_REPOSITORY: "pingdotgg/t3code",
+              T3CODE_DESKTOP_UPDATE_REPOSITORY: "koenigseggposche/agentshare-client",
+            },
+          }),
         ),
       ),
     ),
+  );
+
+  it.effect("ignores the CI repository when the update feed is missing or invalid", () =>
+    Effect.gen(function* () {
+      for (const configured of [undefined, "owner/repo?feed=other", "owner/.."]) {
+        const publish = yield* resolveGitHubPublishConfig("latest").pipe(
+          Effect.provide(
+            ConfigProvider.layer(
+              ConfigProvider.fromEnv({
+                env: {
+                  GITHUB_REPOSITORY: "pingdotgg/t3code",
+                  ...(configured ? { T3CODE_DESKTOP_UPDATE_REPOSITORY: configured } : {}),
+                },
+              }),
+            ),
+          ),
+        );
+        assert.isUndefined(publish);
+      }
+    }),
   );
 
   // pnpm writes "set this to true or false" placeholders into allowBuilds when a

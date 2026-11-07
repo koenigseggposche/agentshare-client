@@ -530,6 +530,7 @@ jobs:
       - name: Build desktop artifact
         shell: bash
         env:
+          T3CODE_DESKTOP_UPDATE_REPOSITORY: ${{ github.repository }}
           # pnpm only goes to the registry for packages or versions the cache lacks.
           pnpm_config_cache_dir: ${{ steps.stage_pnpm.outputs.dir }}/cache
           pnpm_config_store_dir: ${{ steps.stage_pnpm.outputs.dir }}/store
