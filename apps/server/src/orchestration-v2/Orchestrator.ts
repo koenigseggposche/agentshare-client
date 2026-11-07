@@ -190,7 +190,10 @@ import {
 } from "./ThreadForkService.ts";
 import { planThreadDeletion } from "./ThreadDeletion.ts";
 import type * as ProviderAdapter from "@t3tools/provider-core/server/ProviderAdapter";
-import { isPaidModelConnection } from "../agentshare/ModelConnectionPolicy.ts";
+import {
+  isPaidModelConnection,
+  PAID_AUTOMATION_BLOCKED,
+} from "../agentshare/ModelConnectionPolicy.ts";
 import * as ServerSettings from "../serverSettings.ts";
 
 const isMessageQuestionAnswer = Schema.is(
@@ -203,9 +206,11 @@ export class OrchestratorDispatchError extends Schema.TaggedError<OrchestratorDi
     commandId: CommandId,
     commandType: Schema.String,
     cause: Schema.optional(Schema.Defect()),
+    policy: Schema.optional(Schema.Literal("paid-automation")),
   },
 ) {
   override get message(): string {
+    if (this.policy === "paid-automation") return PAID_AUTOMATION_BLOCKED;
     return `Failed to dispatch orchestration command ${this.commandType} (${this.commandId}).`;
   }
 }
@@ -5479,7 +5484,7 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         return yield* new OrchestratorDispatchError({
           commandId: command.commandId,
           commandType: command.type,
-          cause: "Scheduled tasks and webhooks cannot use paid AgentShare model connections.",
+          policy: "paid-automation",
         });
       }
     }

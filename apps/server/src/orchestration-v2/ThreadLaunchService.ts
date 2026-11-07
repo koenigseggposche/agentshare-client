@@ -44,6 +44,10 @@ import * as ProjectService from "../project/ProjectService.ts";
 import * as ProjectSetupScriptRunner from "../project/ProjectSetupScriptRunner.ts";
 import * as ManagedProjectFolders from "../project/ManagedProjectFolders.ts";
 import * as ProviderRegistry from "../provider/ProviderRegistry.ts";
+import {
+  isPaidModelConnection,
+  PAID_AUTOMATION_BLOCKED,
+} from "../agentshare/ModelConnectionPolicy.ts";
 import * as ServerSettings from "../serverSettings.ts";
 import * as TextGeneration from "../textGeneration/TextGeneration.ts";
 import * as CommandReceiptStore from "./CommandReceiptStore.ts";
@@ -131,6 +135,7 @@ export class ThreadLaunchError extends Schema.TaggedError<ThreadLaunchError>()(
   {
     operation: Schema.Literals([
       "resolve-project",
+      "check-automation-policy",
       "read-receipt",
       "generate-metadata",
       "provision-worktree",
@@ -148,6 +153,7 @@ export class ThreadLaunchError extends Schema.TaggedError<ThreadLaunchError>()(
   },
 ) {
   override get message(): string {
+    if (this.operation === "check-automation-policy") return PAID_AUTOMATION_BLOCKED;
     return `Thread launch ${this.commandId} failed during ${this.operation}.`;
   }
 }
@@ -861,6 +867,16 @@ const make = Effect.gen(function* () {
         )("Reusing an existing thread requires a thread id.");
       }
 
+      if (input.initialMessage?.scheduledTaskId !== undefined) {
+        const settings = yield* serverSettings.getSettings.pipe(
+          Effect.mapError(mapError(input, "resolve-project")),
+        );
+        if (
+          isPaidModelConnection(settings.providerInstances[input.modelSelection.instanceId]?.config)
+        ) {
+          return yield* mapError(input, "check-automation-policy")(PAID_AUTOMATION_BLOCKED);
+        }
+      }
       const launchReceipt = yield* readReceipt(input, input.commandId);
       yield* threads.assertProviderInstanceEnabled({
         projectId: input.projectId,

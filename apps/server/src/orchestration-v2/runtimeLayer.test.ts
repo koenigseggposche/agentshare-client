@@ -8420,6 +8420,9 @@ it.layer(layerQueueResumeDisabledInstanceTest)(
           })
           .pipe(Effect.result);
         assert.equal(result._tag, "Failure");
+        if (result._tag === "Failure") {
+          assert.include(result.failure.message, "cannot use paid AgentShare model connections");
+        }
         assert.isNull((yield* orchestrator.getThreadShell(threadId))?.latestRunId);
       }),
     );
