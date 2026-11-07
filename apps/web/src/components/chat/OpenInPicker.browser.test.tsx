@@ -189,12 +189,21 @@ describe("host editor access", () => {
   });
 });
 
+const announcementRegions = () => document.querySelectorAll('body > [aria-live="polite"]');
+
 describe("remote editor links", () => {
   it("opens the link from the fallback when the picker is not mounted", async () => {
     await using fixture = await setup();
     const { screen, pressOpenFavorite, FavoriteEditorFallback } = fixture;
     state.remote = { mode: "remote-links", host: { kind: "ssh-alias", host: "sol" } };
     await act(async () => screen.rerender(<FavoriteEditorFallback />));
+    using _timers = fakeTimers();
+    using _announcements = {
+      [Symbol.dispose]() {
+        vi.runAllTimers();
+        for (const region of announcementRegions()) region.textContent = "";
+      },
+    };
 
     expect((await pressOpenFavorite()).defaultPrevented).toBe(true);
     expect(state.openUrl).toHaveBeenCalledWith(expect.stringContaining("ssh-remote+sol"));
@@ -209,12 +218,9 @@ describe("open in editor announcement", () => {
     state.allowed.add(selected);
     await renderPicker();
     using _timers = fakeTimers();
-    const regions = () => [...document.querySelectorAll('body > [aria-live="polite"]')];
     const spoken = async () => {
       await act(async () => vi.runAllTimers());
-      return regions()
-        .map((region) => region.textContent)
-        .join("");
+      return [...announcementRegions()].map((region) => region.textContent).join("");
     };
     const refuse = () =>
       state.run.mockResolvedValueOnce(AsyncResult.failure(Cause.fail(new Error("No editor"))));
@@ -225,7 +231,7 @@ describe("open in editor announcement", () => {
     await pressOpenFavorite();
     expect(await spoken()).toBe("Opened in VS Code");
 
-    for (const region of regions()) region.textContent = "";
+    for (const region of announcementRegions()) region.textContent = "";
     await act(async () => screen.rerender(<FavoriteEditorFallback />));
     refuse();
     await pressOpenFavorite();
