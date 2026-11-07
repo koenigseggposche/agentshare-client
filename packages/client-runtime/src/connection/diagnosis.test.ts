@@ -69,10 +69,15 @@ describe("presentConnectionDiagnosis", () => {
     ]);
   });
 
-  it("tells a working tunnel apart from T3 Code not answering", () => {
-    expect(diagnose(backoff(unavailable("origin_unreachable")))?.headline).toBe(
-      "Tunnel works, but T3 Code on Mac mini did not answer",
+  it("tells a working tunnel apart from AgentShare Client not answering", () => {
+    const diagnosis = diagnose(backoff(unavailable("origin_unreachable")));
+    expect(diagnosis?.headline).toBe(
+      "Tunnel works, but AgentShare Client on Mac mini did not answer",
     );
+    expect(diagnosis?.steps).toContain(
+      "On Mac mini, check Settings > Sharing & access or run `agentshare-client connect status`.",
+    );
+
     expect(results(backoff(unavailable("origin_unreachable")), "direct")).toEqual([
       "device:ok",
       "relay:ok",
