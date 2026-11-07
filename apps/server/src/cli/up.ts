@@ -90,7 +90,7 @@ const readSetup = Effect.fn("cli.up.read_setup")(function* () {
 });
 
 /**
- * The routes `t3 up` starts from. With no route flag it asks about every
+ * The routes `agentshare-client up` starts from. With no route flag it asks about every
  * route, starting a machine with no service from T3 Connect. Any route flag
  * means it asks nothing and keeps the routes not named as they are.
  */
@@ -162,7 +162,7 @@ const formatSetup = (setup: Setup) => {
       ? ["Anyone on your LAN or tailnet can reach the port. A pairing code is the only lock."]
       : []),
     ...(setup.lanFromOldDefault
-      ? ["Older installs keep LAN access on. Turn it off: `t3 up --no-lan`."]
+      ? ["Older installs keep LAN access on. Turn it off: `agentshare-client up --no-lan`."]
       : []),
   ];
   return [
@@ -241,7 +241,7 @@ const setUp = Effect.fn("cli.up")(function* (flags: {
       cause: "routes",
       userMessage: `No terminal. Choose access with ${
         before.connect === null ? "--lan" : "--connect or --lan"
-      }, or use --yes for the default. See \`t3 up --help\`.`,
+      }, or use --yes for the default. See \`agentshare-client up --help\`.`,
     });
   }
   if (routes.connect && !current.connect) yield* requireConnectAllowed;
@@ -302,7 +302,7 @@ const setUp = Effect.fn("cli.up")(function* (flags: {
       ? (yield* disconnectCloud({ clearAuthorization: false })).status === "failed"
       : false;
   const previousLan = (yield* CliService.readServiceEnv(baseDir)).entries.AGENTSHARE_CLIENT_LAN;
-  // Also with no service manager: the file records the choice that `t3 status` shows.
+  // Also with no service manager: the file records the choice that `agentshare-client status` shows.
   yield* CliService.writeServiceEnv(baseDir, { AGENTSHARE_CLIENT_LAN: String(routes.lan) });
   // When the service step fails, an installed service still runs with the old
   // value, so the file goes back to match it.
@@ -370,7 +370,7 @@ const setUp = Effect.fn("cli.up")(function* (flags: {
       // The old service still runs, so a foreground server would clash with it.
       yield* restoreServiceEnv;
       yield* Console.log(
-        `Service setup failed: ${result.failed} Fix that, then run \`t3 up\` again.`,
+        `Service setup failed: ${result.failed} Fix that, then run \`agentshare-client up\` again.`,
       );
     } else if ("failed" in result) {
       yield* printServeCommand(`Service setup failed: ${result.failed}`);
@@ -442,17 +442,22 @@ export const upCommand = Command.make("up", {
   ),
   headless: headlessFlag,
 }).pipe(
-  Command.withShortDescription("Set up remote access and the T3 Code background service."),
+  Command.withShortDescription(
+    "Set up remote access and the AgentShare workbench background service.",
+  ),
   Command.withDescription(
-    "Set up remote access and the T3 Code background service. Access flags skip the question, and routes not named keep their settings. Without a terminal, a needed restart runs without asking and stops running agent turns.",
+    "Set up remote access and the AgentShare workbench background service. Access flags skip the question, and routes not named keep their settings. Without a terminal, a needed restart runs without asking and stops running agent turns.",
   ),
   Command.withExamples([
-    { command: "t3 up", description: "Choose remote access." },
-    { command: "t3 up --connect", description: "Turn on T3 Connect. Keep other settings." },
-    { command: "t3 up --lan", description: "Allow LAN access with pairing codes." },
-    { command: "t3 up --no-lan", description: "Stop LAN access." },
-    { command: "t3 up --yes", description: "Take the defaults with no questions." },
-    { command: "t3 status --json", description: "Read the settings from a script." },
+    { command: "agentshare-client up", description: "Choose remote access." },
+    {
+      command: "agentshare-client up --connect",
+      description: "Turn on T3 Connect. Keep other settings.",
+    },
+    { command: "agentshare-client up --lan", description: "Allow LAN access with pairing codes." },
+    { command: "agentshare-client up --no-lan", description: "Stop LAN access." },
+    { command: "agentshare-client up --yes", description: "Take the defaults with no questions." },
+    { command: "agentshare-client status --json", description: "Read the settings from a script." },
   ]),
   Command.withHandler((flags) => runCloudCommand(flags, setUp(flags), { quietLogs: true })),
 );
@@ -461,7 +466,9 @@ export const connectCommand = Command.make("connect", {
   ...projectLocationFlags,
   headless: headlessFlag,
 }).pipe(
-  Command.withDescription("Set up T3 Connect for this machine. Same as `t3 up --connect`."),
+  Command.withDescription(
+    "Set up T3 Connect for this machine. Same as `agentshare-client up --connect`.",
+  ),
   Command.withHandler((flags) =>
     runCloudCommand(
       flags,
@@ -472,7 +479,7 @@ export const connectCommand = Command.make("connect", {
   Command.withSubcommands(connectSubcommands),
 );
 
-/** `t3 status --json`, for scripts and agents. */
+/** `agentshare-client status --json`, for scripts and agents. */
 const setupJson = (setup: Setup) =>
   JSON.stringify(
     {
@@ -502,8 +509,11 @@ export const statusCommand = Command.make("status", {
 }).pipe(
   Command.withDescription("Show service setup and remote access settings."),
   Command.withExamples([
-    { command: "t3 status", description: "Show the settings." },
-    { command: "t3 status --json", description: "Print them for scripts and agents." },
+    { command: "agentshare-client status", description: "Show the settings." },
+    {
+      command: "agentshare-client status --json",
+      description: "Print them for scripts and agents.",
+    },
   ]),
   Command.withHandler(
     Effect.fn("cli.status")(function* (flags) {
@@ -521,7 +531,7 @@ export const statusCommand = Command.make("status", {
       yield* Console.log(
         flags.json
           ? setupJson(setup)
-          : `This machine\n${formatSetup(setup)}\n\nChange access: \`t3 up\`.`,
+          : `This machine\n${formatSetup(setup)}\n\nChange access: \`agentshare-client up\`.`,
       );
     }),
   ),

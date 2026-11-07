@@ -45,7 +45,7 @@ const hostFlag = Flag.String("host").pipe(
 );
 export const baseDirFlag = Flag.String("base-dir").pipe(
   Flag.withDescription(
-    "Explicit T3 Code data directory; runtime state is stored under userdata (equivalent to AGENTSHARE_CLIENT_HOME).",
+    "Explicit AgentShare workbench data directory; runtime state is stored under userdata (equivalent to AGENTSHARE_CLIENT_HOME).",
   ),
   Flag.optional,
 );

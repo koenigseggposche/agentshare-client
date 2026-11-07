@@ -12,17 +12,17 @@ Sharing & access**, sign in, and enable **T3 Connect** for that environment.
 For a command-line host, run:
 
 ```bash
-t3 up
+agentshare-client up
 ```
 
 It asks how your other devices reach the machine: T3 Connect, the local network,
 or both. Choose T3 Connect and follow the sign-in instructions. On Linux and
 macOS, it then runs T3 Code as a [background service](./background-service.md).
-`t3 connect` is the same as `t3 up --connect`. Run `t3 up` again to change your
-choice, and `t3 status` to see it.
+`agentshare-client connect` is the same as `agentshare-client up --connect`. Run `agentshare-client up` again to change your
+choice, and `agentshare-client status` to see it.
 
-The background service is not available on Windows, so there `t3 up` prints the
-`t3 serve` command to keep running in a terminal. You can also keep the desktop
+The background service is not available on Windows, so there `agentshare-client up` prints the
+`agentshare-client serve` command to keep running in a terminal. You can also keep the desktop
 app running with its local environment enabled. Closing the desktop app's last
 window stops its local server. Saving your sign-in alone does not start a server
 or make the machine reachable.
@@ -41,15 +41,15 @@ disconnect an otherwise healthy conversation.
 
 ### Scripts and agents
 
-`t3 up` asks nothing when you name a choice: `--connect`, `--lan`, or their
+`agentshare-client up` asks nothing when you name a choice: `--connect`, `--lan`, or their
 `--no-` forms. Choices you do not name keep their settings, and `--yes` takes
 the defaults. Without a terminal:
 
 - T3 Connect sign-in prints a URL and a code. Approve it on any device.
 - A needed restart runs without asking, and stops running agent turns.
-- With nothing set up and no choice named, `t3 up` stops and names the flags.
+- With nothing set up and no choice named, `agentshare-client up` stops and names the flags.
 
-`t3 status --json` prints the settings. `t3 up --help` lists every flag with
+`agentshare-client status --json` prints the settings. `agentshare-client up --help` lists every flag with
 examples.
 
 ### More machines with T3 Chat
@@ -72,13 +72,13 @@ On a desktop host, open **Settings → Sharing & access**, enable **Network acce
 then create a pairing link using an address the other device can reach. Changing
 network access restarts the desktop app. You can turn it off in the same place.
 
-For a command-line host, choose the local network in `t3 up`, or run:
+For a command-line host, choose the local network in `agentshare-client up`, or run:
 
 ```bash
-t3 up --lan
+agentshare-client up --lan
 ```
 
-For a server in a terminal, run `t3 serve --lan`. Either way, T3 Code then
+For a server in a terminal, run `agentshare-client serve --lan`. Either way, T3 Code then
 accepts connections from your local network and tailnet, so a pairing code is
 all that keeps other devices on them out.
 
@@ -125,7 +125,7 @@ pairing once through T3 Connect is enough to use the LAN at home. When the
 machine's LAN address changes, for example after it joins another Wi-Fi network,
 the learned route follows it. The machine must allow network access for its LAN
 address to be learned: **Network access** in the desktop app, or the
-[local network](./background-service.md#local-network-access) choice in `t3 up`.
+[local network](./background-service.md#local-network-access) choice in `agentshare-client up`.
 You can reorder a learned route, but not remove it; it
 goes away with the route it was learned through, or when the machine stops
 reporting that address.
@@ -175,7 +175,7 @@ HTTPS** in **Settings → Sharing & access**. Turn it off there to remove that r
 To start a command-line server with Tailscale HTTPS:
 
 ```bash
-t3 serve --tailscale-serve
+agentshare-client serve --tailscale-serve
 ```
 
 For an already-running server:
@@ -305,7 +305,7 @@ If you need to run as root, or cannot enable the sandbox on your host, set
 the server. This disables Chrome's sandbox. For a manual launch:
 
 ```sh
-T3CODE_SERVER_BROWSER_SANDBOX=0 t3 serve
+T3CODE_SERVER_BROWSER_SANDBOX=0 agentshare-client serve
 ```
 
 For a systemd service, add `Environment=T3CODE_SERVER_BROWSER_SANDBOX=0` under
