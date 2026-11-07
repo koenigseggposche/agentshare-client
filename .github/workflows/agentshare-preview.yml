@@ -84,6 +84,7 @@ jobs:
               if os.environ['WINDOWS_SIGNING_CONFIGURED'] != 'true':
                   raise SystemExit('Signed Windows builds require the Azure Artifact Signing credentials, endpoint, account, certificate profile, and publisher.')
               platforms.add('win')
+          signed_platforms = platforms.copy()
           # A complete distribution rehearsal also needs both Linux AppImages.
           if platforms == {'mac', 'win'}:
               platforms.add('linux')
@@ -96,7 +97,8 @@ jobs:
               ('ubuntu-24.04-arm', 'linux', 'arm64', 'AppImage', 'linux-arm64'),
           ]
           fields = ('runner', 'platform', 'arch', 'target', 'core_target')
-          matrix = {'include': [dict(zip(fields, row)) for row in targets if not platforms or row[1] in platforms]}
+          matrix = {'include': [dict(zip(fields, row), distribution_signing=row[1] in signed_platforms)
+                                for row in targets if not platforms or row[1] in platforms]}
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               for key, value in [('version', version), ('core_ref', os.environ['CORE_REF']), ('core_version', os.environ['CORE_VERSION']), ('matrix', json.dumps(matrix, separators=(',', ':')))]:
                   output.write(f'{key}={value}\n')
@@ -121,7 +123,7 @@ jobs:
       DESKTOP_PLATFORM: ${{ matrix.platform }}
       DESKTOP_ARCH: ${{ matrix.arch }}
       DESKTOP_TARGET: ${{ matrix.target }}
-      DISTRIBUTION_SIGNING: ${{ inputs.macos_distribution && matrix.platform == 'mac' || inputs.windows_distribution && matrix.platform == 'win' }}
+      DISTRIBUTION_SIGNING: ${{ matrix.distribution_signing }}
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
       CARGO_BUILD_JOBS: "2"
     steps:
@@ -192,13 +194,13 @@ jobs:
           go-version: "1.27.3"
           cache: false
       - name: Build verified Core artifact
-        if: ${{ !inputs.macos_distribution && !inputs.windows_distribution }}
+        if: ${{ !matrix.distribution_signing }}
         run: |
           python3 "$RUNNER_TEMP/core-source/scripts/build_core_artifact.py" \
             --target "$CORE_TARGET" --version "$CORE_VERSION" \
             --expected-revision "$CORE_REF" --output "$RUNNER_TEMP/core-artifact"
       - name: Build Developer ID-signed Core artifact
-        if: inputs.macos_distribution && matrix.platform == 'mac'
+        if: matrix.distribution_signing && matrix.platform == 'mac'
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -262,14 +264,14 @@ jobs:
           if (process.arch !== process.env.DESKTOP_ARCH) throw new Error('Runner architecture differs from the artifact target.');
           JS
       - name: Build desktop preview
-        if: ${{ !inputs.macos_distribution && !inputs.windows_distribution }}
+        if: ${{ !matrix.distribution_signing }}
         run: |
           node scripts/build-desktop-artifact.ts \
             --platform "$DESKTOP_PLATFORM" --arch "$DESKTOP_ARCH" --target "$DESKTOP_TARGET" \
             --build-version "$CLIENT_VERSION" --output-dir "$RUNNER_TEMP/client-artifacts" \
             --core-manifest "$RUNNER_TEMP/core-artifact/manifest.json"
       - name: Build signed and notarized desktop preview
-        if: inputs.macos_distribution && matrix.platform == 'mac'
+        if: matrix.distribution_signing && matrix.platform == 'mac'
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -288,14 +290,14 @@ jobs:
             --build-version "$CLIENT_VERSION" --output-dir "$RUNNER_TEMP/client-artifacts" \
             --core-manifest "$RUNNER_TEMP/core-artifact/manifest.json" --signed
       - name: Install Windows signing module
-        if: inputs.windows_distribution && matrix.platform == 'win'
+        if: matrix.distribution_signing && matrix.platform == 'win'
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
           Install-Module -Name TrustedSigning -RequiredVersion 0.5.8 -Force -Repository PSGallery -Scope CurrentUser
       - name: Build signed Windows Core and desktop preview
-        if: inputs.windows_distribution && matrix.platform == 'win'
+        if: matrix.distribution_signing && matrix.platform == 'win'
         shell: powershell
         env:
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -364,7 +366,7 @@ jobs:
       - name: Upload preview artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: ${{ (inputs.macos_distribution && matrix.platform == 'mac' || inputs.windows_distribution && matrix.platform == 'win') && 'agentshare-signed-preview' || 'agentshare-preview' }}-${{ matrix.core_target }}
+          name: ${{ matrix.distribution_signing && 'agentshare-signed-preview' || 'agentshare-preview' }}-${{ matrix.core_target }}
           path: |
             ${{ runner.temp }}/client-artifacts/*.dmg
             ${{ runner.temp }}/client-artifacts/*.zip
