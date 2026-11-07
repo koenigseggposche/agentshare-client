@@ -17,7 +17,7 @@ import {
   pinnedRuntimeVersionsDir,
   windowsShimTarget,
 } from "../cloud/pinnedRuntime.ts";
-import { projectLocationFlags, resolveCliAuthConfig } from "./config.ts";
+import { projectLocationFlags, resolveCliHostConfig } from "./config.ts";
 import * as CliService from "./service.ts";
 import { findWindowsShim, resolveLauncherPath } from "./update.ts";
 
@@ -126,7 +126,7 @@ export const uninstallCommand = Command.make("uninstall", {
   Command.withHandler((flags) =>
     Effect.gen(function* () {
       const logLevel = yield* GlobalFlag.LogLevel;
-      const config = yield* resolveCliAuthConfig(flags, logLevel);
+      const config = yield* resolveCliHostConfig(flags, logLevel);
       return yield* runUninstall({ baseDir: config.baseDir, assumeYes: flags.yes }).pipe(
         Effect.provide(CliService.layer(config)),
       );

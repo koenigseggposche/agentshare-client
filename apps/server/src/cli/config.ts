@@ -541,12 +541,11 @@ export const resolveServerConfig = Effect.fn("config.resolveServerConfig")(funct
   return config;
 });
 
-export const resolveCliAuthConfig = (
+export const resolveCliHostConfig = (
   flags: CliAuthLocationFlags,
   cliLogLevel: Option.Option<LogLevel.LogLevel>,
-  options?: { readonly quietLogs?: boolean },
-) => {
-  const resolved = resolveServerConfig(
+) =>
+  resolveServerConfig(
     {
       mode: Option.none(),
       port: Option.none(),
@@ -563,7 +562,14 @@ export const resolveCliAuthConfig = (
       lan: Option.none(),
     },
     cliLogLevel,
-  ).pipe(
+  );
+
+export const resolveCliAuthConfig = (
+  flags: CliAuthLocationFlags,
+  cliLogLevel: Option.Option<LogLevel.LogLevel>,
+  options?: { readonly quietLogs?: boolean },
+) => {
+  const resolved = resolveCliHostConfig(flags, cliLogLevel).pipe(
     Effect.flatMap((config) =>
       ServerConfig.ServerConfig.pipe(
         Effect.provide(WorkspaceAccount.layer.pipe(Layer.provide(ServerConfig.layer(config)))),

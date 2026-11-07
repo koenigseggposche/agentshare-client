@@ -1,7 +1,6 @@
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { expect, it } from "@effect/vitest";
-import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as NetService from "@t3tools/shared/Net";
 import * as ConfigProvider from "effect/ConfigProvider";
 import * as Effect from "effect/Effect";
@@ -14,6 +13,7 @@ import { vi } from "vite-plus/test";
 import packageJson from "../../package.json" with { type: "json" };
 import * as BootService from "../cloud/bootService.ts";
 import { upCommand } from "./up.ts";
+import { withCliAccountFixture } from "./WorkspaceAccount.testkit.ts";
 
 // T3 Connect's flows run only in builds with its public config, and they call
 // the relay; this file swaps in the link and unlink steps.
@@ -100,12 +100,11 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer))
           ),
         );
 
-        const exit = yield* Command.runWith(upCommand, { version: packageJson.version })([
-          "--base-dir",
-          baseDir,
-          "--connect",
-        ]).pipe(
-          Effect.provideService(HostProcess.Environment, {}),
+        const args = ["--base-dir", baseDir, "--connect"];
+        const exit = yield* withCliAccountFixture(
+          Command.runWith(upCommand, { version: packageJson.version })(args),
+          args,
+        ).pipe(
           Effect.provide(
             Layer.mergeAll(
               ConfigProvider.layer(ConfigProvider.fromEnv({ env: {} })),

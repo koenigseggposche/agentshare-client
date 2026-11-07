@@ -19,6 +19,7 @@ import {
   makePersistedServerRuntimeState,
   persistServerRuntimeState,
 } from "../serverRuntimeState.ts";
+import { testAccountProfilePath, withCliAccountFixture } from "./WorkspaceAccount.testkit.ts";
 
 const hooks = vi.hoisted(() => ({
   importsAttempted: [] as string[],
@@ -43,8 +44,12 @@ vi.mock("../claudeHistoryWorker.ts", async () => {
 });
 
 const layerCliRuntime = Layer.mergeAll(NodeServices.layer, NetService.layer);
-const runCli = (args: ReadonlyArray<string>) =>
-  Command.runWith(cli, { version: "0.0.0" })(args).pipe(Effect.provide(layerCliRuntime));
+const runCli = (args: ReadonlyArray<string>, useAccountFixture = false) => {
+  const command = Command.runWith(cli, { version: "0.0.0" })(args);
+  return (useAccountFixture ? withCliAccountFixture(command, args) : command).pipe(
+    Effect.provide(layerCliRuntime),
+  );
+};
 
 it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("CLI deferred imports", (it) => {
   it.effect("runs commands that do not need them without loading them", () =>
@@ -77,7 +82,10 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("CLI deferred imp
       const fs = yield* FileSystem.FileSystem;
       const root = yield* fs.makeTempDirectoryScoped({ prefix: "t3-deferred-project-" });
       const baseDir = NodePath.join(root, "state");
-      const runtimeStatePath = NodePath.join(baseDir, "userdata", "server-runtime.json");
+      const runtimeStatePath = NodePath.join(
+        testAccountProfilePath(baseDir),
+        "server-runtime.json",
+      );
       yield* persistServerRuntimeState({
         path: runtimeStatePath,
         state: yield* makePersistedServerRuntimeState({
@@ -88,14 +96,16 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("CLI deferred imp
       const unreachable: typeof globalThis.fetch = () =>
         Promise.reject(new Error("connection refused"));
 
-      const exit = yield* runCli(["project", "add", root, "--base-dir", baseDir]).pipe(
+      const exit = yield* runCli(["project", "add", root, "--base-dir", baseDir], true).pipe(
         Effect.provideService(FetchHttpClient.Fetch, unreachable),
         Effect.exit,
       );
 
       assert.isTrue(Exit.hasDies(exit));
       assert.isTrue(yield* fs.exists(runtimeStatePath));
-      assert.isFalse(yield* fs.exists(NodePath.join(baseDir, "userdata", "server-owner.sqlite")));
+      assert.isFalse(
+        yield* fs.exists(NodePath.join(testAccountProfilePath(baseDir), "server-owner.sqlite")),
+      );
     }),
   );
 
@@ -135,10 +145,10 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("CLI deferred imp
         );
       };
 
-      const exit = yield* runCli(["project", "add", workspaceRoot, "--base-dir", baseDir]).pipe(
-        Effect.provideService(FetchHttpClient.Fetch, fetch),
-        Effect.exit,
-      );
+      const exit = yield* runCli(
+        ["project", "add", workspaceRoot, "--base-dir", baseDir],
+        true,
+      ).pipe(Effect.provideService(FetchHttpClient.Fetch, fetch), Effect.exit);
 
       assert.isTrue(Exit.isSuccess(exit));
       assert.equal(mutations, 1);
