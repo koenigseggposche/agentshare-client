@@ -1,4 +1,4 @@
-import { randomUUID } from "../../lib/utils";
+import { isWindowsPlatform, randomUUID } from "../../lib/utils";
 import { useState } from "react";
 import { useAtomValue } from "@effect/atom-react";
 import type {
@@ -13,6 +13,9 @@ import {
   modelOperationSubmissionState,
   parseModelBudget,
 } from "@t3tools/client-runtime/agentShareModelManager";
+import { environmentCatalog } from "../../connection/catalog";
+import { desktopLocalBackendId } from "../../connection/desktopLocal";
+import { resolveProjectPickerTarget } from "../../wslPaths";
 import { agentShareEnvironment } from "../../state/agentShare";
 import { useEnvironmentQuery } from "../../state/query";
 import { useAtomCommand } from "../../state/use-atom-command";
@@ -47,6 +50,56 @@ export function AgentShareModelManager({
   const [importId, setImportId] = useState("");
   const [importPath, setImportPath] = useState("");
   const [libraryPath, setLibraryPath] = useState("");
+  const [pickingDirectory, setPickingDirectory] = useState(false);
+  const entry = useAtomValue(environmentCatalog.catalogValueAtom).entries.get(environmentId);
+  const primary = entry?.target._tag === "PrimaryConnectionTarget";
+  const desktopInstanceId = entry ? desktopLocalBackendId(entry.target) : null;
+  const canPickDirectory =
+    typeof window !== "undefined" &&
+    window.desktopBridge !== undefined &&
+    (primary || desktopInstanceId !== null);
+
+  const pickDirectory = (current: string, setPath: (path: string) => void) => {
+    const bridge = window.desktopBridge;
+    if (!canPickDirectory || pickingDirectory || !bridge) return;
+    setPickingDirectory(true);
+    setMessage(null);
+    void (async () => {
+      const wslConfiguration =
+        primary && isWindowsPlatform(navigator.platform) ? await bridge.getWslState() : null;
+      const targetEnvironmentId = resolveProjectPickerTarget({
+        browseEnvironmentId: environmentId,
+        primaryEnvironmentId: primary ? environmentId : null,
+        desktopInstanceId,
+        wslConfiguration,
+      });
+      if (wslConfiguration?.enabled && wslConfiguration.wslOnly && targetEnvironmentId === null) {
+        setMessage(
+          t("无法识别执行电脑的 WSL 发行版。", "Could not identify the host WSL distribution."),
+        );
+        return;
+      }
+      const selected = await bridge.pickFolder({
+        ...(current.trim() ? { initialPath: current.trim() } : {}),
+        ...(targetEnvironmentId === null ? {} : { targetEnvironmentId }),
+      });
+      if (selected === null) return;
+      if (targetEnvironmentId?.startsWith("wsl:") && !selected.startsWith("/")) {
+        setMessage(
+          t(
+            "无法将目录转换为执行电脑可用的路径。",
+            "The selected folder could not be resolved on the host.",
+          ),
+        );
+        return;
+      }
+      setPath(selected);
+    })()
+      .catch(() =>
+        setMessage(t("无法打开系统目录选择器。", "Could not open the system folder picker.")),
+      )
+      .finally(() => setPickingDirectory(false));
+  };
   const run = async (input: AgentShareCommandInput) => {
     setPending(true);
     setMessage(null);
@@ -273,6 +326,16 @@ export function AgentShareModelManager({
                   disabled={blocked}
                 />
               </label>
+              {canPickDirectory ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={libraryBlocked || pickingDirectory}
+                  onClick={() => pickDirectory(importPath, setImportPath)}
+                >
+                  {t("选择目录", "Choose folder")}
+                </Button>
+              ) : null}
               <Button
                 size="sm"
                 variant="outline"
@@ -306,6 +369,16 @@ export function AgentShareModelManager({
                   disabled={blocked}
                 />
               </label>
+              {canPickDirectory ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={libraryBlocked || pickingDirectory}
+                  onClick={() => pickDirectory(libraryPath, setLibraryPath)}
+                >
+                  {t("选择目录", "Choose folder")}
+                </Button>
+              ) : null}
               <Button
                 size="sm"
                 variant="outline"
