@@ -60,10 +60,12 @@ const audio = vi.hoisted(() => ({
   navigate: vi.fn(),
   query: vi.fn(),
 }));
-// Account startup is independent of this fixture's storage/media behavior.
-vi.mock("../features/agentshare/accountLayer", async () => ({
-  layer: (await import("effect/Layer")).empty,
-}));
+// Media previews in this fixture do not initialize the mobile runtime.
+vi.mock("./runtime", async () => {
+  const { empty } = await import("effect/Layer");
+  const { make } = await import("effect/ManagedRuntime");
+  return { layer: empty, runtime: make(empty) };
+});
 
 vi.mock("expo-audio", () => ({
   AudioModule: { setAudioSessionOwner: audio.setSessionOwner },
@@ -118,6 +120,7 @@ vi.mock("../components/ui/Button", () => ({
     createElement("button", { onClick: props.onPress, disabled: props.disabled }, props.label),
 }));
 vi.mock("expo-constants", () => ({ default: { expoConfig: { extra: {} } } }));
+vi.mock("expo-secure-store", () => ({ getItemAsync: async () => null }));
 vi.mock("expo", () => ({
   useEvent: (_player: unknown, _event: unknown, initial: unknown) => initial,
   useReleasingSharedObjectWithLifecycle: (
@@ -175,6 +178,7 @@ vi.mock("../state/projects", () => ({
   },
 }));
 vi.mock("../state/server", () => ({ serverEnvironment: {} }));
+vi.mock("../state/agentShare", () => ({ agentShareEnvironment: {} }));
 vi.mock("../state/session", () => ({
   readEnvironmentScope: () => true,
   usePreparedConnection: () => ({ _tag: "Some", value: { httpBaseUrl: "https://example.com" } }),
@@ -235,6 +239,10 @@ vi.mock("expo-haptics", () => ({ selectionAsync: async () => {} }));
 vi.mock("expo-image", () => ({}));
 vi.mock("uniwind", () => ({}));
 vi.mock("../components/ui/Dialog", () => ({}));
+vi.mock("../components/ui/Sheet", () => ({ Sheet: () => null }));
+vi.mock("../features/settings/AgentShareWalletSection", () => ({
+  AgentShareWalletSection: () => null,
+}));
 vi.mock("../components/ui/NativePresentation", () => ({
   PresentationSource: ({ children }: { children?: ReactNode }) => children,
 }));
