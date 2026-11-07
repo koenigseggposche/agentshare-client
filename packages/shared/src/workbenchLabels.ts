@@ -1,5 +1,12 @@
 export const workbenchLabels = {
   en: {
+    unsentDraft: "Unsent draft",
+    discardDraft: "Discard draft",
+    copy: "Copy",
+    path: "Path",
+    branch: "Branch",
+    projectSettings: "Project settings",
+    draftAttachmentCount: (count: number) => `${count} attachment${count === 1 ? "" : "s"}`,
     draftHeading: "What should we work on?",
     noProject: "No project",
     chooseProject: "Choose a project",
@@ -30,6 +37,13 @@ export const workbenchLabels = {
     noThreadsInProject: (name: string) => `No threads in ${name} yet`,
   },
   zh: {
+    unsentDraft: "未发送的草稿",
+    discardDraft: "丢弃草稿",
+    copy: "复制",
+    path: "路径",
+    branch: "分支",
+    projectSettings: "项目设置",
+    draftAttachmentCount: (count: number) => `${count} 个附件`,
     draftHeading: "今天想做什么？",
     noProject: "未选择项目",
     chooseProject: "选择项目",

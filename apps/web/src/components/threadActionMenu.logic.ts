@@ -1,3 +1,4 @@
+import type { workbenchLabels } from "@t3tools/shared/workbenchLabels";
 import type { ContextMenuItem } from "@t3tools/contracts";
 import type { SnoozePreset } from "@t3tools/client-runtime/state/thread-settled";
 
@@ -37,6 +38,10 @@ export type DraftActionMenuId =
   | "discard";
 
 export function buildDraftActionMenuItems(options: {
+  readonly labels: Pick<
+    (typeof workbenchLabels)[keyof typeof workbenchLabels],
+    "copy" | "path" | "branch" | "projectSettings" | "discardDraft"
+  >;
   readonly hasPath: boolean;
   readonly hasBranch: boolean;
   readonly hasProject: boolean;
@@ -44,22 +49,30 @@ export function buildDraftActionMenuItems(options: {
   return [
     {
       id: "copy",
-      label: "Copy",
+      label: options.labels.copy,
       icon: "copy",
       disabled: !options.hasPath && !options.hasBranch,
       children: [
-        ...(options.hasPath ? [{ id: "copy-path" as const, label: "Path", icon: "folder" }] : []),
+        ...(options.hasPath
+          ? [{ id: "copy-path" as const, label: options.labels.path, icon: "folder" }]
+          : []),
         ...(options.hasBranch
-          ? [{ id: "copy-branch" as const, label: "Branch", icon: "git-branch" }]
+          ? [{ id: "copy-branch" as const, label: options.labels.branch, icon: "git-branch" }]
           : []),
       ],
     },
     ...(options.hasProject
-      ? [{ id: "project-settings" as const, label: "Project settings", icon: "settings" }]
+      ? [
+          {
+            id: "project-settings" as const,
+            label: options.labels.projectSettings,
+            icon: "settings",
+          },
+        ]
       : []),
     {
       id: "discard",
-      label: "Discard draft",
+      label: options.labels.discardDraft,
       icon: "trash",
       destructive: true,
       separatorBefore: true,

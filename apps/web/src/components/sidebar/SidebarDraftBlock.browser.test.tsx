@@ -5,9 +5,19 @@ import { expect, it, vi } from "vite-plus/test";
 
 import { act, render } from "../../../test/render";
 import { DraftId, useComposerDraftStore } from "../../composerDraftStore";
+import {
+  __setClientSettingsForTests,
+  getClientSettings,
+  persistClientSettingsPatch,
+} from "../../hooks/useSettings";
 import { SidebarDraftBlock } from "./SidebarDraftBlock";
 
 it("keeps draft previews current through edits, promotion and removal", async () => {
+  const settings = getClientSettings();
+  using _settings = {
+    [Symbol.dispose]: () => __setClientSettingsForTests(settings),
+  };
+  __setClientSettingsForTests({ ...settings, uiLanguage: "en" });
   const initial = useComposerDraftStore.getState();
   using _store = {
     [Symbol.dispose]: () => useComposerDraftStore.setState(initial, true),
@@ -52,6 +62,11 @@ it("keeps draft previews current through edits, promotion and removal", async ()
   expect(onRender).toHaveBeenCalledTimes(rendersBeforeOtherComposer);
   await act(() => initial.setPrompt(draftId, "Updated draft preview"));
   await expect.element(row).toHaveAccessibleName("Updated draft preview, Unsent draft");
+
+  await act(() => persistClientSettingsPatch({ uiLanguage: "zh" }, async () => {}));
+  await expect.element(row).toHaveAccessibleName("Updated draft preview, 未发送的草稿");
+  await expect.element(screen.getByRole("button", { name: "丢弃草稿" })).toBeInTheDocument();
+  await act(() => persistClientSettingsPatch({ uiLanguage: "en" }, async () => {}));
 
   await act(() => initial.markDraftThreadPromoting(draftId));
   await expect.element(row).not.toBeInTheDocument();
