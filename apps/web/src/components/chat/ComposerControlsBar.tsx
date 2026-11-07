@@ -3,6 +3,8 @@ import type { PromptUltrathink } from "./TraitsPicker";
 import type { ProviderInstanceEntry } from "../../providerInstances";
 import { type AppModelOption } from "../../modelSelection";
 import { CircleAlertIcon } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { useClientSettings } from "../../hooks/useSettings";
 import { CompactComposerControlsMenu } from "./CompactComposerControlsMenu";
 import { ComposerControl } from "./ComposerControl";
 import {
@@ -89,6 +91,7 @@ export function ComposerControlsBar(props: {
   modelPickerIconClassName: string | undefined;
   getModelDisabledReason: ChatComposerProps["getModelDisabledReason"];
 }) {
+  const chinese = useClientSettings((settings) => settings.uiLanguage) === "zh";
   const {
     environmentId,
     routeKind,
@@ -252,20 +255,24 @@ export function ComposerControlsBar(props: {
     />
   );
   return showProviderUnavailable ? (
-    <ComposerControl
-      type="button"
-      disabled={!providerSetupInstanceId}
-      onClick={() => {
-        if (providerSetupInstanceId) {
-          onOpenProviderSetup(providerSetupInstanceId);
-        }
-      }}
+    <div
+      className="flex min-w-0 flex-wrap items-center gap-1"
       data-chat-provider-unavailable="true"
-      className="shrink-0"
     >
-      <CircleAlertIcon className="size-4" />
-      {providerSetupInstanceId ? "Open provider settings" : "No provider available"}
-    </ComposerControl>
+      <ComposerControl
+        render={
+          <Link to="/settings/agentshare" search={{ machine: environmentId, section: "models" }} />
+        }
+      >
+        <CircleAlertIcon className="size-4" />
+        {chinese ? "浏览 AgentShare 模型" : "Browse AgentShare models"}
+      </ComposerControl>
+      {providerSetupInstanceId ? (
+        <ComposerControl onClick={() => onOpenProviderSetup(providerSetupInstanceId)}>
+          {chinese ? "打开提供方设置" : "Open provider settings"}
+        </ComposerControl>
+      ) : null}
+    </div>
   ) : (
     <>
       {composerModelPicker}

@@ -27,7 +27,7 @@ const decodeSignIn = Schema.decodeUnknownOption(
 const isAuthorizationError = Schema.is(EnvironmentAuthorizationError);
 const cannotManage = Atom.make(false);
 
-export function AgentShareSettings() {
+export function AgentShareSettings({ initialSection }: { initialSection: "account" | "models" }) {
   const language = useClientSettings((settings) => settings.uiLanguage);
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const { environment } = useSettingsScope();
@@ -41,7 +41,7 @@ export function AgentShareSettings() {
   const [pending, setPending] = useState(false);
   const [section, setSection] = useState<
     "account" | "wallet" | "models" | "library" | "sharing" | "tools"
-  >("account");
+  >(initialSection);
   const sections = [
     ["account", t("账号与消费", "Account and consumption")],
     ["wallet", t("钱包与设备", "Wallet and devices")],
