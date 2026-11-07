@@ -2,7 +2,8 @@ import { modelSelectionsEqual } from "@t3tools/shared/model";
 import { projectComposerContextForProvider } from "@t3tools/shared/composerContextReferences";
 import {
   CommandId,
-  ProviderSessionId,
+  WORKBENCH_TASK_SESSION_PREFIX,
+  workbenchTaskProviderSessionId,
   latestProviderTurnForAttempt,
   type OrchestrationV2DomainEvent,
   type OrchestrationV2ContextHandoff,
@@ -426,8 +427,7 @@ export const layer: Layer.Layer<
           cause: `Run ${runId} is missing its execution projection state.`,
         });
       }
-      const taskSessionPrefix = "provider-session:workbench-task:";
-      const taskSessionId = ProviderSessionId.make(taskSessionPrefix + runId);
+      const taskSessionId = workbenchTaskProviderSessionId(runId);
       const taskBillingEnabled = yield* Config.String("AGENTSHARE_WORKBENCH_TASK_BILLING").pipe(
         Config.withDefault("0"),
         Effect.orDie,
@@ -435,7 +435,7 @@ export const layer: Layer.Layer<
       const scopedTask =
         priorProviderThread.providerSessionId === taskSessionId ||
         ((taskBillingEnabled === "1" ||
-          priorProviderThread.providerSessionId.startsWith(taskSessionPrefix)) &&
+          priorProviderThread.providerSessionId.startsWith(WORKBENCH_TASK_SESSION_PREFIX)) &&
           (priorProviderThread.driver === "codex" ||
             priorProviderThread.driver === "claudeAgent") &&
           isPaidModelConnection(

@@ -10,6 +10,8 @@ import {
   RuntimeRequestId,
   TurnItemId,
   type OrchestrationV2TurnItem,
+  type OrchestrationV2ProviderSession,
+  workbenchTaskProviderSessionId,
 } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import { describe, expect, it } from "vite-plus/test";
@@ -165,6 +167,25 @@ describe("resolveV2ItemSupport", () => {
     const support = resolveV2ItemSupport(projection, itemId);
     expect(support.item).toBe(commandItem);
     expect(support.run).toBe(run);
+    expect(support.hasWorkbenchTaskBilling).toBe(false);
+    const billedSession = {
+      id: workbenchTaskProviderSessionId(runId),
+    } as OrchestrationV2ProviderSession;
+    expect(
+      resolveV2ItemSupport(
+        {
+          ...projection,
+          providerSessions: [billedSession],
+          providerThreads: [
+            {
+              ...providerThread,
+              providerSessionId: workbenchTaskProviderSessionId(RunId.make("later-run")),
+            },
+          ],
+        },
+        itemId,
+      ).hasWorkbenchTaskBilling,
+    ).toBe(true);
     expect(support.attempts).toEqual(attempts);
     expect(support.attempts[0]).toBe(attempts[0]);
     expect(support.node).toBe(node);

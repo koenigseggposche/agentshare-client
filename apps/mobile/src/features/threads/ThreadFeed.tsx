@@ -1,3 +1,7 @@
+import { AgentShareWalletSection } from "../settings/AgentShareWalletSection";
+import { agentShareEnvironment } from "../../state/agentShare";
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
+import { Sheet } from "../../components/ui/Sheet";
 import { Button } from "../../components/ui/Button";
 import * as Dialog from "../../components/ui/Dialog";
 import { useOpenPullRequest } from "../../native/useOpenPullRequest";
@@ -127,6 +131,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Pressable,
+  ScrollView,
   StyleSheet,
   type ColorValue,
   useWindowDimensions,
@@ -423,6 +428,58 @@ function UserMessageCopyButton(props: {
     >
       {button}
     </Menu>
+  );
+}
+
+function AssistantTaskCharges(props: {
+  readonly environmentId: EnvironmentId;
+  readonly projectedItem: OrchestrationV2ProjectedTurnItem;
+}) {
+  const language = useWorkbenchLanguage();
+  const title = language === "zh" ? "任务账单" : "Task charges";
+  const [open, setOpen] = useState(false);
+  const { environmentId, projectedItem } = props;
+  const support = useV2ItemSupport({
+    environmentId,
+    sourceThreadId: projectedItem.sourceThreadId,
+    sourceItemId: projectedItem.sourceItemId,
+  });
+  const state = useEnvironmentQuery(
+    open ? agentShareEnvironment.state({ environmentId, input: {} }) : null,
+  );
+  if (!support.hasWorkbenchTaskBilling || support.run === null) return null;
+  const host = state.error ? undefined : state.data?.host;
+  return (
+    <>
+      <Pressable accessibilityRole="button" onPress={() => setOpen(true)} className="px-2 py-1">
+        <Text className="text-xs text-foreground-secondary">{title}</Text>
+      </Pressable>
+      {open ? (
+        <Sheet title={title} onClose={() => setOpen(false)}>
+          <ScrollView contentInsetAdjustmentBehavior="automatic">
+            {host?.paired ? (
+              <AgentShareWalletSection
+                key={host.owner}
+                environmentId={environmentId}
+                owner={host.owner}
+                language={language}
+                taskId={support.run.id}
+              />
+            ) : (
+              <Text className="px-5 py-2">
+                {state.isPending
+                  ? language === "zh"
+                    ? "正在读取账号…"
+                    : "Loading account…"
+                  : language === "zh"
+                    ? "请连接已登录的执行电脑。"
+                    : "Connect to a signed-in execution host."}
+              </Text>
+            )}
+          </ScrollView>
+        </Sheet>
+      ) : null}
+    </>
   );
 }
 
@@ -2291,6 +2348,12 @@ function renderFeedEntry(
               buttonSize={props.replyActionSize.button}
               iconSize={props.replyActionSize.icon}
             />
+            {message.projectedItem ? (
+              <AssistantTaskCharges
+                environmentId={props.environmentId}
+                projectedItem={message.projectedItem}
+              />
+            ) : null}
             {message.projectedItem ? (
               <AssistantForkButton
                 environmentId={props.environmentId}

@@ -23,16 +23,19 @@ export function AgentShareWallet({
   environmentId,
   owner,
   language,
+  taskId,
 }: {
   environmentId: EnvironmentId;
   owner: string;
   language: "zh" | "en";
+  taskId?: string;
 }) {
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
-  const [selection, setSelection] = useState<AgentShareWalletReadInput>({
-    action: "overview",
-    owner,
-  });
+  const initial: AgentShareWalletReadInput =
+    taskId === undefined
+      ? { action: "overview", owner }
+      : { action: "history", owner, kind: "spending", cursor: "", workbench_task_id: taskId };
+  const [selection, setSelection] = useState<AgentShareWalletReadInput>(initial);
   const query = useEnvironmentQuery(
     agentShareEnvironment.wallet({ environmentId, input: selection }),
   );
@@ -105,13 +108,22 @@ export function AgentShareWallet({
     />
   );
   return (
-    <SettingsSection title={t("账号钱包与设备", "Account wallet and devices")}>
-      <p className="text-sm text-muted-foreground">
-        {t(
-          "显示所选执行电脑当前账号的平台余额和账单。",
-          "Platform balances and records for the selected host’s account.",
-        )}
-      </p>
+    <SettingsSection
+      title={
+        taskId === undefined
+          ? t("账号钱包与设备", "Account wallet and devices")
+          : t("任务账单", "Task charges")
+      }
+      hideTitle={taskId !== undefined}
+    >
+      {taskId === undefined ? (
+        <p className="text-sm text-muted-foreground">
+          {t(
+            "显示所选执行电脑当前账号的平台余额和账单。",
+            "Platform balances and records for the selected host’s account.",
+          )}
+        </p>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Button
           size="sm"
@@ -121,34 +133,39 @@ export function AgentShareWallet({
             query.refresh();
           }}
         >
-          {t("刷新钱包", "Refresh wallet")}
+          {taskId === undefined
+            ? t("刷新钱包", "Refresh wallet")
+            : t("刷新账单", "Refresh charges")}
         </Button>
-        {selection.action !== "overview" ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setSelection({ action: "overview", owner })}
-          >
-            {t("返回余额", "Back to balances")}
+        {(
+          taskId === undefined ? selection.action !== "overview" : selection.action === "detail"
+        ) ? (
+          <Button size="sm" variant="outline" onClick={() => setSelection(initial)}>
+            {taskId === undefined
+              ? t("返回余额", "Back to balances")
+              : t("返回任务账单", "Back to task charges")}
           </Button>
         ) : null}
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setSelection({ action: "devices", owner })}
-        >
-          {t("已登录设备", "Signed-in devices")}
-        </Button>
-        {kinds.map(([kind, label]) => (
+        {taskId === undefined ? (
           <Button
-            key={kind}
             size="sm"
             variant="outline"
-            onClick={() => setSelection({ action: "history", owner, kind, cursor: "" })}
+            onClick={() => setSelection({ action: "devices", owner })}
           >
-            {label}
+            {t("已登录设备", "Signed-in devices")}
           </Button>
-        ))}
+        ) : null}
+        {taskId === undefined &&
+          kinds.map(([kind, label]) => (
+            <Button
+              key={kind}
+              size="sm"
+              variant="outline"
+              onClick={() => setSelection({ action: "history", owner, kind, cursor: "" })}
+            >
+              {label}
+            </Button>
+          ))}
       </div>
       {query.error ? (
         <p role="alert">
@@ -296,6 +313,7 @@ export function AgentShareWallet({
                   owner,
                   kind: value.kind,
                   cursor: value.data.next_cursor,
+                  ...(taskId === undefined ? {} : { workbench_task_id: taskId }),
                 })
               }
             >

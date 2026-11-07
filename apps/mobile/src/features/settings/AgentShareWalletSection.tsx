@@ -26,15 +26,18 @@ export function AgentShareWalletSection({
   environmentId,
   owner,
   language,
+  taskId,
 }: {
   environmentId: EnvironmentId;
   owner: string;
   language: "zh" | "en";
+  taskId?: string;
 }) {
-  const [selection, setSelection] = useState<AgentShareWalletReadInput>({
-    action: "overview",
-    owner,
-  });
+  const [selection, setSelection] = useState<AgentShareWalletReadInput>(
+    taskId === undefined
+      ? { action: "overview", owner }
+      : { action: "history", owner, kind: "spending", cursor: "", workbench_task_id: taskId },
+  );
   const query = useEnvironmentQuery(
     agentShareEnvironment.wallet({ environmentId, input: selection }),
   );
@@ -47,6 +50,7 @@ export function AgentShareWalletSection({
       owner={owner}
       language={language}
       selection={selection}
+      {...(taskId === undefined ? {} : { taskId })}
       onSelect={setSelection}
       query={{ ...query, error: Boolean(query.error) }}
       canCommand={canCommand}
@@ -71,6 +75,7 @@ export function AgentShareWalletView({
   owner,
   language,
   selection,
+  taskId,
   onSelect: setSelection,
   query,
   personal = false,
@@ -85,6 +90,7 @@ export function AgentShareWalletView({
   canCommand?: boolean;
   onCommand?: (input: AgentShareWalletCommandInput) => Promise<boolean>;
   selection: AgentShareWalletReadInput;
+  taskId?: string;
   onSelect: (selection: AgentShareWalletReadInput) => void;
   query: {
     data: AgentShareWalletReadResult | null | undefined;
@@ -143,28 +149,38 @@ export function AgentShareWalletView({
     />
   );
   return (
-    <SettingsSection title={t("账号钱包与设备", "Account wallet and devices")}>
-      <Text className="px-5 py-2" textRole="body">
-        {t(
-          personal
-            ? "此设备登录账号的平台余额和账单，不依赖执行电脑在线。"
-            : "所选执行电脑当前账号的平台余额和账单。",
-          personal
-            ? "Balances and records for this device’s account, available without an execution host."
-            : "Platform balances and records for the selected host’s account.",
-        )}
-      </Text>
+    <SettingsSection
+      {...(taskId === undefined
+        ? { title: t("账号钱包与设备", "Account wallet and devices") }
+        : {})}
+    >
+      {taskId === undefined ? (
+        <Text className="px-5 py-2" textRole="body">
+          {t(
+            personal
+              ? "此设备登录账号的平台余额和账单，不依赖执行电脑在线。"
+              : "所选执行电脑当前账号的平台余额和账单。",
+            personal
+              ? "Balances and records for this device’s account, available without an execution host."
+              : "Platform balances and records for the selected host’s account.",
+          )}
+        </Text>
+      ) : null}
       <ListActionRow
-        label={t("刷新钱包", "Refresh wallet")}
+        label={
+          taskId === undefined ? t("刷新钱包", "Refresh wallet") : t("刷新账单", "Refresh charges")
+        }
         onPress={() => {
           setCommandUnconfirmed(false);
           query.refresh();
         }}
       />
-      <ListActionRow
-        label={t("已登录设备", "Signed-in devices")}
-        onPress={() => setSelection({ action: "devices", owner })}
-      />
+      {taskId === undefined ? (
+        <ListActionRow
+          label={t("已登录设备", "Signed-in devices")}
+          onPress={() => setSelection({ action: "devices", owner })}
+        />
+      ) : null}
       {commandUnconfirmed ? (
         <Text className="px-5 py-2" textRole="body" accessibilityRole="alert">
           {t(
@@ -173,10 +189,26 @@ export function AgentShareWalletView({
           )}
         </Text>
       ) : null}
-      {selection.action !== "overview" ? (
+      {(taskId === undefined ? selection.action !== "overview" : selection.action === "detail") ? (
         <ListActionRow
-          label={t("返回余额", "Back to balances")}
-          onPress={() => setSelection({ action: "overview", owner })}
+          label={
+            taskId === undefined
+              ? t("返回余额", "Back to balances")
+              : t("返回任务账单", "Back to task charges")
+          }
+          onPress={() =>
+            setSelection(
+              taskId === undefined
+                ? { action: "overview", owner }
+                : {
+                    action: "history",
+                    owner,
+                    kind: "spending",
+                    cursor: "",
+                    workbench_task_id: taskId,
+                  },
+            )
+          }
         />
       ) : null}
       {query.error ? (
@@ -280,13 +312,14 @@ export function AgentShareWalletView({
           }}
         />
       ) : null}
-      {kinds.map(([kind, label]) => (
-        <ListActionRow
-          key={kind}
-          label={label}
-          onPress={() => setSelection({ action: "history", owner, kind, cursor: "" })}
-        />
-      ))}
+      {taskId === undefined &&
+        kinds.map(([kind, label]) => (
+          <ListActionRow
+            key={kind}
+            label={label}
+            onPress={() => setSelection({ action: "history", owner, kind, cursor: "" })}
+          />
+        ))}
       {value?.action === "history" ? (
         <>
           {value.data.items.length === 0 ? (
@@ -305,6 +338,7 @@ export function AgentShareWalletView({
                   owner,
                   kind: value.kind,
                   cursor: value.data.next_cursor,
+                  ...(taskId === undefined ? {} : { workbench_task_id: taskId }),
                 })
               }
             />

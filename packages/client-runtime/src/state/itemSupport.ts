@@ -1,10 +1,15 @@
-import type { OrchestrationV2ThreadProjection, TurnItemId } from "@t3tools/contracts";
+import {
+  workbenchTaskProviderSessionId,
+  type OrchestrationV2ThreadProjection,
+  type TurnItemId,
+} from "@t3tools/contracts";
 
 type Projection = OrchestrationV2ThreadProjection;
 
 export interface V2ItemSupport {
   readonly item: Projection["turnItems"][number] | null;
   readonly run: Projection["runs"][number] | null;
+  readonly hasWorkbenchTaskBilling: boolean;
   readonly attempts: ReadonlyArray<Projection["attempts"][number]>;
   readonly node: Projection["nodes"][number] | null;
   readonly providerSession: Projection["providerSessions"][number] | null;
@@ -20,6 +25,7 @@ export interface V2ItemSupport {
 export const EMPTY_V2_ITEM_SUPPORT: V2ItemSupport = Object.freeze({
   item: null,
   run: null,
+  hasWorkbenchTaskBilling: false,
   attempts: Object.freeze([]),
   node: null,
   providerSession: null,
@@ -98,6 +104,11 @@ export function resolveV2ItemSupport(projection: Projection, itemId: TurnItemId)
   return {
     item,
     run,
+    hasWorkbenchTaskBilling:
+      run !== null &&
+      projection.providerSessions.some(
+        (session) => session.id === workbenchTaskProviderSessionId(run.id),
+      ),
     attempts,
     node,
     providerSession,
@@ -119,6 +130,7 @@ export function v2ItemSupportEqual(left: V2ItemSupport, right: V2ItemSupport): b
   return (
     left.item === right.item &&
     left.run === right.run &&
+    left.hasWorkbenchTaskBilling === right.hasWorkbenchTaskBilling &&
     sameEntities(left.attempts, right.attempts) &&
     left.node === right.node &&
     left.providerSession === right.providerSession &&

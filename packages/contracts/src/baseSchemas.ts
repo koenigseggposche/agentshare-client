@@ -304,6 +304,11 @@ export const ProviderItemId = makeEntityId("ProviderItemId");
 export type ProviderItemId = typeof ProviderItemId.Type;
 export const ProviderSessionId = makeEntityId("ProviderSessionId");
 export type ProviderSessionId = typeof ProviderSessionId.Type;
+export const WORKBENCH_TASK_SESSION_PREFIX = "provider-session:workbench-task:";
+export function workbenchTaskProviderSessionId(runId: RunId): ProviderSessionId {
+  return ProviderSessionId.make(WORKBENCH_TASK_SESSION_PREFIX + runId);
+}
+
 export const ProviderThreadId = makeEntityId("ProviderThreadId");
 export type ProviderThreadId = typeof ProviderThreadId.Type;
 export const ProviderTurnId = makeEntityId("ProviderTurnId");
