@@ -857,7 +857,7 @@ export function NewTaskDraftScreen(props: {
       <ThreadScreenFallback
         header={
           <AppBar
-            title="New thread"
+            title={labels.newThread}
             onBack={goBack}
             options={{
               ...threadHeaderAppearance(NATIVE_LIQUID_GLASS_SUPPORTED),
@@ -870,14 +870,12 @@ export function NewTaskDraftScreen(props: {
       >
         <View className="flex-1 justify-end gap-3 p-4">
           {environmentControl}
-          <Text className="text-foreground-muted">
-            Your draft is saved on this device. Connect to an environment to choose its first model.
-          </Text>
+          <Text className="text-foreground-muted">{labels.localDraftNeedsConnection}</Text>
           <ComposerEditor
             draftKey={flow.draftKey}
             value={flow.prompt}
             onChangeText={flow.setPrompt}
-            placeholder="Ask anything"
+            placeholder={labels.composerPlaceholder}
             multiline
             style={{ minHeight: 64 }}
           />
