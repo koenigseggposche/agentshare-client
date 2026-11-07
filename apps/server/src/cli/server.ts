@@ -1,12 +1,14 @@
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
+import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import { Command, GlobalFlag } from "effect/cli";
 import * as CliError from "effect/cli/CliError";
 
 import * as ServerConfig from "../config.ts";
+import * as WorkspaceAccount from "../agentshare/WorkspaceAccount.ts";
 import { awaitLauncherLoss } from "../launcherWatch.ts";
 import * as ProcessRunner from "../processRunner.ts";
 import * as AutomaticPort from "./automaticPort.ts";
@@ -34,7 +36,10 @@ const runServerCommand = Effect.fn("server.runServerCommand")(function* (
   const logLevel = yield* GlobalFlag.LogLevel;
   const selectAutomaticPort = yield* AutomaticPort.make.pipe(Effect.provide(ProcessRunner.layer));
   const config = yield* resolveServerConfig(flags, logLevel, { ...options, selectAutomaticPort });
-  const run = runServer.pipe(Effect.provideService(ServerConfig.ServerConfig, config));
+  const run = Effect.raceFirst(runServer, WorkspaceAccount.awaitAccountChange).pipe(
+    Effect.provide(WorkspaceAccount.layer.pipe(Layer.provide(ServerConfig.layer(config)))),
+    Effect.forever,
+  );
   if (config.mode !== "desktop" || config.desktopBootstrapToken === undefined) return yield* run;
   yield* Effect.sync(() => {
     process.stdout.on("error", ignoreClosedLauncherPipe);

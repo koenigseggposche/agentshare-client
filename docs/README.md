@@ -29,6 +29,10 @@
 
 ---
 
+## AgentShare workbench
+
+- SQLite schema · [English](./en/database-tables.md) · [简体中文](./zh/database-tables.md)
+
 ## Working on T3 Code
 
 Start with the [development runbook](./operations/development.md) and

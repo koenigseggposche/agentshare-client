@@ -1118,4 +1118,13 @@ const make = Effect.gen(function* () {
   });
 });
 
-export const layer = Layer.effect(SessionStore, make).pipe(Layer.provideMerge(AuthSessions.layer));
+export const layer = Layer.unwrap(
+  Effect.gen(function* () {
+    const config = yield* ServerConfig.ServerConfig;
+    return Layer.effect(SessionStore, make).pipe(
+      Layer.provideMerge(
+        AuthSessions.layerForAccountGeneration(config.agentShareAccountGeneration ?? 0),
+      ),
+    );
+  }),
+);

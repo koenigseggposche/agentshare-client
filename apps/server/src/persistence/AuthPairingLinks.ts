@@ -123,7 +123,7 @@ function toPersistenceSqlOrDecodeError(
 }
 
 /** @public */
-export const make = Effect.gen(function* () {
+export const make = Effect.fn("AuthPairingLinks.make")(function* (accountGeneration = 0) {
   const sql = yield* SqlClient.SqlClient;
 
   const createPairingLinkRow = SqlSchema.void({
@@ -131,6 +131,7 @@ export const make = Effect.gen(function* () {
     execute: (input) =>
       sql`
         INSERT INTO auth_pairing_links (
+          account_generation,
           id,
           credential,
           method,
@@ -144,6 +145,7 @@ export const make = Effect.gen(function* () {
           revoked_at
         )
         VALUES (
+          ${accountGeneration},
           ${input.id},
           ${input.credential},
           ${input.method},
@@ -174,6 +176,7 @@ export const make = Effect.gen(function* () {
         UPDATE auth_pairing_links
         SET consumed_at = ${consumedAt}
         WHERE credential = ${credential}
+          AND account_generation = ${accountGeneration}
           AND revoked_at IS NULL
           AND consumed_at IS NULL
           AND expires_at > ${now}
@@ -229,6 +232,7 @@ export const make = Effect.gen(function* () {
           revoked_at AS "revokedAt"
         FROM auth_pairing_links
         WHERE revoked_at IS NULL
+          AND account_generation = ${accountGeneration}
           AND consumed_at IS NULL
           AND expires_at > ${now}
         ORDER BY created_at DESC, id DESC
@@ -243,6 +247,7 @@ export const make = Effect.gen(function* () {
         UPDATE auth_pairing_links
         SET revoked_at = ${revokedAt}
         WHERE id = ${id}
+          AND account_generation = ${accountGeneration}
           AND revoked_at IS NULL
           AND consumed_at IS NULL
         RETURNING id AS "id"
@@ -268,6 +273,7 @@ export const make = Effect.gen(function* () {
           revoked_at AS "revokedAt"
         FROM auth_pairing_links
         WHERE credential = ${credential}
+          AND account_generation = ${accountGeneration}
       `,
   });
 
@@ -380,4 +386,7 @@ export const make = Effect.gen(function* () {
   } satisfies AuthPairingLinkRepository["Service"];
 });
 
-export const layer = Layer.effect(AuthPairingLinkRepository, make);
+export const layerForAccountGeneration = (generation: number) =>
+  Layer.effect(AuthPairingLinkRepository, make(generation));
+
+export const layer = layerForAccountGeneration(0);

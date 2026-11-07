@@ -38,7 +38,7 @@ const config = {
 };
 
 describe("DesktopLocalEnvironmentAuth", () => {
-  it.effect("exchanges the desktop bootstrap credential only once", () =>
+  it.effect("caches the desktop bearer until the renderer requests a refresh", () =>
     Effect.gen(function* () {
       const requestCount = yield* Ref.make(0);
       const waiting = yield* Deferred.make<void>();
@@ -46,13 +46,13 @@ describe("DesktopLocalEnvironmentAuth", () => {
       const layerHttpClient = Layer.succeed(
         HttpClient.HttpClient,
         HttpClient.make((request) =>
-          Ref.update(requestCount, (count) => count + 1).pipe(
-            Effect.as(
+          Ref.updateAndGet(requestCount, (count) => count + 1).pipe(
+            Effect.map((count) =>
               HttpClientResponse.fromWeb(
                 request,
                 new Response(
                   JSON.stringify({
-                    access_token: "desktop-bearer-token",
+                    access_token: `desktop-bearer-token-${count}`,
                     issued_token_type: "urn:ietf:params:oauth:token-type:access_token",
                     token_type: "Bearer",
                     expires_in: 3600,
@@ -83,7 +83,7 @@ describe("DesktopLocalEnvironmentAuth", () => {
         Layer.provide(Layer.mergeAll(layerPool, layerHttpClient)),
       );
 
-      const [first, second] = yield* Effect.gen(function* () {
+      const [first, second, refreshed, cached] = yield* Effect.gen(function* () {
         const auth = yield* DesktopLocalEnvironmentAuth.DesktopLocalEnvironmentAuth;
         const tokens = yield* Effect.all([auth.getBearerToken, auth.getBearerToken]).pipe(
           Effect.forkChild,
@@ -92,12 +92,17 @@ describe("DesktopLocalEnvironmentAuth", () => {
         yield* TestClock.adjust(Duration.seconds(16));
         assert.strictEqual(yield* Ref.get(requestCount), 0);
         yield* Deferred.succeed(ready, true);
-        return yield* Fiber.join(tokens);
+        const [first, second] = yield* Fiber.join(tokens);
+        const refreshed = yield* auth.refreshBearerToken;
+        const cached = yield* auth.getBearerToken;
+        return [first, second, refreshed, cached];
       }).pipe(Effect.provide(layerTest));
 
-      assert.strictEqual(first, "desktop-bearer-token");
-      assert.strictEqual(second, "desktop-bearer-token");
-      assert.strictEqual(yield* Ref.get(requestCount), 1);
+      assert.strictEqual(first, "desktop-bearer-token-1");
+      assert.strictEqual(second, first);
+      assert.strictEqual(refreshed, "desktop-bearer-token-2");
+      assert.strictEqual(cached, refreshed);
+      assert.strictEqual(yield* Ref.get(requestCount), 2);
     }).pipe(Effect.provide(TestClock.layer())),
   );
 

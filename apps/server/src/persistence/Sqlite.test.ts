@@ -5,14 +5,153 @@ import * as NodePath from "node:path";
 import * as NodeSqlite from "node:sqlite";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
+import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
+import * as CoreClient from "@agentshare/core-client/CoreClient";
+import { AgentShareCoreError } from "@t3tools/contracts";
 import { assert, it } from "@effect/vitest";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as Effect from "effect/Effect";
+import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as SqlClient from "effect/sql/SqlClient";
 
 import * as SqlitePersistence from "./Sqlite.ts";
 import * as ServerConfig from "../config.ts";
+import * as WorkspaceAccount from "../agentshare/WorkspaceAccount.ts";
+
+it.effect("keeps each account's workbench database separate when reopening the same host", () => {
+  const fixtures = NodePath.resolve(import.meta.dirname, "../../../../.t3/fixtures");
+  NodeFS.mkdirSync(fixtures, { recursive: true });
+  const directory = NodeFS.mkdtempSync(NodePath.join(fixtures, "account-"));
+  const persistence = (owner: string) =>
+    SqlitePersistence.layerConfig.pipe(
+      Layer.provideMerge(
+        WorkspaceAccount.layerFromCore.pipe(
+          Layer.provide(
+            Layer.effect(
+              ServerConfig.ServerConfig,
+              Effect.gen(function* () {
+                const config = yield* ServerConfig.ServerConfig;
+                return ServerConfig.make({
+                  ...config,
+                  otlpTracesUrl: "https://previous.example.test/traces",
+                  otlpMetricsUrl: "https://previous.example.test/metrics",
+                  otlpLogsUrl: "https://previous.example.test/logs",
+                  otlpTracesSource: "settings",
+                  otlpMetricsSource: "settings",
+                  otlpLogsSource: "settings",
+                });
+              }),
+            ).pipe(Layer.provide(ServerConfig.layerTest(directory, directory))),
+          ),
+          Layer.provide(
+            Layer.mock(CoreClient.CoreClient)({
+              identity: () =>
+                Effect.succeed({
+                  api_version: 1,
+                  version: "generated",
+                  revision: "generated",
+                  owner,
+                  account_generation: 1,
+                  device_id: "generated-device",
+                  paired: owner !== "offline",
+                  stopping: false,
+                  features: [],
+                }),
+            }),
+          ),
+        ),
+      ),
+      Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
+    );
+  const inspect = (owner: string, expected: readonly string[], insert?: string) =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const config = yield* ServerConfig.ServerConfig;
+      const fs = yield* FileSystem.FileSystem;
+      const paths = [
+        NodePath.join(config.attachmentsDir, "generated-attachment.txt"),
+        NodePath.join(config.secretsDir, "generated-secret-fixture.txt"),
+        NodePath.join(config.providerStatusCacheDir, "generated-cache.txt"),
+      ];
+      assert.equal(config.baseDir, directory);
+      assert.equal(
+        config.serverRuntimeStatePath,
+        NodePath.join(directory, "userdata/server-runtime.json"),
+      );
+      assert.equal(
+        config.otlpTracesUrl,
+        expected.length > 0 ? `https://${owner}.example.test/traces` : undefined,
+      );
+      assert.isUndefined(config.otlpMetricsUrl);
+      assert.isUndefined(config.otlpLogsUrl);
+      assert.equal(yield* fs.exists(config.settingsPath), expected.length > 0);
+      if (insert !== undefined)
+        yield* fs.writeFileString(
+          config.settingsPath,
+          JSON.stringify({
+            observability: { otlpTracesUrl: `https://${owner}.example.test/traces` },
+          }),
+        );
+      for (const file of paths) {
+        assert.equal(yield* fs.exists(file), expected.length > 0);
+        if (expected.length > 0) assert.equal(yield* fs.readFileString(file), expected[0]);
+        if (insert !== undefined) {
+          yield* fs.makeDirectory(NodePath.dirname(file), { recursive: true });
+          yield* fs.writeFileString(file, insert);
+        }
+      }
+      yield* sql`CREATE TABLE IF NOT EXISTS generated_history(value TEXT NOT NULL)`;
+      const rows = yield* sql<{ readonly value: string }>`SELECT value FROM generated_history`;
+      assert.deepEqual(
+        rows.map((row) => row.value),
+        expected,
+      );
+      if (insert !== undefined) yield* sql`INSERT INTO generated_history VALUES (${insert})`;
+    }).pipe(Effect.provide(persistence(owner)));
+  return Effect.gen(function* () {
+    yield* inspect("generated-account-a", [], "first account's work");
+    yield* inspect("generated-account-b", [], "second account's work");
+    yield* inspect("offline", [], "offline work");
+    yield* inspect("generated-account-a", ["first account's work"]);
+    yield* inspect("generated-account-b", ["second account's work"]);
+    yield* inspect("offline", ["offline work"]);
+  }).pipe(
+    Effect.ensuring(Effect.sync(() => NodeFS.rmSync(directory, { recursive: true, force: true }))),
+  );
+});
+
+it.effect("does not open offline history when the current account cannot be verified", () => {
+  const fixtures = NodePath.resolve(import.meta.dirname, "../../../../.t3/fixtures");
+  NodeFS.mkdirSync(fixtures, { recursive: true });
+  const directory = NodeFS.mkdtempSync(NodePath.join(fixtures, "account-"));
+  return Effect.gen(function* () {
+    const failure = yield* ServerConfig.ServerConfig.pipe(
+      Effect.provide(
+        WorkspaceAccount.layerFromCore.pipe(
+          Layer.provide(ServerConfig.layerTest(directory, directory)),
+          Layer.provide(
+            Layer.mock(CoreClient.CoreClient)({
+              identity: () =>
+                Effect.fail(
+                  new AgentShareCoreError({
+                    operation: "identity",
+                    category: "unavailable",
+                  }),
+                ),
+            }),
+          ),
+        ),
+      ),
+      Effect.flip,
+    );
+    assert.equal(failure._tag, "AgentShareCoreError");
+    assert.isFalse(NodeFS.existsSync(NodePath.join(directory, "accounts")));
+  }).pipe(
+    Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)),
+    Effect.ensuring(Effect.sync(() => NodeFS.rmSync(directory, { recursive: true, force: true }))),
+  );
+});
 
 // Linux names an open, already-deleted file "<path> (deleted)" in /proc/self/fd.
 // SQLite names its temp files "etilqs_*" and, without TMPDIR, puts them in

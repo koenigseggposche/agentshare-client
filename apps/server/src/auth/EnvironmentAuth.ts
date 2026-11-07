@@ -25,6 +25,7 @@ import {
   mcpClientScopes,
 } from "@t3tools/contracts";
 import { isLocalLoopbackHost } from "@t3tools/shared/hostClassification";
+import * as CoreClient from "@agentshare/core-client/CoreClient";
 import { encodeOAuthScope } from "@t3tools/shared/oauthScope";
 import * as Context from "effect/Context";
 import * as Digest from "effect/crypto/Digest";
@@ -533,6 +534,8 @@ export class EnvironmentAuth extends Context.Service<
     readonly authenticateHttpRequest: (
       request: HttpServerRequest.HttpServerRequest,
     ) => Effect.Effect<AuthenticatedSession, ServerAuthCredentialError | ServerAuthInternalError>;
+    readonly requireCurrentAccount: Effect.Effect<void, ServerAuthInvalidCredentialError>;
+    readonly awaitAccountInvalidation: Effect.Effect<void>;
     readonly authenticateWebSocketUpgrade: (
       request: HttpServerRequest.HttpServerRequest,
       use: AuthWebSocketTicketUse,
@@ -718,6 +721,29 @@ export const make = Effect.gen(function* () {
   const digest = yield* Digest.Digest;
   const descriptor = yield* policy.getDescriptor();
   const config = yield* ServerConfig.ServerConfig;
+  const accountCore = yield* Effect.serviceOption(CoreClient.CoreClient);
+  const requireCurrentAccount = Effect.gen(function* () {
+    if (config.agentShareOwner === undefined) return;
+    const denied = () =>
+      new ServerAuthInvalidCredentialError({
+        diagnostic:
+          "The execution host's login changed or cannot be verified. Reconnect to its current account workspace.",
+      });
+    if (Option.isNone(accountCore)) return yield* denied();
+    const identity = yield* accountCore.value.identity().pipe(Effect.mapError(denied));
+    if (
+      identity.owner !== config.agentShareOwner ||
+      identity.account_generation !== config.agentShareAccountGeneration ||
+      identity.stopping
+    )
+      return yield* denied();
+  });
+  const awaitAccountInvalidation =
+    config.agentShareOwner === undefined
+      ? Effect.never
+      : Effect.forever(Effect.sleep("1 second").pipe(Effect.andThen(requireCurrentAccount))).pipe(
+          Effect.catchTags({ ServerAuthInvalidCredentialError: () => Effect.void }),
+        );
   const managedPolicy = yield* ManagedPolicy.ManagedPolicy;
   const devAuth = resolveReusableDevAuth(config);
 
@@ -791,6 +817,7 @@ export const make = Effect.gen(function* () {
       );
     }
     return authenticateToken(credential.token).pipe(
+      Effect.tap(() => requireCurrentAccount),
       Effect.flatMap((session) => {
         if (session.proofKeyThumbprint) {
           if (!dpopToken || dpopToken !== credential.token) {
@@ -848,6 +875,7 @@ export const make = Effect.gen(function* () {
   const createBrowserSession: EnvironmentAuth["Service"]["createBrowserSession"] = Effect.fn(
     "EnvironmentAuth.createBrowserSession",
   )(function* (credential, requestMetadata, previousSessionToken) {
+    yield* requireCurrentAccount;
     if (devAuth?.matches(credential)) {
       return yield* sessions.verify(credential).pipe(
         mapSessionVerificationErrors,
@@ -956,10 +984,13 @@ export const make = Effect.gen(function* () {
 
   const exchangeBootstrapCredentialForAccessToken: EnvironmentAuth["Service"]["exchangeBootstrapCredentialForAccessToken"] =
     (credential, requestedScopes, requestMetadata, input) => {
-      return resolveBootstrapGrant(credential, {
-        ...input,
-        ...(requestedScopes !== undefined ? { requestedScopes } : {}),
-      }).pipe(
+      return requireCurrentAccount.pipe(
+        Effect.andThen(
+          resolveBootstrapGrant(credential, {
+            ...input,
+            ...(requestedScopes !== undefined ? { requestedScopes } : {}),
+          }),
+        ),
         Effect.flatMap((grant) =>
           Effect.gen(function* () {
             const grantedScopes =
@@ -1251,9 +1282,11 @@ export const make = Effect.gen(function* () {
         ).pipe(Effect.orDie);
         const websocketTicket = query.wsTicket && Redacted.value(query.wsTicket);
         if (websocketTicket && websocketTicket.trim().length > 0) {
-          const session = yield* sessions
-            .verifyWebSocketToken(websocketTicket)
-            .pipe(mapSessionVerificationErrors, Effect.flatMap(rejectMcpClientAudience));
+          const session = yield* sessions.verifyWebSocketToken(websocketTicket).pipe(
+            mapSessionVerificationErrors,
+            Effect.flatMap(rejectMcpClientAudience),
+            Effect.tap(() => requireCurrentAccount),
+          );
           if (session.audience !== undefined && session.audience !== use) {
             return yield* new ServerAuthInvalidCredentialError({
               diagnostic: `WebSocket ticket was issued for the ${session.audience} route.`,
@@ -1301,6 +1334,7 @@ export const make = Effect.gen(function* () {
     if (token === null) return Effect.fail(new ServerAuthMissingCredentialError({}));
     return sessions.verify(token).pipe(
       mapSessionVerificationErrors,
+      Effect.tap(() => requireCurrentAccount),
       Effect.flatMap((session) =>
         session.subject === MCP_CLIENT_SUBJECT && session.method === "bearer-access-token"
           ? Effect.succeed({
@@ -1401,6 +1435,8 @@ export const make = Effect.gen(function* () {
     revokeClientSession,
     revokeOtherClientSessions,
     authenticateHttpRequest,
+    requireCurrentAccount,
+    awaitAccountInvalidation,
     authenticateWebSocketUpgrade,
     issueWebSocketTicket,
     issueStartupPairingUrl,

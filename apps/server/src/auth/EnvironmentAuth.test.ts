@@ -17,6 +17,9 @@ import { expect, it } from "@effect/vitest";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Ref from "effect/Ref";
+import * as CoreClient from "@agentshare/core-client/CoreClient";
+import { AgentShareCoreError, type AgentShareHostIdentity } from "@t3tools/contracts";
 import * as Redacted from "effect/Redacted";
 
 import * as ServerConfig from "../config.ts";
@@ -117,6 +120,86 @@ const makeDpopKey = () => {
 it.layer(Layer.mergeAll(NodeServices.layer, NodePlatformCrypto.layer))(
   "EnvironmentAuth.layer",
   (it) => {
+    it.effect("rejects old HTTP, websocket and MCP credentials after the host login changes", () =>
+      Effect.gen(function* () {
+        const initial: AgentShareHostIdentity = {
+          api_version: 1,
+          version: "generated",
+          revision: "generated",
+          owner: "generated-account-a",
+          account_generation: 7,
+          device_id: "generated-device",
+          paired: true,
+          stopping: false,
+          features: [],
+        };
+        const identity = yield* Ref.make<AgentShareHostIdentity | null>(initial);
+        return yield* Effect.gen(function* () {
+          const auth = yield* EnvironmentAuth.EnvironmentAuth;
+          const bearer = yield* auth.issueSession();
+          const request = makeBearerRequest(bearer.token);
+          const session = yield* auth.authenticateHttpRequest(request);
+          const ticket = yield* auth.issueWebSocketTicket(session, { use: "rpc" });
+          const websocket = { ...request, url: `/ws?wsTicket=${Redacted.value(ticket.ticket)}` };
+          yield* auth.authenticateWebSocketUpgrade(websocket, "rpc");
+          const mcp = yield* auth.issueMcpClientSession({
+            label: "Generated",
+            access: "read-only",
+            peerLink: false,
+            client: { deviceType: "bot" },
+          });
+          const mcpRequest = makeBearerRequest(mcp.token);
+          yield* auth.authenticateMcpClient(mcpRequest);
+          for (const next of [
+            { ...initial, account_generation: 8 },
+            { ...initial, owner: "generated-account-b", account_generation: 9 },
+            { ...initial, account_generation: 10 },
+            { ...initial, stopping: true },
+            null,
+          ]) {
+            yield* Ref.set(identity, next);
+            const failures = yield* Effect.all([
+              auth.authenticateHttpRequest(request).pipe(
+                Effect.flip,
+                Effect.map((error) => error._tag),
+              ),
+              auth.authenticateWebSocketUpgrade(websocket, "rpc").pipe(
+                Effect.flip,
+                Effect.map((error) => error._tag),
+              ),
+              auth.authenticateMcpClient(mcpRequest).pipe(
+                Effect.flip,
+                Effect.map((error) => error._tag),
+              ),
+            ]);
+            expect(failures).toEqual(Array(3).fill("ServerAuthInvalidCredentialError"));
+          }
+        }).pipe(
+          Effect.provide(
+            layerEnvironmentAuth({
+              agentShareOwner: initial.owner,
+              agentShareAccountGeneration: 7,
+            }).pipe(
+              Layer.provide(
+                Layer.mock(CoreClient.CoreClient)({
+                  identity: () =>
+                    Ref.get(identity).pipe(
+                      Effect.filterOrFail(
+                        (value) => value !== null,
+                        () =>
+                          new AgentShareCoreError({
+                            operation: "identity",
+                            category: "unavailable",
+                          }),
+                      ),
+                    ),
+                }),
+              ),
+            ),
+          ),
+        );
+      }),
+    );
     it.effect("uses the reusable dev cookie without overriding a normal scoped cookie", () =>
       Effect.gen(function* () {
         const serverAuth = yield* EnvironmentAuth.EnvironmentAuth;

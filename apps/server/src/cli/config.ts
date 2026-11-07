@@ -12,6 +12,7 @@ import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as LogLevel from "effect/LogLevel";
+import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as Redacted from "effect/Redacted";
@@ -25,6 +26,7 @@ import * as CliError from "effect/cli/CliError";
 import { readBootstrapEnvelope } from "../bootstrap.ts";
 import { resolveServiceLauncherMode } from "../cloud/serviceLauncherClient.ts";
 import * as ServerConfig from "../config.ts";
+import * as WorkspaceAccount from "../agentshare/WorkspaceAccount.ts";
 import { expandHomePath, resolveBaseDir } from "../os-jank.ts";
 import { isProcessAlive, readPersistedServerRuntimeState } from "../serverRuntimeState.ts";
 
@@ -561,6 +563,12 @@ export const resolveCliAuthConfig = (
       lan: Option.none(),
     },
     cliLogLevel,
+  ).pipe(
+    Effect.flatMap((config) =>
+      ServerConfig.ServerConfig.pipe(
+        Effect.provide(WorkspaceAccount.layer.pipe(Layer.provide(ServerConfig.layer(config)))),
+      ),
+    ),
   );
   // Logs go to stdout, where --json and --token-only print, and resolving can
   // log, for example when it sweeps abandoned attachment uploads.

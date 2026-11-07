@@ -60,6 +60,7 @@ export class DesktopLocalEnvironmentAuth extends Context.Service<
   DesktopLocalEnvironmentAuth,
   {
     readonly getBearerToken: Effect.Effect<string, DesktopLocalEnvironmentAuthError>;
+    readonly refreshBearerToken: Effect.Effect<string, DesktopLocalEnvironmentAuthError>;
   }
 >()("@t3tools/desktop/backend/DesktopLocalEnvironmentAuth") {}
 
@@ -70,61 +71,67 @@ export const make = Effect.gen(function* () {
   const tokenRef = yield* Ref.make(Option.none<string>());
   const mutex = yield* Semaphore.make(1);
 
-  const getBearerToken = mutex
-    .withPermits(1)(
-      Effect.gen(function* () {
-        const cached = yield* Ref.get(tokenRef);
-        if (Option.isSome(cached)) {
-          return cached.value;
-        }
+  const bearerToken = (refresh: boolean) =>
+    mutex
+      .withPermits(1)(
+        Effect.gen(function* () {
+          const cached = yield* Ref.get(tokenRef);
+          if (!refresh && Option.isSome(cached)) {
+            return cached.value;
+          }
 
-        const instances = yield* pool.list;
-        const primary = instances.find((instance) => instance.id === PRIMARY_LOCAL_ENVIRONMENT_ID);
-        if (primary === undefined || !(yield* primary.waitForReady(Duration.infinity))) {
-          return yield* new DesktopLocalEnvironmentAuthBackendNotConfiguredError();
-        }
-        const configOption = yield* primary.currentConfig;
-        if (Option.isNone(configOption)) {
-          return yield* new DesktopLocalEnvironmentAuthBackendNotConfiguredError();
-        }
-        const config = configOption.value;
-        // Secret-authenticated backends accept the current window token; the launch token may be stale.
-        const secret = config.bootstrap.desktopBootstrapSecret;
-        const credential =
-          secret === undefined
-            ? config.bootstrap.desktopBootstrapToken
-            : currentDesktopBootstrapToken(secret, yield* Clock.currentTimeMillis);
-        if (!credential) {
-          return yield* new DesktopLocalEnvironmentAuthBackendNotConfiguredError();
-        }
-        const session = yield* bootstrapRemoteBearerSession({
-          httpBaseUrl: config.httpBaseUrl.href,
-          credential,
-          clientMetadata: {
-            label: "T3 Code Desktop",
-            deviceType: "desktop",
-          },
-        }).pipe(
-          Effect.provideService(HttpClient.HttpClient, httpClient),
-          Effect.retry({
-            while: isTransientBearerBootstrapError,
-            schedule: Schedule.spaced(BOOTSTRAP_TRANSIENT_RETRY_INTERVAL),
-          }),
-          Effect.timeout(BOOTSTRAP_TRANSIENT_RETRY_TIMEOUT),
-          Effect.mapError(
-            (cause) =>
-              new DesktopLocalEnvironmentAuthSessionBootstrapError({
-                cause,
-              }),
-          ),
-        );
-        yield* Ref.set(tokenRef, Option.some(session.access_token));
-        return session.access_token;
-      }),
-    )
-    .pipe(Effect.withSpan("desktop.localEnvironmentAuth.getBearerToken"));
+          const instances = yield* pool.list;
+          const primary = instances.find(
+            (instance) => instance.id === PRIMARY_LOCAL_ENVIRONMENT_ID,
+          );
+          if (primary === undefined || !(yield* primary.waitForReady(Duration.infinity))) {
+            return yield* new DesktopLocalEnvironmentAuthBackendNotConfiguredError();
+          }
+          const configOption = yield* primary.currentConfig;
+          if (Option.isNone(configOption)) {
+            return yield* new DesktopLocalEnvironmentAuthBackendNotConfiguredError();
+          }
+          const config = configOption.value;
+          // Secret-authenticated backends accept the current window token; the launch token may be stale.
+          const secret = config.bootstrap.desktopBootstrapSecret;
+          const credential =
+            secret === undefined
+              ? config.bootstrap.desktopBootstrapToken
+              : currentDesktopBootstrapToken(secret, yield* Clock.currentTimeMillis);
+          if (!credential) {
+            return yield* new DesktopLocalEnvironmentAuthBackendNotConfiguredError();
+          }
+          const session = yield* bootstrapRemoteBearerSession({
+            httpBaseUrl: config.httpBaseUrl.href,
+            credential,
+            clientMetadata: {
+              label: "T3 Code Desktop",
+              deviceType: "desktop",
+            },
+          }).pipe(
+            Effect.provideService(HttpClient.HttpClient, httpClient),
+            Effect.retry({
+              while: isTransientBearerBootstrapError,
+              schedule: Schedule.spaced(BOOTSTRAP_TRANSIENT_RETRY_INTERVAL),
+            }),
+            Effect.timeout(BOOTSTRAP_TRANSIENT_RETRY_TIMEOUT),
+            Effect.mapError(
+              (cause) =>
+                new DesktopLocalEnvironmentAuthSessionBootstrapError({
+                  cause,
+                }),
+            ),
+          );
+          yield* Ref.set(tokenRef, Option.some(session.access_token));
+          return session.access_token;
+        }),
+      )
+      .pipe(Effect.withSpan("desktop.localEnvironmentAuth.getBearerToken"));
 
-  return DesktopLocalEnvironmentAuth.of({ getBearerToken });
+  return DesktopLocalEnvironmentAuth.of({
+    getBearerToken: bearerToken(false),
+    refreshBearerToken: bearerToken(true),
+  });
 });
 
 export const layer = Layer.effect(DesktopLocalEnvironmentAuth, make);

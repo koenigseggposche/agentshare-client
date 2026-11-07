@@ -625,6 +625,13 @@ const make = Effect.gen(function* () {
   });
 });
 
-export const layer = Layer.effect(PairingGrantStore, make).pipe(
-  Layer.provideMerge(AuthPairingLinks.layer),
+export const layer = Layer.unwrap(
+  Effect.gen(function* () {
+    const config = yield* ServerConfig.ServerConfig;
+    return Layer.effect(PairingGrantStore, make).pipe(
+      Layer.provideMerge(
+        AuthPairingLinks.layerForAccountGeneration(config.agentShareAccountGeneration ?? 0),
+      ),
+    );
+  }),
 );

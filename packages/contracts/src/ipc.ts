@@ -1055,7 +1055,7 @@ export interface DesktopBridge {
   setLocalEnvironmentEnabled: (enabled: boolean) => Promise<void>;
   getStartupState: () => Promise<DesktopStartupState>;
   setStartupEnabled: (enabled: boolean) => Promise<DesktopStartupState>;
-  getLocalEnvironmentBearerToken: () => Promise<string>;
+  getLocalEnvironmentBearerToken: (refresh?: boolean) => Promise<string>;
   getClientSettings: () => Promise<ClientSettings | null>;
   setClientSettings: (settings: ClientSettings) => Promise<void>;
   getConnectionCatalog: () => Promise<string | null>;

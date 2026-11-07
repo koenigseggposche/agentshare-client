@@ -34,6 +34,7 @@ import {
   persistServerRuntimeState,
   type PersistedServerRuntimeState,
 } from "../serverRuntimeState.ts";
+import { testAccountProfilePath, withCliAccountFixture } from "./WorkspaceAccount.testkit.ts";
 import { DevServerNotProxiableError, resolveTailscaleLocalTarget } from "./pair.ts";
 
 import packageJson from "../../package.json" with { type: "json" };
@@ -70,8 +71,6 @@ describe("pair tailscale local target", () => {
   });
 });
 
-const runCli = (args: ReadonlyArray<string>) => Command.runWith(cli, { version: "0.0.0" })(args);
-
 const provideCliTestLayers = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.provide(effect, Layer.mergeAll(layerCliRuntime, TestConsole.layer));
 
@@ -95,6 +94,13 @@ const testDescriptor = {
   orchestrationProtocolVersion: ORCHESTRATION_PROTOCOL_VERSION,
   capabilities: { repositoryIdentity: true },
 };
+
+const runCli = (args: ReadonlyArray<string>) =>
+  withCliAccountFixture(
+    Command.runWith(cli, { version: "0.0.0" })(args),
+    args,
+    testDescriptor.environmentId,
+  );
 
 const withDescriptorServer = <A, E, R>(
   run: (origin: string) => Effect.Effect<A, E, R>,
@@ -607,7 +613,7 @@ describe("scripted auth output", () => {
   )("prints only the result for $label after removing an abandoned upload", ({ command }) =>
     Effect.gen(function* () {
       const baseDir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-cli-quiet-test-"));
-      const attachmentsDir = NodePath.join(baseDir, "userdata", "attachments");
+      const attachmentsDir = NodePath.join(testAccountProfilePath(baseDir), "attachments");
       NodeFS.mkdirSync(attachmentsDir, { recursive: true });
       // An abandoned upload makes config resolution log that it removed it.
       const abandoned = NodePath.join(attachmentsDir, "abandoned.part");

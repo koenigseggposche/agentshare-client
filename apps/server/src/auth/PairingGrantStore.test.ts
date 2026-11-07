@@ -24,7 +24,10 @@ import * as PairingGrantStore from "./PairingGrantStore.ts";
 
 const layerServerConfig = (
   overrides?: Partial<
-    Pick<ServerConfig.ServerConfig["Service"], "desktopBootstrapToken" | "desktopBootstrapSecret">
+    Pick<
+      ServerConfig.ServerConfig["Service"],
+      "desktopBootstrapToken" | "desktopBootstrapSecret" | "agentShareAccountGeneration"
+    >
   >,
 ) =>
   Layer.effect(
@@ -51,6 +54,30 @@ const layerPairingGrantStore = (
   );
 
 it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("PairingGrantStore.layer", (it) => {
+  it.effect("cannot reuse or reveal pairing credentials from a previous login generation", () =>
+    Effect.gen(function* () {
+      const forGeneration = (generation: number) =>
+        PairingGrantStore.layer.pipe(
+          Layer.provide(layerServerConfig({ agentShareAccountGeneration: generation })),
+        );
+      const old = yield* Effect.gen(function* () {
+        const store = yield* PairingGrantStore.PairingGrantStore;
+        return yield* store.issueOneTimeToken({ label: "Generated previous login" });
+      }).pipe(Effect.provide(forGeneration(1)));
+      for (const generation of [2, 3]) {
+        yield* Effect.gen(function* () {
+          const store = yield* PairingGrantStore.PairingGrantStore;
+          expect(yield* store.listActive()).toEqual([]);
+          expect((yield* store.consume(old.credential).pipe(Effect.flip))._tag).toBe(
+            "UnknownBootstrapCredentialError",
+          );
+          expect(yield* store.revoke(old.id)).toBe(false);
+          const current = yield* store.issueOneTimeToken();
+          expect((yield* store.consume(current.credential)).method).toBe("one-time-token");
+        }).pipe(Effect.provide(forGeneration(generation)));
+      }
+    }).pipe(Effect.provide(SqlitePersistence.layerMemory)),
+  );
   it.effect("accepts lowercase one-time tokens exactly once", () =>
     Effect.gen(function* () {
       const bootstrapCredentials = yield* PairingGrantStore.PairingGrantStore;

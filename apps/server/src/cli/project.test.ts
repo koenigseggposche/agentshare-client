@@ -30,6 +30,7 @@ import * as TestClock from "effect/testing/TestClock";
 
 import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
 import { cli } from "../binCli.ts";
+import { testAccountProfilePath, withCliAccountFixture } from "./WorkspaceAccount.testkit.ts";
 import * as ServerConfig from "../config.ts";
 import * as EventSink from "../orchestration-v2/EventSink.ts";
 import * as EventStore from "../orchestration-v2/EventStore.ts";
@@ -51,11 +52,14 @@ import * as WorkspacePaths from "../workspace/WorkspacePaths.ts";
 
 const layerCliRuntime = Layer.mergeAll(NodeServices.layer, NodeCrypto.layer, NetService.layer);
 const runCli = (args: ReadonlyArray<string>) =>
-  Command.runWith(cli, { version: "0.0.0" })(args).pipe(Effect.provide(layerCliRuntime));
+  withCliAccountFixture(Command.runWith(cli, { version: "0.0.0" })(args), args).pipe(
+    Effect.provide(layerCliRuntime),
+  );
 
 const makeConfig = (baseDir: string) =>
   Effect.gen(function* () {
-    const derivedPaths = yield* ServerConfig.deriveServerPaths(baseDir, undefined);
+    const path = NodePath.dirname(testAccountProfilePath(baseDir));
+    const derivedPaths = yield* ServerConfig.deriveServerPaths(path, undefined);
     return {
       logLevel: "Info",
       traceMinLevel: "Info",

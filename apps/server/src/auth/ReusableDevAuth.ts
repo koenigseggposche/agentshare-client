@@ -11,7 +11,10 @@ export const REUSABLE_DEV_SESSION_PREFIX = "dev-auth-";
 export const REUSABLE_DEV_SESSION_EXPIRES_AT = DateTime.makeUnsafe("9999-12-31T23:59:59.999Z");
 
 export function resolveReusableDevAuth(
-  config: Pick<ServerConfig["Service"], "mode" | "devUrl" | "devAuthToken">,
+  config: Pick<
+    ServerConfig["Service"],
+    "mode" | "devUrl" | "devAuthToken" | "agentShareAccountGeneration"
+  >,
 ) {
   if (config.mode !== "web" || config.devUrl === undefined || config.devAuthToken === undefined) {
     return undefined;
@@ -22,10 +25,14 @@ export function resolveReusableDevAuth(
   }
   const hash = NodeCrypto.createHash("sha256").update(Redacted.value(token)).digest();
   const tokenId = hash.toString("hex");
+  const sessionKey =
+    config.agentShareAccountGeneration === undefined
+      ? tokenId
+      : `${tokenId}-${config.agentShareAccountGeneration}`;
   return {
     credential: Redacted.value(token),
-    sessionId: AuthSessionId.make(`${REUSABLE_DEV_SESSION_PREFIX}${tokenId}`),
-    cookieName: `t3_dev_session_${tokenId}`,
+    sessionId: AuthSessionId.make(`${REUSABLE_DEV_SESSION_PREFIX}${sessionKey}`),
+    cookieName: `t3_dev_session_${sessionKey}`,
     matches: (credential: string) =>
       NodeCrypto.timingSafeEqual(hash, NodeCrypto.createHash("sha256").update(credential).digest()),
   };

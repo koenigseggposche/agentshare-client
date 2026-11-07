@@ -55,6 +55,7 @@ export const AgentShareHostIdentity = Schema.Struct({
   version: Schema.String,
   revision: Schema.String,
   owner: Schema.String,
+  account_generation: Schema.optionalKey(Schema.Int),
   device_id: Schema.String,
   paired: Schema.Boolean,
   stopping: Schema.Boolean,

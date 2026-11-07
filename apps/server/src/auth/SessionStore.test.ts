@@ -60,6 +60,7 @@ const relaySessionInput = {
 const makeDiskSessionStoreLayer = Effect.fn("makeDiskSessionStoreLayer")(function* (
   baseDir: string,
   token?: string,
+  accountGeneration?: number,
 ) {
   const devUrl = new URL("http://127.0.0.1:5173");
   const paths = yield* ServerConfig.deriveServerPaths(baseDir, devUrl, {
@@ -78,12 +79,51 @@ const makeDiskSessionStoreLayer = Effect.fn("makeDiskSessionStoreLayer")(functio
         mode: "web",
         devUrl,
         ...(token === undefined ? {} : { devAuthToken: Redacted.make(token) }),
+        ...(accountGeneration === undefined
+          ? {}
+          : { agentShareAccountGeneration: accountGeneration }),
       }),
     ),
   );
 });
 
 it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("SessionStore.layer", (it) => {
+  it.effect(
+    "keeps old bearer and websocket credentials invalid after a new login and restart",
+    () =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const baseDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-login-generation-" });
+        const devToken = "generated-reusable-development-credential";
+        const initialLayer = yield* makeDiskSessionStoreLayer(baseDir, devToken, 1);
+        const old = yield* Effect.gen(function* () {
+          const sessions = yield* SessionStore.SessionStore;
+          const bearer = yield* sessions.issue({ subject: "generated-account" });
+          const ticket = yield* sessions.issueWebSocketToken(bearer.sessionId);
+          const dev = yield* sessions.verify(devToken);
+          return { bearer, ticket, dev };
+        }).pipe(Effect.provide(initialLayer), Effect.scoped);
+        for (const generation of [2, 3]) {
+          const reopened = yield* makeDiskSessionStoreLayer(baseDir, devToken, generation);
+          yield* Effect.gen(function* () {
+            const sessions = yield* SessionStore.SessionStore;
+            expect((yield* sessions.verify(old.bearer.token).pipe(Effect.flip))._tag).toBe(
+              "UnknownSessionTokenError",
+            );
+            expect(
+              (yield* sessions.verifyWebSocketToken(old.ticket.token).pipe(Effect.flip))._tag,
+            ).toBe("UnknownWebSocketSessionError");
+            const dev = yield* sessions.verify(devToken);
+            expect(dev.sessionId).not.toBe(old.dev.sessionId);
+            expect((yield* sessions.listActive()).map((session) => session.sessionId)).toEqual([
+              dev.sessionId,
+            ]);
+            const current = yield* sessions.issue({ subject: "generated-account" });
+            expect((yield* sessions.verify(current.token)).sessionId).toBe(current.sessionId);
+          }).pipe(Effect.provide(reopened), Effect.scoped);
+        }
+      }),
+  );
   it.effect.each(["revoke", "revokeAllExcept", "replace"] as const)(
     "invalidates every connection for a session on %s and leaves other sessions active",
     (operation) =>

@@ -195,7 +195,7 @@ function toPersistenceSqlOrDecodeError(
 }
 
 /** @public */
-export const make = Effect.gen(function* () {
+export const make = Effect.fn("AuthSessions.make")(function* (accountGeneration = 0) {
   const sql = yield* SqlClient.SqlClient;
 
   const insertSessionRow = (ignoreExisting: boolean) =>
@@ -204,6 +204,7 @@ export const make = Effect.gen(function* () {
       execute: (input) =>
         sql`
         INSERT INTO auth_sessions (
+          account_generation,
           session_id,
           subject,
           scopes,
@@ -219,6 +220,7 @@ export const make = Effect.gen(function* () {
           revoked_at
         )
         VALUES (
+          ${accountGeneration},
           ${input.sessionId},
           ${input.subject},
           ${JSON.stringify(input.scopes)},
@@ -261,6 +263,7 @@ export const make = Effect.gen(function* () {
           revoked_at AS "revokedAt"
         FROM auth_sessions
         WHERE session_id = ${sessionId}
+          AND account_generation = ${accountGeneration}
       `,
   });
 
@@ -277,6 +280,7 @@ export const make = Effect.gen(function* () {
             : sql`session_id = ${replaceSessionId}`
         }
           AND method = ${session.method}
+          AND account_generation = ${accountGeneration}
           AND revoked_at IS NULL
           AND expires_at > ${revokedAt}
         RETURNING session_id AS "sessionId"
@@ -305,6 +309,7 @@ export const make = Effect.gen(function* () {
           revoked_at AS "revokedAt"
         FROM auth_sessions
         WHERE revoked_at IS NULL
+          AND account_generation = ${accountGeneration}
           AND (expires_at > ${now} OR ${sql.in("session_id", connectedSessionIds)})
         ORDER BY issued_at DESC, session_id DESC
       `,
@@ -317,6 +322,7 @@ export const make = Effect.gen(function* () {
         UPDATE auth_sessions
         SET last_connected_at = ${lastConnectedAt}
         WHERE session_id = ${sessionId}
+          AND account_generation = ${accountGeneration}
           AND revoked_at IS NULL
       `,
   });
@@ -329,6 +335,7 @@ export const make = Effect.gen(function* () {
         UPDATE auth_sessions
         SET revoked_at = ${revokedAt}
         WHERE session_id = ${sessionId}
+          AND account_generation = ${accountGeneration}
           AND revoked_at IS NULL
         RETURNING session_id AS "sessionId"
       `,
@@ -342,6 +349,7 @@ export const make = Effect.gen(function* () {
         UPDATE auth_sessions
         SET revoked_at = ${revokedAt}
         WHERE session_id <> ${currentSessionId}
+          AND account_generation = ${accountGeneration}
           AND revoked_at IS NULL
         RETURNING session_id AS "sessionId"
       `,
@@ -492,4 +500,7 @@ export const make = Effect.gen(function* () {
   } satisfies AuthSessionRepository["Service"];
 });
 
-export const layer = Layer.effect(AuthSessionRepository, make);
+export const layerForAccountGeneration = (generation: number) =>
+  Layer.effect(AuthSessionRepository, make(generation));
+
+export const layer = layerForAccountGeneration(0);

@@ -281,14 +281,16 @@ const requiredScopesForRpcCall = (
 export const layer = (
   scopes: ReadonlyArray<AuthEnvironmentScope>,
   onAuthorized?: (method: string, payload: unknown) => Effect.Effect<void>,
+  beforeAuthorized = Effect.void,
 ) =>
   Layer.succeed(RpcScopeAuthorization)((effect, { rpc, payload }) => {
     const requiredScopes = requiredScopesForRpcCall(rpc._tag, payload);
     const requiredScope = requiredScopes.find((scope) => !scopes.includes(scope));
     if (requiredScope !== undefined) return Effect.fail(rpcAuthorizationError(requiredScope));
+    const authorized = beforeAuthorized.pipe(Effect.andThen(effect));
     return onAuthorized === undefined
-      ? effect
-      : Effect.tap(effect, () => onAuthorized(rpc._tag, payload));
+      ? authorized
+      : Effect.tap(authorized, () => onAuthorized(rpc._tag, payload));
   });
 
 /** Retrying can install or restart tools even though ordinary listing is readable. */

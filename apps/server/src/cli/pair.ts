@@ -28,8 +28,10 @@ import * as Schema from "effect/Schema";
 import { Command, Flag, GlobalFlag } from "effect/cli";
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http";
 
+import * as WorkspaceAccount from "../agentshare/WorkspaceAccount.ts";
 import * as EnvironmentAuth from "../auth/EnvironmentAuth.ts";
 import * as ServerConfig from "../config.ts";
+import { ServerEnvironmentIdentity } from "../environment/ServerEnvironment.ts";
 import * as ManagedLimits from "../policy/managedLimits.ts";
 import * as ManagedPolicy from "../policy/ManagedPolicy.ts";
 import { resolveBaseDir } from "../os-jank.ts";
@@ -76,6 +78,15 @@ export class NoRunningServerError extends Schema.TaggedError<NoRunningServerErro
         : []),
       "Start one with `npx agentshare-client serve`, or connect this machine with T3 Connect: `npx agentshare-client connect`.",
     ].join("\n");
+  }
+}
+
+class PairTargetChangedError extends Schema.TaggedError<PairTargetChangedError>()(
+  "PairTargetChangedError",
+  {},
+) {
+  override get message(): string {
+    return "The active workbench changed. Run the pair command again.";
   }
 }
 
@@ -425,12 +436,18 @@ const resolveTailscalePairingBase = Effect.fn("pair.resolveTailscalePairingBase"
 
 const mintPairingLink = Effect.fn("pair.mintPairingLink")(function* (input: {
   readonly config: ServerConfig.ServerConfig["Service"];
+  readonly environmentId: ExecutionEnvironmentDescriptor["environmentId"];
   readonly scopes: ReadonlyArray<AuthEnvironmentScope>;
   readonly ttl: Option.Option<Duration.Duration>;
   readonly label: Option.Option<string>;
 }) {
   return yield* Effect.gen(function* () {
     const environmentAuth = yield* EnvironmentAuth.EnvironmentAuth;
+    const identity = yield* ServerEnvironmentIdentity;
+    if ((yield* identity.getEnvironmentId) !== input.environmentId) {
+      return yield* new PairTargetChangedError();
+    }
+    yield* environmentAuth.requireCurrentAccount;
     return yield* environmentAuth.createPairingLink({
       scopes: input.scopes,
       subject: "one-time-token",
@@ -440,7 +457,7 @@ const mintPairingLink = Effect.fn("pair.mintPairingLink")(function* (input: {
   }).pipe(
     Effect.provide(
       EnvironmentAuth.layerRuntime.pipe(
-        Layer.provide(ServerConfig.layer(input.config)),
+        Layer.provide(WorkspaceAccount.layer.pipe(Layer.provide(ServerConfig.layer(input.config)))),
         Layer.provide(Layer.succeed(References.MinimumLogLevel, input.config.logLevel)),
       ),
     ),
@@ -539,6 +556,7 @@ export const pairCommand = Command.make("pair", {
       const config = yield* makePairServerConfig({ target, logLevel });
       const issued = yield* mintPairingLink({
         config,
+        environmentId: target.descriptor.environmentId,
         scopes: flags.scopes,
         ttl: flags.ttl,
         label: flags.label,

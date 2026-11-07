@@ -19,7 +19,10 @@ import {
   sshTargetKey,
   Wakeups,
 } from "@t3tools/client-runtime/connection";
-import { bootstrapRemoteBearerSession } from "@t3tools/client-runtime/authorization";
+import {
+  bootstrapRemoteBearerSession,
+  fetchRemoteSessionState,
+} from "@t3tools/client-runtime/authorization";
 import { fetchRemoteEnvironmentDescriptor } from "@t3tools/client-runtime/environment";
 import { managedRelayAccountChanges, managedRelaySessionAtom } from "@t3tools/client-runtime/relay";
 import { EnvironmentRpcRequestObserver } from "@t3tools/client-runtime/rpc";
@@ -656,6 +659,26 @@ const layerPlatformConnectionSource = Layer.effect(
         const primaryTarget = primaryTopologyRead.target;
         const signature = `primary|${primaryTarget.target.httpBaseUrl}|${primaryTarget.target.wsBaseUrl}`;
         const cached = previous.get(PRIMARY_LOCAL_ENVIRONMENT_ID);
+        const bridge =
+          primaryTarget.source === "desktop-managed" ? window.desktopBridge : undefined;
+        if (bridge !== undefined && cached?.signature === signature) {
+          const httpBaseUrl = primaryTarget.target.httpBaseUrl;
+          yield* Effect.gen(function* () {
+            const bearerToken = yield* Effect.tryPromise(readDesktopPrimaryBearerToken);
+            if (bearerToken === null) return;
+            const session = yield* fetchRemoteSessionState({ httpBaseUrl, bearerToken });
+            if (session.authenticated) return;
+            // Keep the old registration until the replacement session is ready.
+            const refreshed = yield* Effect.tryPromise(() =>
+              bridge.getLocalEnvironmentBearerToken(true),
+            );
+            const replacement = yield* fetchRemoteSessionState({
+              httpBaseUrl,
+              bearerToken: refreshed,
+            });
+            if (replacement.authenticated) window.location.reload();
+          }).pipe(Effect.ignore);
+        }
         if (
           cached !== undefined &&
           canReuseCachedPlatformRegistration(cached, signature, nowEpochMs)
