@@ -417,7 +417,10 @@ export function DraftHeroHeadline({
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col items-center">
       {hasResolvedProject && !isScratchDraft ? (
-        <DraftHeroProjectHeading projectName={activeProjectTitle ?? labels.chooseProject}>
+        <DraftHeroProjectHeading
+          language={language}
+          projectName={activeProjectTitle ?? labels.chooseProject}
+        >
           {projectSelector}
         </DraftHeroProjectHeading>
       ) : (
