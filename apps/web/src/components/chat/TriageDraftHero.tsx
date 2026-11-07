@@ -31,8 +31,8 @@ export function TriageDraftHero(props: {
             )}
           </TooltipTrigger>
           <TooltipPopup side="bottom">
-            The agent reads T3 Code's logs and source here, and asks before it applies a fix or
-            posts anything.
+            The agent reads local diagnostics and checks AgentShare Client source. It asks before
+            applying a fix and leaves the report in this session for review.
           </TooltipPopup>
         </Tooltip>
         <span aria-hidden className="text-muted-foreground">
