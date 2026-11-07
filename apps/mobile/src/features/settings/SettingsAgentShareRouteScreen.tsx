@@ -5,7 +5,13 @@ import { AgentShareSourceControls } from "./AgentShareSourceControls";
 import { AgentShareWalletSection } from "./AgentShareWalletSection";
 import { AgentSharePersonalAccount } from "./AgentSharePersonalAccount";
 import { useState } from "react";
-import { Linking } from "react-native";
+import { Linking, View } from "react-native";
+import {
+  modelSourceLabels,
+  modelSourceOptions,
+  type ModelSourceFilter,
+} from "@t3tools/shared/workbenchLabels";
+
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { AsyncResult } from "effect/reactivity";
 import * as Schema from "effect/Schema";
@@ -19,6 +25,7 @@ import {
 import { AppText as Text } from "../../components/ui/AppText";
 import { ScreenScrollView } from "../../components/ui/ScreenScrollView";
 import { ListActionRow } from "../../components/ui/ListActionRow";
+import { Chip } from "../../components/ui/Chip";
 import { agentShareEnvironment } from "../../state/agentShare";
 import { mobilePreferencesAtom, updateMobilePreferencesAtom } from "../../state/preferences";
 import { useAtomCommand } from "../../state/use-atom-command";
@@ -382,6 +389,8 @@ function HostModels({
   );
   const configure = useAtomCommand(agentShareEnvironment.configureModel, { reportFailure: false });
   const allowed = useAtomValue(agentShareEnvironment.configureModel.permissionAtom(environmentId));
+  const [source, setSource] = useState<ModelSourceFilter>("all");
+  const sourceLabels = modelSourceLabels[language];
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const add = async (model: AgentShareModel) => {
@@ -401,14 +410,34 @@ function HostModels({
     );
     setPending(false);
   };
+  const models = agentShareWorkbenchModels(query.data?.models ?? []);
+  const visibleModels =
+    source === "all" ? models : models.filter((entry) => entry.model.source === source);
   return (
     <SettingsSection title={t("会话模型", "Conversation models")}>
+      <View className="flex-row flex-wrap gap-2 px-4 py-2">
+        {modelSourceOptions.map((option) => (
+          <Chip
+            key={option}
+            label={sourceLabels[option]}
+            selected={source === option}
+            onPress={() => setSource(option)}
+          />
+        ))}
+      </View>
       <ListActionRow label={t("刷新模型", "Refresh models")} onPress={query.refresh} />
       {message ? <Text>{message}</Text> : null}
       {query.error ? (
         <Text>{t("暂时无法读取模型目录。", "The model catalog could not be loaded.")}</Text>
       ) : null}
-      {agentShareWorkbenchModels(query.data?.models ?? []).map((entry) => (
+      {!query.isPending && !query.error && visibleModels.length === 0 ? (
+        <Text>
+          {source === "all"
+            ? t("暂无会话模型。", "No conversation models are listed.")
+            : t("这个来源暂时没有会话模型。", "No conversation models from this source.")}
+        </Text>
+      ) : null}
+      {visibleModels.map((entry) => (
         <ListActionRow
           key={[
             entry.model.source,
@@ -419,11 +448,7 @@ function HostModels({
           ].join(":")}
           label={entry.name}
           description={[
-            entry.model.source === "community"
-              ? t("社区", "Community")
-              : entry.model.source === "owned"
-                ? t("我的设备", "My devices")
-                : t("本机", "This host"),
+            sourceLabels[entry.model.source],
             entry.device_name ?? "",
             entry.model.runtime === "text"
               ? t("纯文本，无文件和终端工具", "Text only, without file or terminal tools")

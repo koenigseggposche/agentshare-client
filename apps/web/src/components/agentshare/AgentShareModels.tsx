@@ -1,4 +1,10 @@
 import { useState } from "react";
+import {
+  modelSourceLabels,
+  modelSourceOptions,
+  type ModelSourceFilter,
+} from "@t3tools/shared/workbenchLabels";
+
 import { useAtomValue } from "@effect/atom-react";
 import {
   agentShareWorkbenchModels,
@@ -9,6 +15,7 @@ import { agentShareEnvironment } from "../../state/agentShare";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { useEnvironmentQuery } from "../../state/query";
 import { Button } from "../ui/button";
+import { Toggle, ToggleGroup } from "../ui/toggle-group";
 import { SettingsSection, SettingsRow } from "../settings/settingsLayout";
 
 export function AgentShareModels({
@@ -28,6 +35,8 @@ export function AgentShareModels({
   const canConfigure = useAtomValue(
     agentShareEnvironment.configureModel.permissionAtom(environmentId),
   );
+  const [source, setSource] = useState<ModelSourceFilter>("all");
+  const sourceLabels = modelSourceLabels[language];
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const add = async (model: AgentShareModel) => {
@@ -60,6 +69,8 @@ export function AgentShareModels({
     setPending(false);
   };
   const models = agentShareWorkbenchModels(query.data?.models ?? []);
+  const visibleModels =
+    source === "all" ? models : models.filter((entry) => entry.model.source === source);
   return (
     <SettingsSection title={t("会话模型", "Conversation models")}>
       <p className="text-sm text-muted-foreground">
@@ -68,6 +79,20 @@ export function AgentShareModels({
           "Choose a model and source for the workbench. Local text models run on the execution host; online tasks use the selected source’s platform rates.",
         )}
       </p>
+      <ToggleGroup
+        aria-label={t("模型来源", "Model source")}
+        className="max-w-full flex-wrap"
+        value={[source]}
+        onValueChange={(next) =>
+          setSource(modelSourceOptions.find((option) => option === next[0]) ?? "all")
+        }
+      >
+        {modelSourceOptions.map((option) => (
+          <Toggle key={option} value={option}>
+            {sourceLabels[option]}
+          </Toggle>
+        ))}
+      </ToggleGroup>
       <Button size="sm" variant="outline" onClick={query.refresh}>
         {t("刷新模型", "Refresh models")}
       </Button>
@@ -88,7 +113,10 @@ export function AgentShareModels({
           )}
         </p>
       ) : null}
-      {models.map((entry) => (
+      {!query.isPending && !query.error && models.length > 0 && visibleModels.length === 0 ? (
+        <p>{t("这个来源暂时没有会话模型。", "No conversation models from this source.")}</p>
+      ) : null}
+      {visibleModels.map((entry) => (
         <SettingsRow
           key={[
             entry.model.source,
@@ -99,11 +127,7 @@ export function AgentShareModels({
           ].join(":")}
           title={entry.name}
           description={[
-            entry.model.source === "community"
-              ? t("社区", "Community")
-              : entry.model.source === "owned"
-                ? t("我的设备", "My devices")
-                : t("本机", "This host"),
+            sourceLabels[entry.model.source],
             entry.device_name ?? "",
             entry.model.runtime === "text"
               ? t("纯文本，无文件和终端工具", "Text only, without file or terminal tools")

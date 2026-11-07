@@ -40,3 +40,11 @@ export const workbenchLabels = {
     noThreadsInProject: (name: string) => `${name} 还没有会话`,
   },
 } as const;
+
+export const modelSourceOptions = ["all", "community", "owned", "local"] as const;
+export type ModelSourceFilter = (typeof modelSourceOptions)[number];
+
+export const modelSourceLabels = {
+  en: { all: "All sources", community: "Community", owned: "My devices", local: "This host" },
+  zh: { all: "全部来源", community: "社区", owned: "我的设备", local: "本机" },
+} as const;
