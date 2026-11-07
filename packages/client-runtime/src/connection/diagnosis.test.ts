@@ -53,6 +53,22 @@ const results = (state: SupervisorConnectionState, via?: "relay" | "direct") =>
   diagnose(state, via)?.hops.map((hop) => `${hop.hop}:${hop.result}`);
 
 describe("presentConnectionDiagnosis", () => {
+  it.each([
+    ["environment_identity_changed", "Mac mini is serving a different workbench"],
+    ["credential_rejected", "Mac mini rejected this device's pairing"],
+  ] as const)("explains how to recover from %s", (failureCause, headline) => {
+    const failure = new ConnectionBlockedError({
+      reason: "configuration",
+      detail: "Access changed.",
+      failureCause,
+    });
+    const diagnosis = diagnose(backoff(failure), "direct");
+    expect(diagnosis?.headline).toBe(headline);
+    expect(diagnosis?.steps).toEqual([
+      "Open the intended workbench on Mac mini and pair again with a new link.",
+    ]);
+  });
+
   it("tells a working tunnel apart from T3 Code not answering", () => {
     expect(diagnose(backoff(unavailable("origin_unreachable")))?.headline).toBe(
       "Tunnel works, but T3 Code on Mac mini did not answer",

@@ -73,6 +73,12 @@ function locate(input: ConnectionDiagnosisInput): Located | null {
   if (failure?.reason === "session-pending") {
     return { hop: "device", cause: "session_pending" };
   }
+  if (
+    failure?.failureCause === "environment_identity_changed" ||
+    failure?.failureCause === "credential_rejected"
+  ) {
+    return { hop: "server", cause: failure.failureCause };
+  }
   if (failure?.hop !== undefined) {
     return { hop: failure.hop, cause: failure.failureCause ?? null };
   }
@@ -103,6 +109,10 @@ function headline(host: string, located: Located, failure: ConnectionAttemptErro
       return "This device is still loading its T3 Connect sign-in";
     case "outdated":
       return `${host} runs an older T3 Code`;
+    case "environment_identity_changed":
+      return `${host} is serving a different workbench`;
+    case "credential_rejected":
+      return `${host} rejected this device's pairing`;
     case "clock_skew":
       return "This device's clock is off";
     case "not_linked":
@@ -165,6 +175,9 @@ function steps(host: string, located: Located, failure: ConnectionAttemptError |
       ];
     case "outdated":
       return [`Update T3 Code on ${host}.`];
+    case "environment_identity_changed":
+    case "credential_rejected":
+      return [`Open the intended workbench on ${host} and pair again with a new link.`];
     case "clock_skew":
       return [`Turn on automatic date and time on this device and on ${host}, then retry.`];
     case "not_linked":
@@ -242,6 +255,8 @@ function helpSection(
       return "the-host-runs-an-older-t3-code";
     case "clock_skew":
       return "the-clock-is-off";
+    case "environment_identity_changed":
+    case "credential_rejected":
     case "session_pending":
     case "not_linked":
     case "tunnel_not_enabled":
