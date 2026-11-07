@@ -48,6 +48,7 @@ import type {
 } from "@t3tools/contracts";
 import {
   IDLE_COMPACTION_TEXT,
+  WORKBENCH_TASK_SESSION_PREFIX,
   idleCompactionOf,
   OrchestrationV2AppThreadJson as OrchestrationV2AppThreadJsonSchema,
   OrchestrationV2CheckpointJson as OrchestrationV2CheckpointJsonSchema,
@@ -3485,7 +3486,10 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
               ON threads.provider_session_id = sessions.provider_session_id
             WHERE bindings.thread_id = ${threadId}
               AND (sessions.status IN ('starting','running','waiting')
-                OR threads.provider_thread_id IN (SELECT value FROM json_each(${cohortProviderThreadIds})))
+                OR threads.provider_thread_id IN (SELECT value FROM json_each(${cohortProviderThreadIds}))
+                OR sessions.provider_session_id IN (
+                  SELECT ${WORKBENCH_TASK_SESSION_PREFIX} || value FROM json_each(${cohortRunIds})
+                ))
             ORDER BY sessions.updated_at ASC, sessions.provider_session_id ASC
           `,
           (fields !== undefined && !fields.includes("providerThreads")) ||

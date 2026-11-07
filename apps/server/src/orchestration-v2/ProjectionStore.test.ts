@@ -29,6 +29,7 @@ import {
   type ThreadPullRequestLink,
   isLiveSubagentShell,
   isListedThreadLineage,
+  workbenchTaskProviderSessionId,
 } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
@@ -3767,13 +3768,68 @@ it.layer(layerTest)("ProjectionStoreV2", (it) => {
         });
       }
 
+      const olderRunId = RunId.make("run:bounded-provider-scope:older");
+      const billedSessionId = workbenchTaskProviderSessionId(olderRunId);
+      for (const [threadId, sessionId] of [
+        [targetThreadId, billedSessionId],
+        [targetThreadId, workbenchTaskProviderSessionId(RunId.make("run:outside-window"))],
+        [unrelatedThreadId, ProviderSessionId.make("provider-session:unrelated-stopped")],
+      ] as const) {
+        yield* projectionStore.apply({
+          id: EventId.make(`event:bounded-provider-scope:historical:${sessionId}`),
+          type: "provider-session.attached",
+          threadId,
+          driver,
+          occurredAt: now,
+          payload: {
+            id: sessionId,
+            driver,
+            providerInstanceId,
+            status: "stopped",
+            cwd: "/workspace",
+            model: modelSelection.model,
+            capabilities: CodexProviderCapabilitiesV2,
+            createdAt: now,
+            updatedAt: now,
+            lastError: null,
+          },
+        });
+      }
+      yield* projectionStore.apply({
+        id: EventId.make("event:bounded-provider-scope:older-message"),
+        type: "turn-item.updated",
+        threadId: targetThreadId,
+        runId: olderRunId,
+        occurredAt: now,
+        payload: {
+          id: TurnItemId.make("turn-item:bounded-provider-scope:older-message"),
+          threadId: targetThreadId,
+          runId: olderRunId,
+          nodeId: null,
+          providerThreadId: null,
+          providerTurnId: null,
+          nativeItemRef: null,
+          parentItemId: null,
+          ordinal: 1,
+          type: "assistant_message",
+          status: "completed",
+          title: "Assistant",
+          messageId: MessageId.make("message:bounded-provider-scope:older"),
+          text: "Generated task reply",
+          streaming: false,
+          startedAt: now,
+          completedAt: now,
+          updatedAt: now,
+        },
+      });
+
       const snapshot = yield* projectionStore.getThreadSnapshotWindow(targetThreadId, {
         rowLimit: 10,
       });
 
       assert.deepEqual(
         snapshot.projection.providerSessions.map((session) => session.id),
-        [ProviderSessionId.make(`provider-session:${targetThreadId}`)],
+        [ProviderSessionId.make(`provider-session:${targetThreadId}`), billedSessionId].sort(),
       );
       assert.deepEqual(
         snapshot.projection.providerThreads.map((thread) => thread.id),
