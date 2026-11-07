@@ -1,6 +1,7 @@
 import { AgentShareWallet } from "../agentshare/AgentShareWallet";
 import { agentShareEnvironment } from "../../state/agentShare";
 import { useEnvironmentQuery } from "../../state/query";
+import { useEnvironmentScope } from "../../state/session";
 import { useClientSettings } from "../../hooks/useSettings";
 import {
   Dialog,
@@ -11,7 +12,7 @@ import {
   DialogTrigger,
 } from "../ui/dialog";
 import { shouldPreserveAssistantLineBreaks } from "@t3tools/shared/markdownPipeline";
-import { type RunId } from "@t3tools/contracts";
+import { AuthAccessWriteScope, type RunId } from "@t3tools/contracts";
 import { canForkProjectedAssistantItem } from "@t3tools/client-runtime/state/thread-workflows";
 import { memo, use, useState } from "react";
 import { type ChatMessage, type TurnDiffSummary } from "../../types";
@@ -175,10 +176,11 @@ function AssistantTaskCharges({
     sourceThreadId: projectedItem.sourceThreadId,
     sourceItemId: projectedItem.sourceItemId,
   });
+  const canReadHostWallet = useEnvironmentScope(environmentId, AuthAccessWriteScope);
   const state = useEnvironmentQuery(
-    open ? agentShareEnvironment.state({ environmentId, input: {} }) : null,
+    open && canReadHostWallet ? agentShareEnvironment.state({ environmentId, input: {} }) : null,
   );
-  if (!support.hasWorkbenchTaskBilling || support.run === null) return null;
+  if (!canReadHostWallet || !support.hasWorkbenchTaskBilling || support.run === null) return null;
   const host = state.error ? undefined : state.data?.host;
   return (
     <Dialog open={open} onOpenChange={setOpen}>

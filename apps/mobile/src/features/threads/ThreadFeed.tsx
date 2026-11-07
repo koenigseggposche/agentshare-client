@@ -49,6 +49,7 @@ import type { ThreadCheckpointSummary } from "@t3tools/client-runtime/state/thre
 import { formatDiffCount } from "@t3tools/client-runtime/diff-count";
 import type { WorkflowOpening } from "@t3tools/client-runtime/state/subagentRuntime";
 import {
+  AuthAccessWriteScope,
   AuthFilesystemReadScope,
   idleCompactionOf,
   type OrchestrationMessageContext,
@@ -252,7 +253,11 @@ import { htmlRenderRowHeight, ThreadHtmlRender } from "./HtmlRenderWebView";
 import { ThreadMcpApp } from "./McpAppWebView";
 import { assetEnvironment, useAssetUrl, useRefreshAssetUrl } from "../../state/assets";
 import { useAtomQueryRunner } from "../../state/use-atom-query-runner";
-import { readEnvironmentScope, usePreparedConnection } from "../../state/session";
+import {
+  readEnvironmentScope,
+  useEnvironmentScope,
+  usePreparedConnection,
+} from "../../state/session";
 import { projectEnvironment } from "../../state/projects";
 import {
   needsWorkspaceBasenameLookup,
@@ -444,10 +449,11 @@ function AssistantTaskCharges(props: {
     sourceThreadId: projectedItem.sourceThreadId,
     sourceItemId: projectedItem.sourceItemId,
   });
+  const canReadHostWallet = useEnvironmentScope(environmentId, AuthAccessWriteScope);
   const state = useEnvironmentQuery(
-    open ? agentShareEnvironment.state({ environmentId, input: {} }) : null,
+    open && canReadHostWallet ? agentShareEnvironment.state({ environmentId, input: {} }) : null,
   );
-  if (!support.hasWorkbenchTaskBilling || support.run === null) return null;
+  if (!canReadHostWallet || !support.hasWorkbenchTaskBilling || support.run === null) return null;
   const host = state.error ? undefined : state.data?.host;
   return (
     <>
