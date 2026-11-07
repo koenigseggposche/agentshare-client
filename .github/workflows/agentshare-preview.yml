@@ -16,7 +16,7 @@ on:
         required: false
         type: string
       macos_distribution:
-        description: "Build only Developer ID-signed and notarized macOS previews"
+        description: "Build Developer ID-signed and notarized macOS previews"
         required: false
         default: false
         type: boolean
@@ -84,6 +84,9 @@ jobs:
               if os.environ['WINDOWS_SIGNING_CONFIGURED'] != 'true':
                   raise SystemExit('Signed Windows builds require the Azure Artifact Signing credentials, endpoint, account, certificate profile, and publisher.')
               platforms.add('win')
+          # A complete distribution rehearsal also needs both Linux AppImages.
+          if platforms == {'mac', 'win'}:
+              platforms.add('linux')
           targets = [
               ('macos-15', 'mac', 'arm64', 'dmg', 'darwin-arm64'),
               ('macos-15-intel', 'mac', 'x64', 'dmg', 'darwin-x64'),
@@ -355,12 +358,13 @@ jobs:
           (root / 'build.json').write_text(json.dumps(dict(
               client_version=os.environ['CLIENT_VERSION'], client_revision=os.environ['GITHUB_SHA'],
               core_version=os.environ['CORE_VERSION'], core_revision=os.environ['CORE_REF'],
+              workflow_run_id=int(os.environ['GITHUB_RUN_ID']),
               target=os.environ['CORE_TARGET'], distribution_signing=os.environ['DISTRIBUTION_SIGNING'] == 'true', files=files), indent=2) + '\n')
           PY
       - name: Upload preview artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: ${{ (inputs.macos_distribution || inputs.windows_distribution) && 'agentshare-signed-preview' || 'agentshare-preview' }}-${{ matrix.core_target }}
+          name: ${{ (inputs.macos_distribution && matrix.platform == 'mac' || inputs.windows_distribution && matrix.platform == 'win') && 'agentshare-signed-preview' || 'agentshare-preview' }}-${{ matrix.core_target }}
           path: |
             ${{ runner.temp }}/client-artifacts/*.dmg
             ${{ runner.temp }}/client-artifacts/*.zip
