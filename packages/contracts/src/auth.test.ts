@@ -55,6 +55,14 @@ describe("authorization grants", () => {
     expect(response.scopes).not.toContain("filesystem:read");
   });
 
+  it("preserves the exact permissions of a newly paired read-only client", () => {
+    const session = { authenticated: true, ...authScopeResponse(["orchestration:read"]) };
+
+    expect(sessionGrantsScope(session, "orchestration:read")).toBe(true);
+    expect(sessionGrantsScope(session, "orchestration:operate")).toBe(false);
+    expect(sessionGrantsScope(session, "filesystem:read")).toBe(false);
+  });
+
   it("ignores unknown response permissions without falling back to broader scopes", () => {
     const decodeAuthSessionState = Schema.decodeUnknownSync(AuthSessionState);
 
