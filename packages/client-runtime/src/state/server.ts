@@ -749,6 +749,7 @@ export function createServerEnvironmentAtoms<R, E>(
     E
   >,
   options: {
+    readonly cachedDataHiddenAtom?: (environmentId: EnvironmentId) => Atom.Atom<boolean>;
     readonly initialConfigValueAtom: (
       environmentId: EnvironmentId,
     ) => Atom.Atom<ServerConfig | null>;
@@ -763,7 +764,7 @@ export function createServerEnvironmentAtoms<R, E>(
     mode: "serial" as const,
     key: ({ environmentId }: { readonly environmentId: string }) => environmentId,
   };
-  const configProjectionFamily = Atom.family((environmentId: EnvironmentId) =>
+  const rawConfigProjectionFamily = Atom.family((environmentId: EnvironmentId) =>
     runtime
       .atom(
         serverConfigStateChanges(environmentId, {
@@ -776,6 +777,13 @@ export function createServerEnvironmentAtoms<R, E>(
         Atom.setIdleTTL(5 * 60_000),
         Atom.withLabel(`environment-data:server:config-projection:${environmentId}`),
       ),
+  );
+  const configProjectionFamily = Atom.family((environmentId: EnvironmentId) =>
+    Atom.make((get) =>
+      options.cachedDataHiddenAtom !== undefined && get(options.cachedDataHiddenAtom(environmentId))
+        ? AsyncResult.initial<ServerConfigProjection, never>()
+        : get(rawConfigProjectionFamily(environmentId)),
+    ),
   );
   const configProjection = (target: {
     readonly environmentId: EnvironmentId;
@@ -796,6 +804,13 @@ export function createServerEnvironmentAtoms<R, E>(
     }
     let previousProviders: ServerConfig["providers"] | undefined;
     return Atom.make((get): ServerConfig | null => {
+      if (
+        options.cachedDataHiddenAtom !== undefined &&
+        get(options.cachedDataHiddenAtom(environmentId))
+      ) {
+        previousProviders = undefined;
+        return null;
+      }
       const projection = AsyncResult.getOrElse(
         get(configProjection({ environmentId, input: {} })),
         () => null,

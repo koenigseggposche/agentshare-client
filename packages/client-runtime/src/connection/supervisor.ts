@@ -431,7 +431,15 @@ export const make = Effect.fn("EnvironmentSupervisor.make")(function* (
   const setState = Effect.fn("EnvironmentSupervisor.setState")(function* (
     next: SupervisorConnectionState,
   ) {
-    yield* SubscriptionRef.set(state, next);
+    yield* SubscriptionRef.update(state, (current) => {
+      const cause = next.lastFailure?.failureCause;
+      const hidden =
+        next.phase !== "connected" &&
+        (current.cachedDataHidden ||
+          (next.phase === "blocked" &&
+            (cause === "credential_rejected" || cause === "environment_identity_changed")));
+      return hidden ? { ...next, cachedDataHidden: true } : next;
+    });
   });
 
   const signal = Effect.fn("EnvironmentSupervisor.signal")(function* (next: SupervisorSignal) {

@@ -22,7 +22,7 @@ import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
 import * as SubscriptionRef from "effect/SubscriptionRef";
 import { HttpClient } from "effect/http";
-import { Atom } from "effect/reactivity";
+import { AsyncResult, Atom } from "effect/reactivity";
 
 import * as RemoteEnvironmentAuthorization from "../authorization/service.ts";
 import * as EnvironmentRegistry from "../connection/registry.ts";
@@ -1060,6 +1060,7 @@ export function createEnvironmentThreadStateAtoms<R, E>(
     | R,
     E
   >,
+  cachedDataHiddenAtom: (environmentId: EnvironmentIdType) => Atom.Atom<boolean>,
 ) {
   // Cache definitions must outlive collectible live-atom definitions. The
   // registry retains these nodes without retaining environment or RPC scopes.
@@ -1092,9 +1093,17 @@ export function createEnvironmentThreadStateAtoms<R, E>(
       .pipe(Atom.setIdleTTL(0), Atom.withLabel(`environment-thread-state:${key}`));
   });
 
+  const visibleFamily = Atom.family((key: string) => {
+    const { environmentId } = parseThreadKey(key);
+    return Atom.make((get) =>
+      get(cachedDataHiddenAtom(environmentId))
+        ? AsyncResult.success(EMPTY_ENVIRONMENT_THREAD_STATE)
+        : get(family(key)),
+    ).pipe(Atom.setIdleTTL(0));
+  });
   return {
     stateAtom: (environmentId: EnvironmentIdType, threadId: ThreadIdType) =>
-      family(threadKey({ environmentId, threadId })),
+      visibleFamily(threadKey({ environmentId, threadId })),
   };
 }
 

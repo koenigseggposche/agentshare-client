@@ -496,6 +496,39 @@ describe("EnvironmentSupervisor", () => {
     }).pipe(Effect.provide(TestClock.layer())),
   );
 
+  it.effect.each(["credential_rejected", "environment_identity_changed"] as const)(
+    "hides cached projections after %s until a connection succeeds",
+    (failureCause) =>
+      Effect.gen(function* () {
+        const releaseRetry = yield* Deferred.make<void>();
+        const harness = yield* makeHarness({
+          prepare: (attempt) =>
+            attempt === 1
+              ? Effect.fail(
+                  new ConnectionBlockedError({
+                    reason: "authentication",
+                    detail: "Access must be verified again.",
+                    failureCause,
+                  }),
+                )
+              : Deferred.await(releaseRetry).pipe(Effect.as(PREPARED_CONNECTION)),
+        });
+        const supervisor = yield* EnvironmentSupervisor.make(TARGET_ENTRY, {
+          initiallyDesired: true,
+        }).pipe(Effect.provide(harness.dependencies));
+        const connectionState = SubscriptionRef.get(supervisor.state);
+
+        yield* awaitState(supervisor.state, (state) => state.phase === "blocked");
+        expect((yield* connectionState).cachedDataHidden).toBe(true);
+        yield* supervisor.retryNow;
+        yield* awaitState(supervisor.state, (state) => state.phase === "connecting");
+        expect((yield* connectionState).cachedDataHidden).toBe(true);
+        yield* Deferred.succeed(releaseRetry, undefined);
+        yield* awaitState(supervisor.state, (state) => state.phase === "connected");
+        expect((yield* connectionState).cachedDataHidden).toBeUndefined();
+      }),
+  );
+
   it.effect("retries a blocked connection when platform credentials change", () =>
     Effect.gen(function* () {
       const harness = yield* makeHarness({

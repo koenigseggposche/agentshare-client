@@ -83,6 +83,8 @@ export type ConnectionHop = typeof ConnectionHop.Type;
 export const ConnectionFailureCause = Schema.Literals([
   ...RelayEnvironmentEndpointFailure.literals,
   "clock_skew",
+  "credential_rejected",
+  "environment_identity_changed",
   "not_linked",
   "relay_error",
   "tunnel_pending",
@@ -175,6 +177,7 @@ export interface SupervisorConnectionState {
   readonly generation: number;
   readonly lastFailure: ConnectionAttemptError | null;
   readonly retryAt: number | null;
+  readonly cachedDataHidden?: boolean;
 }
 
 export type ConnectionProjectionPhase = "disconnected" | "synchronizing" | "ready";

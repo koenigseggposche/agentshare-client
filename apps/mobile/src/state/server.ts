@@ -10,6 +10,7 @@ import { connectionAtomRuntime } from "../connection/runtime";
 import { environmentSession } from "./session";
 
 export const serverEnvironment = createServerEnvironmentAtoms(connectionAtomRuntime, {
+  cachedDataHiddenAtom: environmentCatalog.cachedDataHiddenAtom,
   initialConfigValueAtom: environmentSession.initialConfigValueAtom,
   usageLimitSources: true,
   usageLimitsCommand: true,

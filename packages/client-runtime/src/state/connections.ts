@@ -1,5 +1,6 @@
 import type { EnvironmentId as EnvironmentIdType } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
+import * as Option from "effect/Option";
 import * as Stream from "effect/Stream";
 import * as SubscriptionRef from "effect/SubscriptionRef";
 import { AsyncResult, Atom } from "effect/reactivity";
@@ -136,6 +137,14 @@ export function createEnvironmentCatalogAtoms<R, E>(
     ),
   );
 
+  const cachedDataHiddenAtom = Atom.family((environmentId: EnvironmentIdType) =>
+    Atom.make((get) =>
+      AsyncResult.value(get(stateAtom(environmentId))).pipe(
+        Option.exists((state) => state.cachedDataHidden === true),
+      ),
+    ),
+  );
+
   const sessionGenerationAtom = (environmentId: EnvironmentIdType) =>
     environmentSessionGenerationAtom(runtime, environmentId);
 
@@ -217,6 +226,7 @@ export function createEnvironmentCatalogAtoms<R, E>(
     networkStatusAtom,
     networkStatusValueAtom,
     stateAtom,
+    cachedDataHiddenAtom,
     sessionGenerationAtom,
     register,
     remove,

@@ -31,6 +31,7 @@ import { reuseProvidersIgnoringCheckedAt } from "./serverProviders.logic";
 
 // Subscribe to every environment's themes; primary can change without reconnecting or updating the subscription.
 export const serverEnvironment = createServerEnvironmentAtoms(connectionAtomRuntime, {
+  cachedDataHiddenAtom: environmentCatalog.cachedDataHiddenAtom,
   initialConfigValueAtom: environmentSession.initialConfigValueAtom,
   environmentThemes: true,
   usageLimitSources: true,

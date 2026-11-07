@@ -602,11 +602,20 @@ export function createEnvironmentShellAtoms<R, E>(
     | R,
     E
   >,
+  cachedDataHiddenAtom: (environmentId: EnvironmentId) => Atom.Atom<boolean>,
 ) {
-  const stateAtom = Atom.family((environmentId: EnvironmentId) =>
+  const projectionAtom = Atom.family((environmentId: EnvironmentId) =>
     runtime.atom(shellStateChanges(environmentId), {
       initialValue: EMPTY_SHELL_STATE,
     }),
+  );
+
+  const stateAtom = Atom.family((environmentId: EnvironmentId) =>
+    Atom.make((get) =>
+      get(cachedDataHiddenAtom(environmentId))
+        ? AsyncResult.success(EMPTY_SHELL_STATE)
+        : get(projectionAtom(environmentId)),
+    ),
   );
 
   const stateValueAtom = Atom.family((environmentId: EnvironmentId) =>

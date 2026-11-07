@@ -213,7 +213,8 @@ const makeHarness = Effect.fn("TestThreadAtoms.makeHarness")(function* (options?
       ),
     ),
   );
-  const raw = createEnvironmentThreadStateAtoms(runtime);
+  const cachedDataHidden = Atom.make(false);
+  const raw = createEnvironmentThreadStateAtoms(runtime, () => cachedDataHidden);
   const details = createEnvironmentThreadDetailAtoms(raw.stateAtom);
   const ref = { environmentId: TARGET.environmentId, threadId: THREAD_ID };
   const stateAtom = details.stateAtom(ref);
@@ -227,6 +228,7 @@ const makeHarness = Effect.fn("TestThreadAtoms.makeHarness")(function* (options?
     registry,
     makeRegistry,
     rawAtoms: raw,
+    cachedDataHidden,
     stateAtom,
     details,
     ref,
@@ -261,6 +263,20 @@ describe("createEnvironmentThreadStateAtoms", () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
+
+  it.effect("hides an already open thread when environment access is rejected", () =>
+    Effect.gen(function* () {
+      const h = yield* makeHarness();
+      const unmount = h.registry.mount(h.stateAtom);
+      yield* observeState(h.registry, h.stateAtom, (state) => Option.isSome(state.data));
+      h.registry.set(h.cachedDataHidden, true);
+      expect(Option.isNone(h.registry.get(h.stateAtom).data)).toBe(true);
+      unmount();
+      const remount = h.registry.mount(h.stateAtom);
+      expect(Option.isNone(h.registry.get(h.stateAtom).data)).toBe(true);
+      remount();
+    }),
+  );
 
   it.effect("keeps warm data and resumes a completed cursor without loading another snapshot", () =>
     Effect.gen(function* () {

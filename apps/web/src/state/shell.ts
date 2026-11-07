@@ -24,7 +24,10 @@ import { isHostedStaticApp } from "../hostedPairing";
 import { isLocalEnvironmentDisabled } from "../localEnvironment";
 
 export const shellEnvironment = createShellEnvironmentAtoms(connectionAtomRuntime);
-export const environmentShell = createEnvironmentShellAtoms(connectionAtomRuntime);
+export const environmentShell = createEnvironmentShellAtoms(
+  connectionAtomRuntime,
+  environmentCatalog.cachedDataHiddenAtom,
+);
 export const environmentSnapshotAtom = createEnvironmentSnapshotAtom(environmentShell.stateAtom);
 
 const NO_SHELL_STATUS_ATOM = Atom.make<EnvironmentShellStatus | null>(null).pipe(

@@ -49,6 +49,7 @@ import {
 import { useUiStateStore } from "../uiStateStore";
 import { configureClientTracing } from "../observability/clientTracing";
 import { resolveInitialServerAuthGateState } from "../environments/primary";
+import { fetchSessionState } from "../environments/primary/auth";
 import { GUEST_PAGE_PATH } from "../guestPage";
 import { hasHostedPairingRequest, isHostedStaticApp } from "../hostedPairing";
 import { useHostedPromptLinkLanding } from "../components/promptLinks/HostedPromptLinkLanding";
@@ -144,6 +145,30 @@ function RootRouteBranch() {
   const pathname = useLocation({ select: (location) => location.pathname });
   const { authGateState } = Route.useRouteContext();
   const primaryEnvironmentAuthenticated = authGateState.status === "authenticated";
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- poll the primary host session while the authenticated browser is mounted.
+  useEffect(() => {
+    if (!primaryEnvironmentAuthenticated || isElectron) return;
+    let disposed = false;
+    let pending = false;
+    const timer = window.setInterval(() => {
+      if (pending) return;
+      pending = true;
+      void fetchSessionState()
+        .then((session) => {
+          if (!disposed && !session.authenticated) window.location.reload();
+        })
+        .catch(() => {
+          // Keep the offline view on network errors.
+        })
+        .finally(() => {
+          pending = false;
+        });
+    }, 3_000);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, [primaryEnvironmentAuthenticated]);
   // A sync IPC read; the setting only changes across a relaunch.
   const [localEnvironmentDisabled] = useState(isLocalEnvironmentDisabled);
   // Once true, stays true: a visit to /welcome means the bootstrap already chose a route.

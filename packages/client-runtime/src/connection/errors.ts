@@ -33,6 +33,7 @@ export function environmentMismatchError(input: {
   return new ConnectionBlockedError({
     reason: "configuration",
     detail: `Connected environment ${input.actual} does not match ${input.expected}.`,
+    failureCause: "environment_identity_changed",
   });
 }
 
@@ -192,6 +193,7 @@ export function mapRemoteEnvironmentError(
       return new ConnectionBlockedError({
         reason: "authentication",
         detail: "The environment credential is invalid.",
+        ...(error.reason === "invalid_credential" ? { failureCause: "credential_rejected" } : {}),
         traceId: error.traceId,
         hop: "server",
         via,
