@@ -1260,6 +1260,19 @@ function normalizePasskeyRpDomain(value: string): string {
   return parsed.hostname;
 }
 
+export function resolveOptionalMacPasskeySigningConfiguration(
+  env: Readonly<Record<string, string | undefined>>,
+): MacPasskeySigningConfiguration | undefined {
+  if (
+    !env.T3CODE_CLERK_PUBLISHABLE_KEY?.trim() &&
+    !env.T3CODE_CLERK_PASSKEY_RP_DOMAINS?.trim() &&
+    !env.T3CODE_MACOS_PROVISIONING_PROFILE?.trim()
+  ) {
+    return undefined;
+  }
+  return resolveMacPasskeySigningConfiguration(env);
+}
+
 export function resolveMacPasskeySigningConfiguration(
   env: Readonly<Record<string, string | undefined>>,
 ): MacPasskeySigningConfiguration {
@@ -3549,11 +3562,27 @@ export class MacPackagedAppMissingError extends Schema.TaggedError<MacPackagedAp
   }
 }
 
+const DEVELOPER_ID_APPLICATION_REQUIREMENT =
+  "anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists";
+
+const verifyDeveloperIdApplication = (executable: string, verbose: boolean) =>
+  runCommand(
+    ChildProcess.make("codesign", [
+      "--verify",
+      "--strict",
+      `-R=${DEVELOPER_ID_APPLICATION_REQUIREMENT}`,
+      executable,
+    ]),
+    { label: `Verify Developer ID Application signature: ${executable}`, verbose },
+  );
+
 export const validateMacPackagedPayload = Effect.fn("desktopArtifact.validateMacPackagedPayload")(
   function* (input: {
     readonly stageDistDir: string;
     readonly verbose?: boolean;
     readonly verifySignature?: boolean;
+    readonly requireDistributionSignature?: boolean;
+    readonly verifyRuntime?: boolean;
   }) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
@@ -3572,13 +3601,22 @@ export const validateMacPackagedPayload = Effect.fn("desktopArtifact.validateMac
       return yield* new MacPackagedAppMissingError({ stageDistDir: input.stageDistDir });
     }
     for (const asarPath of asarPaths) {
-      yield* verifyPackagedBundleIsSelfContained({ asarPath, verbose: input.verbose ?? false });
+      if (input.verifyRuntime !== false) {
+        yield* verifyPackagedBundleIsSelfContained({ asarPath, verbose: input.verbose ?? false });
+      }
+      const appPath = path.resolve(asarPath, "../../..");
       if (input.verifySignature) {
-        const appPath = path.resolve(asarPath, "../../..");
         yield* runCommand(
           ChildProcess.make("codesign", ["--verify", "--deep", "--strict", appPath]),
           { label: `Verify macOS app signature: ${appPath}`, verbose: input.verbose ?? false },
         );
+      }
+      if (input.requireDistributionSignature) {
+        yield* verifyDeveloperIdApplication(appPath, input.verbose ?? false);
+        yield* runCommand(ChildProcess.make("xcrun", ["stapler", "validate", appPath]), {
+          label: `Verify stapled macOS notarization ticket: ${appPath}`,
+          verbose: input.verbose ?? false,
+        });
       }
     }
     yield* Effect.log(
@@ -3603,6 +3641,12 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
     yield* preflightLinuxDesktopBuild(options.arch);
   }
   if (hostPlatform === "darwin" && options.platform === "mac") {
+    if (options.signed && options.coreManifest) {
+      yield* verifyDeveloperIdApplication(
+        path.join(path.dirname(options.coreManifest), coreArtifact.manifest.binary),
+        options.verbose,
+      );
+    }
     yield* preflightMacDesktopBuild(options.arch);
   }
   if (hostPlatform === "win32" && options.platform === "win") {
@@ -3837,7 +3881,7 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
   const configuredMacPasskeySigning =
     options.platform === "mac" && options.signed
       ? yield* Effect.try({
-          try: () => resolveMacPasskeySigningConfiguration(loadRepoEnv({ repoRoot })),
+          try: () => resolveOptionalMacPasskeySigningConfiguration(loadRepoEnv({ repoRoot })),
           catch: MacPasskeySigningConfigurationResolutionError.fromCause,
         })
       : undefined;
@@ -4099,12 +4143,17 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
       verbose: options.verbose,
     });
   }
-  // x64 builds on arm64 runners; the arm64 check covers the shared JS bundle.
-  if (options.platform === "mac" && options.arch === "arm64" && hostPlatform === "darwin") {
+  if (
+    options.platform === "mac" &&
+    hostPlatform === "darwin" &&
+    (options.arch === "arm64" || options.signed)
+  ) {
     yield* validateMacPackagedPayload({
       stageDistDir,
       verbose: options.verbose,
       verifySignature: true,
+      requireDistributionSignature: options.signed,
+      verifyRuntime: options.arch === "arm64",
     });
   }
 

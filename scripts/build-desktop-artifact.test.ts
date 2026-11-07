@@ -40,6 +40,7 @@ import {
   renderMacPasskeyEntitlements,
   resolveMacWebAuthnEntitlements,
   resolveMacPasskeySigningConfiguration,
+  resolveOptionalMacPasskeySigningConfiguration,
   resolveMergedStageDependencies,
   resolveBuildOptions,
   resolveGitHubPublishConfig,
@@ -1426,6 +1427,21 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
       ),
     ),
   );
+
+  it("signs without passkey entitlements when cloud identity is not configured", () => {
+    assert.isUndefined(resolveOptionalMacPasskeySigningConfiguration({}));
+    assert.isUndefined(
+      resolveOptionalMacPasskeySigningConfiguration({ T3CODE_APPLE_TEAM_ID: "ABC1234567" }),
+    );
+    assert.throws(
+      () =>
+        resolveOptionalMacPasskeySigningConfiguration({
+          T3CODE_APPLE_TEAM_ID: "ABC1234567",
+          T3CODE_CLERK_PASSKEY_RP_DOMAINS: "example.clerk.accounts.dev",
+        }),
+      MissingMacPasskeyProvisioningProfileError,
+    );
+  });
 
   it("derives macOS passkey signing configuration from the Clerk publishable key", () => {
     const configuration = resolveMacPasskeySigningConfiguration({
