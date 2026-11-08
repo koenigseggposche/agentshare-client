@@ -1,3 +1,4 @@
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { usePaneRole } from "../../components/ui/Pane";
 import { useActiveNewTask } from "../../state/active-new-task";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
@@ -146,8 +147,9 @@ const THREAD_LIST_V2_DRAW_DISTANCE = 1_000;
 function deriveEmptyState(props: {
   readonly catalogState: WorkspaceState;
   readonly projectCount: number;
+  readonly language: ReturnType<typeof useWorkbenchLanguage>;
 }): { readonly title: string; readonly detail: string; readonly loading: boolean } {
-  const { catalogState } = props;
+  const { catalogState, language } = props;
   if (catalogState.isLoadingConnections) {
     return {
       title: "Loading environments",
@@ -197,8 +199,11 @@ function deriveEmptyState(props: {
 
   if (props.projectCount === 0 && catalogState.hasLoadedShellSnapshot) {
     return {
-      title: "No projects found",
-      detail: "The connected environment did not report any projects.",
+      title: language === "zh" ? "还没有项目" : "No projects found",
+      detail:
+        language === "zh"
+          ? "已连接的工作台没有提供项目。"
+          : "The connected environment did not report any projects.",
       loading: false,
     };
   }
@@ -243,6 +248,7 @@ function renderHomeScrollView(props: ScrollViewProps) {
 }
 
 export function HomeScreen(props: HomeScreenProps) {
+  const language = useWorkbenchLanguage();
   const usesNativeWorkspaceColumns = useNativeWorkspaceColumnsSupported();
   const workspace = useWorkspaceTabs();
   const [initialScrollOffset] = useState(() => workspace?.getScrollOffset("threads") ?? 0);
@@ -667,6 +673,7 @@ export function HomeScreen(props: HomeScreenProps) {
   const emptyState = deriveEmptyState({
     catalogState: props.catalogState,
     projectCount: props.projects.length,
+    language,
   });
 
   if (!hasAnyThreads) {

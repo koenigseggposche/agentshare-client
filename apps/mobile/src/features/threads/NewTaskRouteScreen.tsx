@@ -1,3 +1,4 @@
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { isDraftThreadRoute } from "./thread-route-state";
 import * as Dialog from "../../components/ui/Dialog";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
@@ -51,7 +52,10 @@ type NewTaskRouteParams = {
   readonly model?: string | string[];
 };
 
-function deriveProjectEmptyState(catalogState: WorkspaceState): {
+function deriveProjectEmptyState(
+  catalogState: WorkspaceState,
+  language: ReturnType<typeof useWorkbenchLanguage>,
+): {
   readonly title: string;
   readonly detail: string;
   readonly loading: boolean;
@@ -104,8 +108,11 @@ function deriveProjectEmptyState(catalogState: WorkspaceState): {
   }
 
   return {
-    title: "No projects found",
-    detail: "The connected environment did not report any projects.",
+    title: language === "zh" ? "还没有项目" : "No projects found",
+    detail:
+      language === "zh"
+        ? "已连接的工作台没有提供项目。"
+        : "The connected environment did not report any projects.",
     loading: false,
   };
 }
@@ -173,7 +180,8 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
         : `Choose a project for the ${incomingShare.attachments.length} ${incomingShare.attachments.every((attachment) => attachment.type === "image") ? "images" : "files"} you shared`
     : null;
   const screenTitle = incomingShare ? "Start a task" : "Choose project";
-  const projectEmptyState = deriveProjectEmptyState(catalogState);
+  const language = useWorkbenchLanguage();
+  const projectEmptyState = deriveProjectEmptyState(catalogState, language);
   const serverConfigs = useServerConfigs();
   const listScopes = pickableProjectGroups(projectScopes).filter(
     (scope) =>
