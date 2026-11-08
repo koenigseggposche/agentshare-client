@@ -700,6 +700,15 @@ export class DesktopBuildDistDirectoryMissingError extends Schema.TaggedError<De
   }
 }
 
+class DesktopBuildSkippedCompilationError extends Schema.TaggedError<DesktopBuildSkippedCompilationError>()(
+  "DesktopBuildSkippedCompilationError",
+  {},
+) {
+  override get message(): string {
+    return "Desktop payload hashes require compiling the workbench for the requested version. Remove --skip-build.";
+  }
+}
+
 class DesktopBuildRevisionError extends Schema.TaggedError<DesktopBuildRevisionError>()(
   "DesktopBuildRevisionError",
   { actual: Schema.String, expected: Schema.String },
@@ -3689,6 +3698,9 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
   const hostPlatform = yield* HostProcess.Platform;
   const commitHash = yield* resolveGitCommitHash(repoRoot);
   if (options.recordPayloadHashes) {
+    if (options.skipBuild) {
+      return yield* new DesktopBuildSkippedCompilationError();
+    }
     const expected = yield* Config.String("GITHUB_SHA").pipe(Config.withDefault(""));
     if (commitHash === "unknown" || (expected !== "" && commitHash !== expected)) {
       return yield* new DesktopBuildRevisionError({ actual: commitHash, expected });
