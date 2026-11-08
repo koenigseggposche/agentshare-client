@@ -1,3 +1,4 @@
+import { TaskChargesButton } from "./TaskChargesButton";
 import { Button } from "../../components/ui/Button";
 import { ThreadSubagentGroup } from "./thread-subagent-group";
 import { ProposedPlanCard } from "./ProposedPlanCard";
@@ -955,7 +956,7 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
     const label = warning
       ? `Usage limit reached.${resetTime ? ` Retry after ${resetTime}.` : ""}`
       : row.summary;
-    return (
+    const errorRow = (
       <WorkLogPressable
         accessibilityLabel={warning ? label : `${row.summary}: ${failureItem.failure.message}`}
         accessibilityHint="Long press to copy."
@@ -1011,6 +1012,17 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
           ) : null}
         </View>
       </WorkLogPressable>
+    );
+    return (
+      <>
+        {errorRow}
+        <View className="ml-7">
+          <TaskChargesButton
+            environmentId={props.environmentId}
+            projectedItem={row.projectedItem}
+          />
+        </View>
+      </>
     );
   }
   const notifiedSubagentThreadId =

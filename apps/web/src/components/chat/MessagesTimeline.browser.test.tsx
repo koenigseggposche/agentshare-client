@@ -2,6 +2,7 @@ import { flushSync } from "react-dom";
 import { AudioPreview } from "../files/AudioPreview";
 import { cdp, page } from "vite-plus/test/browser";
 import {
+  AuthAccessWriteScope,
   ComposerContextId,
   EnvironmentId,
   MessageId,
@@ -69,6 +70,34 @@ vi.mock(import("~/state/query"), async (original) => ({
     refresh: () => {},
   })) as never,
 }));
+
+const failedTaskBilling = vi.hoisted(() => ({ enabled: false }));
+vi.mock(import("~/state/v2ItemSupport"), async (original) => {
+  const actual = await original();
+  return {
+    ...actual,
+    useV2ItemSupport: (input) => {
+      const support = actual.useV2ItemSupport(input);
+      return failedTaskBilling.enabled && input.sourceItemId === "usage-limit"
+        ? {
+            ...support,
+            hasWorkbenchTaskBilling: true,
+            run: { id: RunId.make("usage-limit-run") } as NonNullable<typeof support.run>,
+          }
+        : support;
+    },
+  };
+});
+vi.mock(import("~/state/session"), async (original) => {
+  const actual = await original();
+  return {
+    ...actual,
+    useEnvironmentScope: (...args) => {
+      const granted = actual.useEnvironmentScope(...args);
+      return granted || (failedTaskBilling.enabled && args[1] === AuthAccessWriteScope);
+    },
+  };
+});
 
 const audioAsset = vi.hoisted(() => ({ url: "" }));
 vi.mock(import("~/assets/assetUrls"), async (original) => {
@@ -613,6 +642,15 @@ describe("MessagesTimeline usage limit notice", () => {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     expect(screen.text()).toMatch(/Usage limit reached\. Retry after .+\./);
     expect(screen.text()).toContain(`(${timeZone})`);
+  });
+
+  it("offers task charges after a billed run fails without a reply", async () => {
+    failedTaskBilling.enabled = true;
+    onTestFinished(() => {
+      failedTaskBilling.enabled = false;
+    });
+    await using _screen = await renderTimeline(usageLimitEntries("2026-03-17T19:30:00.000Z"));
+    await expect.element(page.getByRole("button", { name: /Task charges|任务账单/ })).toBeVisible();
   });
 
   it("keeps the retry time in the named zone after the viewer's timezone changes", async () => {

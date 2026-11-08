@@ -1,3 +1,4 @@
+import { TaskChargesButton } from "./TaskChargesButton";
 import { TimelinePendingApprovalRow } from "./TimelinePendingApprovalRow";
 import { WorkLogDetails, WorkLogRow } from "./WorkLog";
 import {
@@ -253,6 +254,11 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
           <p className="ms-7 whitespace-pre-wrap break-words py-1 text-sm leading-relaxed text-foreground/80">
             {failureItem.failure.message}
           </p>
+        ) : null}
+        {workEntry.projectedItem ? (
+          <div className="ms-7">
+            <TaskChargesButton projectedItem={workEntry.projectedItem} />
+          </div>
         ) : null}
         {retryRunId !== null && onRetryWorkspacePreparation ? (
           <div className="ms-7 pb-1">
