@@ -25,9 +25,13 @@ import {
   SHOWCASE_CONNECTED_CLOUD_ENVIRONMENTS,
 } from "../showcase/showcaseEnvironmentRows";
 
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
+
 const SHOWCASE_ENABLED = process.env.EXPO_PUBLIC_SHOWCASE === "1";
 
 export function SettingsEnvironmentsRouteScreen() {
+  const language = useWorkbenchLanguage();
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const {
     connectedEnvironments,
     onReconnectEnvironment,
@@ -93,15 +97,15 @@ export function SettingsEnvironmentsRouteScreen() {
 
   return (
     <SettingsScreen
-      title="Environments"
+      title={t("环境", "Environments")}
       trailing={
         Platform.OS === "android" && relaySession ? (
           <AndroidAnchoredMenu
-            title="Environment options"
+            title={t("环境选项", "Environment options")}
             actions={[
               {
                 id: "refresh",
-                title: "Refresh cloud environments",
+                title: t("刷新云端环境", "Refresh cloud environments"),
                 attributes: { disabled: isRefreshingCloud },
               },
             ]}
@@ -111,7 +115,7 @@ export function SettingsEnvironmentsRouteScreen() {
           >
             {(open) => (
               <AndroidHeaderIconButton
-                accessibilityLabel="Environment options"
+                accessibilityLabel={t("环境选项", "Environment options")}
                 icon="ellipsis"
                 onPress={open}
               />
@@ -121,7 +125,7 @@ export function SettingsEnvironmentsRouteScreen() {
       }
       actions={[
         {
-          accessibilityLabel: "Add environment",
+          accessibilityLabel: t("添加环境", "Add environment"),
           icon: "plus",
           tintColor: headerIconColor,
           onPress: () => navigation.navigate("SettingsEnvironmentNew"),

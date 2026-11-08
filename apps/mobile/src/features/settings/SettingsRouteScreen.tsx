@@ -5,6 +5,7 @@ import {
 import {
   NAVIGATION_TAB_ICONS,
   WORKSPACE_TAB_LABELS,
+  useWorkbenchLanguage,
   useNavigationTabOrder,
   useHiddenNavigationTabs,
 } from "../workspace/navigation-tabs";
@@ -19,6 +20,7 @@ import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { use, type ComponentProps } from "react";
 import { Platform, View } from "react-native";
 import { useNativeColumnLayoutMetrics } from "../../native/native-layout-metrics";
+import { workbenchLabels } from "@t3tools/shared/workbenchLabels";
 import { deriveProjectGroupLabel } from "@t3tools/client-runtime/state/project-grouping";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -56,6 +58,8 @@ export function SettingsListScreen(props: {
   readonly sidebar: boolean;
   readonly selected: string | null;
 }) {
+  const language = useWorkbenchLanguage();
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const workspace = useWorkspaceTabs();
   const environmentMenu = useSettingsEnvironmentMenu();
   const inSidebar = props.sidebar;
@@ -73,7 +77,7 @@ export function SettingsListScreen(props: {
         <SettingsEnvironmentFilterHeader />
         {Platform.OS === "android" ? (
           <SettingsScreen
-            title="Settings"
+            title={t("设置", "Settings")}
             workspaceRoot={inSidebar}
             menus={[environmentMenu]}
             search={
@@ -82,7 +86,7 @@ export function SettingsListScreen(props: {
                     value: workspace.state.tabs.settings.query,
                     onChangeText: (query) =>
                       workspace.dispatch({ type: "query", tab: "settings", query }),
-                    placeholder: "Search settings",
+                    placeholder: t("搜索设置", "Search settings"),
                   }
                 : undefined
             }
@@ -105,15 +109,18 @@ interface SettingsListSection {
 }
 
 function ConfiguredSettingsRouteScreen() {
+  const language = useWorkbenchLanguage();
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const navigation = useNavigation();
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const { user } = useUser();
   const { savedConnectionsById } = useSavedRemoteConnections();
+  const environments = useEnvironmentsRow(Object.keys(savedConnectionsById).length);
   const accountLabel = !isLoaded
-    ? "Checking"
+    ? t("正在检查", "Checking")
     : !isSignedIn
-      ? "Sign in"
-      : (user?.primaryEmailAddress?.emailAddress ?? "Signed in");
+      ? t("登录", "Sign in")
+      : (user?.primaryEmailAddress?.emailAddress ?? t("已登录", "Signed in"));
 
   return (
     <SettingsList
@@ -126,11 +133,11 @@ function ConfiguredSettingsRouteScreen() {
           disabled: !isLoaded,
           onPress: () => navigation.navigate("SettingsAuth"),
         },
-        environmentsRow(Object.keys(savedConnectionsById).length),
+        environments,
         {
           id: "SettingsNotifications",
           icon: "bell.badge",
-          label: "Notifications",
+          label: t("通知", "Notifications"),
           target: "SettingsNotifications",
         },
       ]}
@@ -140,14 +147,17 @@ function ConfiguredSettingsRouteScreen() {
 
 function LocalSettingsRouteScreen() {
   const { savedConnectionsById } = useSavedRemoteConnections();
-  return <SettingsList connections={[environmentsRow(Object.keys(savedConnectionsById).length)]} />;
+  const environments = useEnvironmentsRow(Object.keys(savedConnectionsById).length);
+  return <SettingsList connections={[environments]} />;
 }
 
-function environmentsRow(count: number): SettingsListRow {
+function useEnvironmentsRow(count: number): SettingsListRow {
+  const language = useWorkbenchLanguage();
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   return {
     id: "SettingsEnvironments",
     icon: "desktopcomputer",
-    label: "Environments",
+    label: t("环境", "Environments"),
     value: `${count}`,
     valuePosition: "trailing",
     target: "SettingsEnvironments",
@@ -155,6 +165,8 @@ function environmentsRow(count: number): SettingsListRow {
 }
 
 function SettingsList(props: { readonly connections: readonly SettingsListRow[] }) {
+  const language = useWorkbenchLanguage();
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   // UIKit's scroll-edge material takes the scroll view's own color; like the chat list, match
   // the sidebar's surface so the bar doesn't darken over content at rest.
   // Grouped cards only lift off the screen surface; the drawer is as dark as they are.
@@ -170,7 +182,7 @@ function SettingsList(props: { readonly connections: readonly SettingsListRow[] 
     [
       { rows: overflowRows },
       {
-        title: "Connections",
+        title: t("连接", "Connections"),
         rows: [
           {
             id: "SettingsAgentShare",
@@ -214,8 +226,12 @@ function SettingsList(props: { readonly connections: readonly SettingsListRow[] 
         ) : (
           <EmptyState
             variant="plain"
-            title="No results"
-            detail={`No settings match “${query.trim()}”.`}
+            title={t("无搜索结果", "No results")}
+            detail={
+              language === "zh"
+                ? `没有匹配“${query.trim()}”的设置。`
+                : `No settings match “${query.trim()}”.`
+            }
           />
         )}
       </ScrollView>
@@ -224,6 +240,8 @@ function SettingsList(props: { readonly connections: readonly SettingsListRow[] 
 }
 
 function useSettingsIndexSections(): SettingsListSection[] {
+  const language = useWorkbenchLanguage();
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const { selectedTargets, projectGroups, selectedProjectKey } = useSettingsEnvironmentFilter();
   const noServerTargets = selectedTargets.length === 0;
   const selectedProject = projectGroups.find((group) => group.key === selectedProjectKey);
@@ -239,7 +257,7 @@ function useSettingsIndexSections(): SettingsListSection[] {
           representative: scopedProjectMembers[0]!,
           members: scopedProjectMembers,
         })
-      : (selectedProject?.label ?? "Unavailable project");
+      : (selectedProject?.label ?? t("项目不可用", "Unavailable project"));
   const page = (
     target: SettingsPageTarget,
     icon: SettingsListRow["icon"],
@@ -252,49 +270,56 @@ function useSettingsIndexSections(): SettingsListSection[] {
   return [
     {
       rows: [
-        page("SettingsOrganization", "gearshape", "General"),
-        page("SettingsAppearance", "paintbrush", "Appearance"),
-        page("SettingsFollowUp", "bubble.left.and.bubble.right", "Chat"),
+        page("SettingsOrganization", "gearshape", t("通用", "General")),
+        page("SettingsAppearance", "paintbrush", t("外观", "Appearance")),
+        page("SettingsFollowUp", "bubble.left.and.bubble.right", t("聊天", "Chat")),
         ...(navigationCustomizationAvailable()
-          ? [page("SettingsNavigation", "line.3.horizontal", "Navigation tabs")]
+          ? [page("SettingsNavigation", "line.3.horizontal", t("导航标签", "Navigation tabs"))]
           : []),
-        ...(Platform.OS === "ios" ? [page("SettingsKeyboard", "keyboard", "Keyboard")] : []),
-        page("SettingsMicrophone", "mic", "Microphone"),
+        ...(Platform.OS === "ios"
+          ? [page("SettingsKeyboard", "keyboard", t("键盘", "Keyboard"))]
+          : []),
+        page("SettingsMicrophone", "mic", t("麦克风", "Microphone")),
       ],
     },
     {
-      title: "Agents",
+      title: t("助手", "Agents"),
       rows: [
-        serverPage("SettingsProviderAccounts", "person.crop.circle", "Providers"),
-        serverPage("SettingsThreads", "text.bubble", "Threads"),
-        page("SettingsScheduledTasks", "clock", "Scheduled tasks"),
+        serverPage("SettingsProviderAccounts", "person.crop.circle", t("模型服务", "Providers")),
+        serverPage("SettingsThreads", "text.bubble", t("会话", "Threads")),
+        page("SettingsScheduledTasks", "clock", t("定时任务", "Scheduled tasks")),
       ],
     },
     {
-      title: "Code",
+      title: t("代码", "Code"),
       rows: [
         page(
           "SettingsProjectOverview",
           "folder",
-          "Projects",
+          t("项目", "Projects"),
           selectedProjectKey !== null ? { value: projectLabel } : undefined,
         ),
-        serverPage("SettingsEnvironmentSourceControl", "arrow.triangle.branch", "Source control"),
-        serverPage("SettingsWorktrees", "square.on.square", "Worktrees"),
+        serverPage(
+          "SettingsEnvironmentSourceControl",
+          "arrow.triangle.branch",
+          t("源代码管理", "Source control"),
+        ),
+        serverPage("SettingsWorktrees", "square.on.square", t("工作树", "Worktrees")),
       ],
     },
     {
       rows: [
-        serverPage("SettingsEnvironmentMaintenance", "arrow.clockwise", "Maintenance"),
-        page("SettingsLabs", "sparkles", "Labs"),
-        page("SettingsAbout", "info.circle", "About"),
-        page("SettingsArchive", "archivebox", "Archive"),
+        serverPage("SettingsEnvironmentMaintenance", "arrow.clockwise", t("维护", "Maintenance")),
+        page("SettingsLabs", "sparkles", t("实验功能", "Labs")),
+        page("SettingsAbout", "info.circle", t("关于", "About")),
+        page("SettingsArchive", "archivebox", t("归档", "Archive")),
       ],
     },
   ];
 }
 
 function useOverflowRows(): SettingsListRow[] {
+  const language = useWorkbenchLanguage();
   const order = useNavigationTabOrder();
   const hidden = useHiddenNavigationTabs();
   const { layout } = useAdaptiveWorkspaceLayout();
@@ -304,7 +329,7 @@ function useOverflowRows(): SettingsListRow[] {
   return tabs.map((tab) => ({
     id: tab,
     icon: NAVIGATION_TAB_ICONS[tab],
-    label: WORKSPACE_TAB_LABELS[tab],
+    label: language === "zh" ? workbenchLabels.zh[tab] : WORKSPACE_TAB_LABELS[tab],
     onPress: () => selectTab(tab),
   }));
 }

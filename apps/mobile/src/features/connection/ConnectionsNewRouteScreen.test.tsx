@@ -9,6 +9,7 @@ const { Children, harness } = vi.hoisted(() => ({
     // The app-wide error slot other features (composer sends, branch refreshes) write to.
     pendingConnectionError: null as string | null,
     connectPress: vi.fn(),
+    language: "en" as "en" | "zh",
   },
 }));
 
@@ -60,6 +61,7 @@ vi.mock("../settings/settings-navigation", () => ({
   leaveSettingsPage: vi.fn(),
   openSettings: vi.fn(),
 }));
+vi.mock("../workspace/navigation-tabs", () => ({ useWorkbenchLanguage: () => harness.language }));
 vi.mock("../workspace/workspace-selection-store", () => ({ workspaceHasColumns: () => false }));
 vi.mock("../cloud/publicConfig", () => ({ hasCloudPublicConfig: () => false }));
 vi.mock("./CloudEnvironmentRows", () => ({ CloudEnvironmentRows: () => null }));
@@ -101,4 +103,26 @@ it("does not show another feature's error as a pairing failure", () => {
   act(() => root.unmount());
   // Leaving the form must not wipe an error that belongs to another screen.
   expect(harness.pendingConnectionError).toBe("Could not send the message.");
+});
+
+it.each([
+  { language: "zh", review: "连接前请核对电脑地址", code: "验证码" },
+  { language: "en", review: "Check the computer address before connecting", code: "Code" },
+] as const)("renders the address review in $language", ({ language, review, code }) => {
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  vi.stubGlobal("__DEV__", false);
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const route = {
+    params: { reviewPairing: { url: "http://127.0.0.1:3773/pair#token=generated" } },
+  };
+  try {
+    harness.language = language;
+    act(() => root.render(<ConnectionsNewRouteScreen route={route} />));
+    expect(container.textContent).toContain(review);
+    expect(container.textContent).toContain(code);
+  } finally {
+    act(() => root.unmount());
+    harness.language = "en";
+  }
 });

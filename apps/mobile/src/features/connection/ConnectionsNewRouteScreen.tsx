@@ -31,6 +31,7 @@ import { CloudEnvironmentRows } from "./CloudEnvironmentRows";
 import { autoConnectReport, devAutoConnectAttemptAtom } from "./devAutoConnect";
 import { splitEnvironmentSections } from "./environmentSections";
 import { leaveSettingsPage } from "../settings/settings-navigation";
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { workspaceHasColumns } from "../workspace/workspace-selection-store";
 
 type ConnectionsNewRouteParams = {
@@ -68,6 +69,8 @@ function PairingForm({
   readonly reviewAddress: boolean;
   readonly routeFor: EnvironmentId | undefined;
 }) {
+  const language = useWorkbenchLanguage();
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const { connectionPairingUrl, onChangeConnectionPairingUrl, onConnectPress } =
     useRemoteConnections();
   const navigation = useNavigation();
@@ -120,11 +123,14 @@ function PairingForm({
     }
     if (permission.canAskAgain) return;
     Dialog.alert(
-      "Camera access needed",
-      "Camera access was denied for this app. Open Settings to enable it.",
+      t("需要相机权限", "Camera access needed"),
+      t(
+        "应用没有相机权限。请在系统设置中开启。",
+        "Camera access was denied for this app. Open Settings to enable it.",
+      ),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Open Settings", onPress: () => void Linking.openSettings() },
+        { text: t("取消", "Cancel"), style: "cancel" },
+        { text: t("打开设置", "Open Settings"), onPress: () => void Linking.openSettings() },
       ],
     );
   };
@@ -147,8 +153,10 @@ function PairingForm({
     } catch (error) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Dialog.alert(
-        "Invalid QR code",
-        error instanceof Error ? error.message : "Scanned QR code was not recognized.",
+        t("二维码无效", "Invalid QR code"),
+        error instanceof Error
+          ? error.message
+          : t("无法识别扫描到的二维码。", "Scanned QR code was not recognized."),
       );
       setTimeout(() => {
         setScannerLocked(false);
@@ -184,10 +192,12 @@ function PairingForm({
   return (
     <SettingsScreen
       formSheet={routeName === "ConnectionsNew"}
-      title="Add environment"
+      title={t("添加环境", "Add environment")}
       actions={[
         {
-          accessibilityLabel: connecting ? "Connecting" : "Add environment",
+          accessibilityLabel: connecting
+            ? t("连接中", "Connecting")
+            : t("添加环境", "Add environment"),
           loading: connecting,
           icon: "checkmark",
           tintColor: headerIconColor,
@@ -221,7 +231,9 @@ function PairingForm({
 
           <View collapsable={false} className="gap-2">
             <Text className="px-4 text-sm font-t3-medium text-foreground-muted">
-              {reviewAddress ? "Check the computer address before connecting" : "Or enter it"}
+              {reviewAddress
+                ? t("连接前请核对电脑地址", "Check the computer address before connecting")
+                : t("或手动输入", "Or enter it")}
             </Text>
             <View
               collapsable={false}
@@ -231,7 +243,7 @@ function PairingForm({
               )}
             >
               <PairingInputRow
-                label="Address"
+                label={t("地址", "Address")}
                 keyboardType="url"
                 placeholder="192.168.1.100:3773"
                 value={hostInput}
@@ -239,8 +251,8 @@ function PairingForm({
               />
               <View className="ml-4 border-t border-border-subtle" />
               <PairingInputRow
-                label="Code"
-                placeholder="Pairing code"
+                label={t("验证码", "Code")}
+                placeholder={t("配对码", "Pairing code")}
                 returnKeyType="go"
                 value={codeInput}
                 onChangeText={handleCodeChange}
@@ -257,7 +269,10 @@ function PairingForm({
               )}
             >
               {pairingConnectionError ??
-                "For machines on your local network or tailnet. The machine keeps its own provider credentials."}
+                t(
+                  "适用于局域网或 Tailnet 中的电脑。模型服务凭据保留在执行电脑上。",
+                  "For machines on your local network or tailnet. The machine keeps its own provider credentials.",
+                )}
             </Text>
           </View>
 
@@ -278,11 +293,13 @@ function PairingScanCard(props: {
   readonly onScan: (result: { readonly data: string }) => void;
   readonly onScanPress: () => void;
 }) {
+  const language = useWorkbenchLanguage();
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const light = useAppearancePreferences().themeAppearance === "light";
   return (
     <Pressable
       accessibilityRole={props.cameraActive ? undefined : "button"}
-      accessibilityLabel={props.cameraActive ? undefined : "Scan QR code"}
+      accessibilityLabel={props.cameraActive ? undefined : t("扫描二维码", "Scan QR code")}
       disabled={props.cameraActive}
       onPress={props.onScanPress}
       className={cn(
@@ -347,13 +364,16 @@ function PairingScanCard(props: {
               <Text
                 className={cn("font-t3-medium text-sm", light ? "text-black/70" : "text-white/80")}
               >
-                Tap to scan
+                {t("点击扫码", "Tap to scan")}
               </Text>
             </>
           )}
         </View>
         <Text className={cn("text-center text-sm", light ? "text-black/70" : "text-white/80")}>
-          Scan the code from t3 pair or desktop Connections settings
+          {t(
+            "扫描 t3 pair 命令或桌面连接设置中的二维码",
+            "Scan the code from t3 pair or desktop Connections settings",
+          )}
         </Text>
       </View>
     </Pressable>
@@ -361,6 +381,8 @@ function PairingScanCard(props: {
 }
 
 function T3ConnectSection() {
+  const language = useWorkbenchLanguage();
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const navigation = useNavigation();
   const { connectedEnvironments, onSetEnvironmentEnabled, onRemoveEnvironmentPress } =
@@ -373,7 +395,7 @@ function T3ConnectSection() {
   return (
     <View collapsable={false} className="gap-2">
       <Text className="px-4 text-sm font-t3-medium text-foreground-muted">
-        Or use the managed relay
+        {t("或使用托管中继", "Or use the managed relay")}
       </Text>
       {isSignedIn ? (
         <CloudEnvironmentRows
@@ -384,8 +406,11 @@ function T3ConnectSection() {
         />
       ) : (
         <ListRow
-          label="Sign in to T3 Connect"
-          description="Reach your machines from anywhere, no network setup."
+          label={t("登录 T3 Connect", "Sign in to T3 Connect")}
+          description={t(
+            "从任何地方连接电脑，无需配置网络。",
+            "Reach your machines from anywhere, no network setup.",
+          )}
           disabled={!isLoaded}
           onPress={() => navigation.navigate("SettingsAuth")}
         />
