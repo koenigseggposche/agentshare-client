@@ -700,6 +700,15 @@ export class DesktopBuildDistDirectoryMissingError extends Schema.TaggedError<De
   }
 }
 
+class DesktopBuildRevisionError extends Schema.TaggedError<DesktopBuildRevisionError>()(
+  "DesktopBuildRevisionError",
+  { actual: Schema.String, expected: Schema.String },
+) {
+  override get message(): string {
+    return `Desktop payload hashes require a Git checkout at ${this.expected || "a known commit"} (found ${this.actual}).`;
+  }
+}
+
 class DesktopPayloadMismatchError extends Schema.TaggedError<DesktopPayloadMismatchError>()(
   "DesktopPayloadMismatchError",
   { archive: Schema.String },
@@ -3678,6 +3687,13 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
   const path = yield* Path.Path;
   const fs = yield* FileSystem.FileSystem;
   const hostPlatform = yield* HostProcess.Platform;
+  const commitHash = yield* resolveGitCommitHash(repoRoot);
+  if (options.recordPayloadHashes) {
+    const expected = yield* Config.String("GITHUB_SHA").pipe(Config.withDefault(""));
+    if (commitHash === "unknown" || (expected !== "" && commitHash !== expected)) {
+      return yield* new DesktopBuildRevisionError({ actual: commitHash, expected });
+    }
+  }
   const coreArtifact = yield* loadCoreArtifact({
     manifestPath: options.coreManifest,
     platform: options.platform,
@@ -3771,7 +3787,6 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
 
   const appVersion = options.version ?? serverPackageJson.version;
   const iconAssets = resolveDesktopBuildIconAssets(appVersion);
-  const commitHash = yield* resolveGitCommitHash(repoRoot);
   const mkdir = options.keepStage ? fs.makeTempDirectory : fs.makeTempDirectoryScoped;
   const stageRoot = yield* mkdir({
     prefix: `t3code-desktop-${options.platform}-stage-`,
