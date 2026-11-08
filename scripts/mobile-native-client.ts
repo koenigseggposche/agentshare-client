@@ -727,6 +727,9 @@ const build = Effect.fn("nativeClient.build")(function* (
           output,
           "ARCHS=arm64",
           "ONLY_ACTIVE_ARCH=NO",
+          // Xcode embeds simulator Keychain entitlements during the link.
+          "CODE_SIGNING_ALLOWED=YES",
+          "CODE_SIGN_IDENTITY=-",
           "build",
         ],
         true,
