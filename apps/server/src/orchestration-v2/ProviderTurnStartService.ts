@@ -429,7 +429,7 @@ export const layer: Layer.Layer<
       }
       const taskSessionId = workbenchTaskProviderSessionId(runId);
       const taskBillingEnabled = yield* Config.String("AGENTSHARE_WORKBENCH_TASK_BILLING").pipe(
-        Config.withDefault("0"),
+        Config.withDefault("1"),
         Effect.orDie,
       );
       const scopedTask =

@@ -279,7 +279,7 @@ function makeLocalCommandHarness(input: {
   readonly gitWorkflow?: GitWorkflow.GitWorkflowService["Service"];
   readonly fileSystem?: FileSystem.FileSystem;
   readonly previousNativeSession?: boolean;
-  readonly taskBilling?: "idle" | "busy";
+  readonly taskBilling?: "idle" | "busy" | "disabled";
   readonly previousMessages?: ReadonlyArray<string>;
   readonly logoutFailure?: string;
   readonly openFailure?: unknown;
@@ -1069,9 +1069,9 @@ function makeLocalCommandHarness(input: {
         Layer.merge(
           layer,
           ConfigProvider.layer(
-            ConfigProvider.fromUnknown({
-              AGENTSHARE_WORKBENCH_TASK_BILLING: input.taskBilling === undefined ? "0" : "1",
-            }),
+            ConfigProvider.fromUnknown(
+              input.taskBilling === "disabled" ? { AGENTSHARE_WORKBENCH_TASK_BILLING: "0" } : {},
+            ),
           ),
         ),
       ),
@@ -1283,8 +1283,8 @@ effectIt.effect(
     }).pipe(Effect.scoped, Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
 );
 
-effectIt.effect.each(["idle", "busy"] as const)(
-  "opens a separate paid task session only when the previous session is idle (%s)",
+effectIt.effect.each(["idle", "busy", "disabled"] as const)(
+  "scopes paid workbench sessions by default and honors the rollout override (%s)",
   (taskBilling) =>
     Effect.gen(function* () {
       const harness = makeLocalCommandHarness({
@@ -1298,6 +1298,15 @@ effectIt.effect.each(["idle", "busy"] as const)(
         expect(harness.releaseUnlessBusy).not.toHaveBeenCalled();
         expect(harness.open).not.toHaveBeenCalled();
         expect(harness.projection().runs.at(-1)?.status).toBe("failed");
+        return;
+      }
+      if (taskBilling === "disabled") {
+        expect(harness.releaseUnlessBusy).not.toHaveBeenCalled();
+        expect(harness.open).toHaveBeenCalledWith(
+          expect.objectContaining({ providerSessionId: "new-provider-session" }),
+        );
+        expect(harness.open.mock.calls[0]?.[0]).not.toHaveProperty("workbenchTaskId");
+        expect(harness.startRootRun).toHaveBeenCalledOnce();
         return;
       }
       const sessionId = `provider-session:workbench-task:${runId}`;
