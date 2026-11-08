@@ -8,6 +8,7 @@ import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
 import * as Sink from "effect/Sink";
 import * as Stream from "effect/Stream";
+import { HttpClient, HttpClientResponse } from "effect/http";
 import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import * as CoreInstallation from "./CoreInstallation.ts";
 
@@ -17,6 +18,11 @@ const fixture = Effect.fn("CoreInstallation.test.fixture")(function* (options?: 
   readonly installedVersion?: string;
   readonly candidateVersion?: string;
   readonly standalone?: boolean;
+  readonly identity?: {
+    readonly version: string;
+    readonly api_version: number;
+    readonly stopping: boolean;
+  };
 }) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -34,6 +40,35 @@ const fixture = Effect.fn("CoreInstallation.test.fixture")(function* (options?: 
     yield* fs.makeDirectory(path.dirname(installed), { recursive: true });
     yield* fs.writeFileString(installed, "generated existing runtime");
   }
+  if (options?.identity) {
+    yield* fs.makeDirectory(path.dirname(runtimePath), { recursive: true });
+    yield* fs.writeFileString(
+      runtimePath,
+      JSON.stringify({
+        url: "http://127.0.0.1:23456",
+        capability: "generated-capability",
+        pid: 123,
+      }),
+    );
+  }
+  const http = HttpClient.make((request) =>
+    Effect.sync(() => {
+      assert.ok(options?.identity);
+      assert.equal(request.url, "http://127.0.0.1:23456/v1/workbench");
+      assert.equal(request.headers.authorization, "Bearer generated-capability");
+      return HttpClientResponse.fromWeb(
+        request,
+        Response.json({
+          revision: "generated-revision",
+          owner: "",
+          device_id: "",
+          paired: false,
+          features: [],
+          ...options.identity,
+        }),
+      );
+    }),
+  );
   let exitCode = 0;
   const spawner = ChildProcessSpawner.make((command) =>
     Effect.gen(function* () {
@@ -84,6 +119,7 @@ const fixture = Effect.fn("CoreInstallation.test.fixture")(function* (options?: 
         Layer.provide(
           Layer.mergeAll(
             Layer.succeed(CoreClient.CoreHome, { directory }),
+            Layer.succeed(HttpClient.HttpClient, http),
             Layer.succeed(HostProcess.Platform, "darwin"),
             Layer.succeed(HostProcess.IsExecutable, options?.standalone ?? false),
             Layer.succeed(HostProcess.ExecutablePath, clientExecutable),
@@ -202,6 +238,28 @@ it.layer(NodeServices.layer)("CoreInstallation", (it) => {
           "generated existing runtime",
         );
       }).pipe(Effect.scoped),
+  );
+
+  it.effect.each([
+    { version: "0.6.27", api_version: 1, stopping: false, accepted: true },
+    { version: "0.6.27", api_version: 2, stopping: false, accepted: false },
+    { version: "0.6.27", api_version: 1, stopping: true, accepted: false },
+    { version: "0.6.26", api_version: 1, stopping: false, accepted: false },
+  ])("checks the installed Core identity before reusing it (%j)", ({ accepted, ...identity }) =>
+    Effect.gen(function* () {
+      const f = yield* fixture({
+        installedVersion: "0.6.27",
+        candidateVersion: "0.6.26",
+        identity,
+      });
+      if (accepted) {
+        yield* f.service.prepare;
+      } else {
+        const failure = yield* f.service.prepare.pipe(Effect.flip);
+        assert.equal(failure.category, "rejected");
+      }
+      assert.equal(f.commands.length, 0);
+    }).pipe(Effect.scoped),
   );
 
   it.effect("allows a newer compatible candidate to use the safe Go installation path", () =>

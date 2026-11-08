@@ -19,6 +19,7 @@ const decodeVersion = Schema.decodeUnknownEffect(
 
 const make = Effect.gen(function* () {
   const home = yield* CoreClient.CoreHome;
+  const installedCore = yield* CoreClient.CoreClient;
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const env = yield* HostProcess.Environment;
@@ -90,6 +91,19 @@ const make = Effect.gen(function* () {
         });
       }
       if (compareSemverVersions(candidate.version, current.version) < 0) {
+        if (Option.isSome(runtime)) {
+          const identity = yield* installedCore
+            .identity()
+            .pipe(Effect.timeout("5 seconds"), Effect.option);
+          if (
+            Option.isSome(identity) &&
+            identity.value.version === current.version &&
+            !identity.value.stopping
+          ) {
+            yield* Ref.set(verified, runtime);
+            return;
+          }
+        }
         return yield* new AgentShareCoreError({
           operation: "prepare",
           category: "rejected",
@@ -152,4 +166,6 @@ const make = Effect.gen(function* () {
   });
 });
 
-export const layer = Layer.effect(CoreClient.CoreBootstrap, make);
+export const layer = Layer.effect(CoreClient.CoreBootstrap, make).pipe(
+  Layer.provide(CoreClient.layer.pipe(Layer.provide(CoreClient.layerExternalCore))),
+);
