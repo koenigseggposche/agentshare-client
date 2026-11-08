@@ -498,6 +498,27 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
     }),
   );
 
+  it.effect("keeps Linux sandbox paths free of spaces without changing the launcher label", () =>
+    Effect.gen(function* () {
+      const config = yield* createBuildConfig(
+        "linux",
+        "deb",
+        "0.1.6-preview.20261109.55",
+        false,
+        false,
+        undefined,
+        undefined,
+      );
+      assert.equal(config.productName, "agentshare-client");
+      assert.deepInclude(config.linux as object, {
+        executableName: "agentshare-client",
+        desktop: {
+          entry: { Name: "AgentShare Client (Beta)", StartupWMClass: "agentshare-client" },
+        },
+      });
+    }),
+  );
+
   it.effect("omits update feeds for pull request preview builds", () =>
     Effect.gen(function* () {
       const preview = yield* createBuildConfig(
