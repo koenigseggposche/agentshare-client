@@ -65,6 +65,10 @@ export function ConnectionEnvironmentRow(props: {
   );
   const enabled = props.environment.isEnabled && !unsupported;
   const statusLabel = connectionStatusLabel(props.environment);
+  const displayUrl = props.environment.isRelayManaged ? "" : props.environment.displayUrl.trim();
+  const accessibilityStatus = [displayUrl, diagnosis?.headline ?? statusLabel]
+    .filter(Boolean)
+    .join(", ");
   const statusTraceId = enabled ? props.environment.connectionErrorTraceId : null;
   const hasConnectionFailure = enabled && props.environment.connectionError !== null;
   const freeze = enabled
@@ -101,6 +105,7 @@ export function ConnectionEnvironmentRow(props: {
               ? `Manage ${props.environment.environmentLabel}`
               : `${props.expanded ? "Collapse" : "Expand"} details for ${props.environment.environmentLabel}`
           }
+          accessibilityValue={{ text: accessibilityStatus }}
           onPress={props.onToggle}
         >
           <View className="flex-row items-center gap-1.5">
@@ -121,9 +126,9 @@ export function ConnectionEnvironmentRow(props: {
               {props.environment.environmentLabel}
             </Text>
           </View>
-          {!props.environment.isRelayManaged && props.environment.displayUrl.trim() ? (
+          {displayUrl ? (
             <Text className="text-xs text-foreground-muted" numberOfLines={1}>
-              {props.environment.displayUrl}
+              {displayUrl}
             </Text>
           ) : null}
           {diagnosis ? (
