@@ -15,6 +15,7 @@ import * as CoreInstallation from "./CoreInstallation.ts";
 const fixture = Effect.fn("CoreInstallation.test.fixture")(function* (options?: {
   readonly executable?: string | null;
   readonly createRuntime?: boolean;
+  readonly startWithoutRuntime?: boolean;
   readonly installedVersion?: string;
   readonly candidateVersion?: string;
   readonly standalone?: boolean;
@@ -40,16 +41,14 @@ const fixture = Effect.fn("CoreInstallation.test.fixture")(function* (options?: 
     yield* fs.makeDirectory(path.dirname(installed), { recursive: true });
     yield* fs.writeFileString(installed, "generated existing runtime");
   }
-  if (options?.identity) {
+  const runtimeReceipt = JSON.stringify({
+    url: "http://127.0.0.1:23456",
+    capability: "generated-capability",
+    pid: 123,
+  });
+  if (options?.identity && !options.startWithoutRuntime) {
     yield* fs.makeDirectory(path.dirname(runtimePath), { recursive: true });
-    yield* fs.writeFileString(
-      runtimePath,
-      JSON.stringify({
-        url: "http://127.0.0.1:23456",
-        capability: "generated-capability",
-        pid: 123,
-      }),
-    );
+    yield* fs.writeFileString(runtimePath, runtimeReceipt);
   }
   const http = HttpClient.make((request) =>
     Effect.sync(() => {
@@ -94,7 +93,10 @@ const fixture = Effect.fn("CoreInstallation.test.fixture")(function* (options?: 
       commands.push(command);
       if (exitCode === 0 && options?.createRuntime !== false) {
         yield* fs.makeDirectory(path.dirname(runtimePath), { recursive: true });
-        yield* fs.writeFileString(runtimePath, `generated-runtime-${commands.length}`);
+        yield* fs.writeFileString(
+          runtimePath,
+          options?.identity ? runtimeReceipt : `generated-runtime-${commands.length}`,
+        );
       }
       return ChildProcessSpawner.makeHandle({
         pid: ChildProcessSpawner.ProcessId(123),
@@ -113,9 +115,12 @@ const fixture = Effect.fn("CoreInstallation.test.fixture")(function* (options?: 
   );
   const executable =
     options?.executable === undefined ? path.join(directory, "bundled core") : options.executable;
-  const service = yield* CoreClient.CoreBootstrap.pipe(
+  const { service, client } = yield* Effect.gen(function* () {
+    return { service: yield* CoreClient.CoreBootstrap, client: yield* CoreClient.CoreClient };
+  }).pipe(
     Effect.provide(
-      CoreInstallation.layer.pipe(
+      CoreClient.layer.pipe(
+        Layer.provideMerge(CoreInstallation.layer),
         Layer.provide(
           Layer.mergeAll(
             Layer.succeed(CoreClient.CoreHome, { directory }),
@@ -135,6 +140,7 @@ const fixture = Effect.fn("CoreInstallation.test.fixture")(function* (options?: 
   );
   return {
     service,
+    client,
     commands,
     directory,
     runtimePath,
@@ -147,6 +153,17 @@ const fixture = Effect.fn("CoreInstallation.test.fixture")(function* (options?: 
 });
 
 it.layer(NodeServices.layer)("CoreInstallation", (it) => {
+  it.effect("installs Core before the composed client reads its identity", () =>
+    Effect.gen(function* () {
+      const f = yield* fixture({
+        startWithoutRuntime: true,
+        identity: { version: "0.6.27", api_version: 1, stopping: false },
+      });
+      assert.equal((yield* f.client.identity()).version, "0.6.27");
+      assert.equal(f.commands.length, 1);
+    }).pipe(Effect.scoped),
+  );
+
   it.effect("serializes preparation and rechecks a replaced or invalidated runtime", () =>
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;

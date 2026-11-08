@@ -167,5 +167,6 @@ const make = Effect.gen(function* () {
 });
 
 export const layer = Layer.effect(CoreClient.CoreBootstrap, make).pipe(
-  Layer.provide(CoreClient.layer.pipe(Layer.provide(CoreClient.layerExternalCore))),
+  // Give the probe its own client so the managed client still runs this bootstrap.
+  Layer.provide(Layer.fresh(CoreClient.layer).pipe(Layer.provide(CoreClient.layerExternalCore))),
 );
