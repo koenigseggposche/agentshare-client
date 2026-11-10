@@ -2,6 +2,8 @@
 // Launches a packaged desktop app against a seeded T3 home, opens a thread, and checks its
 // messages render. Release jobs run it so a build whose backend or bundle cannot start fails
 // before it is published.
+import * as NodeChildProcess from "node:child_process";
+import * as NodeCrypto from "node:crypto";
 import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as NodePath from "node:path";
@@ -29,8 +31,12 @@ const artifactsDir = NodePath.resolve(values["artifacts-dir"] ?? "desktop-launch
 
 const home = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "t3-desktop-launch-"));
 const t3Home = NodePath.join(home, "t3");
-NodeFS.mkdirSync(NodePath.join(t3Home, "userdata"), { recursive: true });
-NodeFS.copyFileSync(FIXTURE_DB, NodePath.join(t3Home, "userdata/statev2.sqlite"));
+const coreHome = NodePath.join(home, "core");
+// The isolated Core is signed out. The Workbench opens its offline account's database.
+const offlineAccountKey = NodeCrypto.createHash("sha256").update("offline").digest("hex");
+const stateDir = NodePath.join(t3Home, "accounts", offlineAccountKey, "userdata");
+NodeFS.mkdirSync(stateDir, { recursive: true });
+NodeFS.copyFileSync(FIXTURE_DB, NodePath.join(stateDir, "statev2.sqlite"));
 
 let step = "launching the app";
 let app: ElectronApplication | undefined;
@@ -46,6 +52,7 @@ try {
       XDG_CONFIG_HOME: NodePath.join(home, ".config"),
       XDG_DATA_HOME: NodePath.join(home, ".local/share"),
       AGENTSHARE_CLIENT_HOME: t3Home,
+      AGENTSHARE_HOME: coreHome,
       T3CODE_TELEMETRY_ENABLED: "false",
       T3CODE_DISABLE_AUTO_UPDATE: "true",
     },
@@ -56,8 +63,16 @@ try {
   step = "waiting for the first window";
   const page = await app.firstWindow({ timeout: STEP_TIMEOUT_MS });
   try {
-    step = `finding "${THREAD_TITLE}" in the sidebar`;
+    step = "waiting for onboarding or the seeded thread";
+    const welcome = page.getByRole("dialog", { name: "Set up AgentShare" });
     const thread = page.locator("li[data-thread-item]", { hasText: THREAD_TITLE });
+    await welcome.or(thread).first().waitFor({ timeout: STEP_TIMEOUT_MS });
+    if (await welcome.isVisible()) {
+      step = "dismissing the welcome wizard";
+      await welcome.getByRole("button", { name: "Close", exact: true }).click();
+      await welcome.waitFor({ state: "hidden", timeout: STEP_TIMEOUT_MS });
+    }
+    step = `finding "${THREAD_TITLE}" in the sidebar`;
     await thread.waitFor({ timeout: STEP_TIMEOUT_MS });
     step = "opening the thread";
     await thread.click();
@@ -92,6 +107,24 @@ try {
     const closed = app.close().catch(() => {});
     await Promise.race([closed, NodeTimersPromises.setTimeout(10_000, undefined, { ref: false })]);
     child.kill("SIGKILL");
+  }
+  const runtime = ["agentshare-runtime", "agentshare-runtime.exe"]
+    .map((name) => NodePath.join(coreHome, "bin", name))
+    .find((candidate) => NodeFS.existsSync(candidate));
+  if (runtime) {
+    try {
+      await NodeUtil.promisify(NodeChildProcess.execFile)(
+        runtime,
+        ["agent-launcher", "core", "stop"],
+        {
+          env: { ...process.env, AGENTSHARE_HOME: coreHome },
+          timeout: 15_000,
+        },
+      );
+    } catch {
+      console.error("Desktop launch fixture Core did not stop cleanly.");
+      process.exitCode = 1;
+    }
   }
   NodeFS.rmSync(home, { recursive: true, force: true, maxRetries: 5 });
 }
