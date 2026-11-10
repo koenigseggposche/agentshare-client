@@ -658,6 +658,23 @@ it("explains interrupted model output alongside the original diagnostic", async 
   expect(screen.text()).toContain(diagnostic);
 });
 
+it("explains a failed model connection without displaying its internal proxy address", async () => {
+  await using screen = await renderTimeline([
+    message("Partial model output", { role: "assistant" }),
+    ...failureEntries({
+      class: "provider_error",
+      code: null,
+      message:
+        'unexpected status 502: {"code":"gateway_response_error","cause":"upstream_unavailable_no_replay"}, url: http://127.0.0.1:12345/v1/responses',
+      retryable: null,
+    }),
+  ]);
+  expect(screen.text()).toContain("Partial model output");
+  expect(screen.text()).toContain("Model connection interrupted");
+  expect(screen.text()).toContain("The request was not retried automatically.");
+  expect(screen.text()).not.toContain("127.0.0.1");
+});
+
 describe("MessagesTimeline usage limit notice", () => {
   it("labels the retry time with the viewer's timezone", async () => {
     await using screen = await renderTimeline(usageLimitEntries("2026-03-17T19:30:00.000Z"));

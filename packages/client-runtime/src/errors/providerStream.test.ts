@@ -14,6 +14,22 @@ describe("provider stream interruption", () => {
     });
   });
 
+  it.each([
+    ["upstream_unavailable_no_replay", "Model request failed"],
+    [
+      null,
+      'unexpected status 502: {"code":"gateway_response_error","cause":"upstream_unavailable_no_replay"}, url: http://127.0.0.1:12345/v1/responses',
+    ],
+  ])("explains an interrupted connection without exposing proxy details (%s)", (code, message) => {
+    expect(
+      providerStreamInterruption({ class: "provider_error", code, message, retryable: null }),
+    ).toEqual({
+      label: "Model connection interrupted",
+      detail:
+        "The model connection was interrupted. The request was not retried automatically. Check any partial output or changes before retrying.",
+    });
+  });
+
   it("leaves other provider errors alone", () => {
     expect(
       providerStreamInterruption({
