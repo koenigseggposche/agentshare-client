@@ -18,11 +18,15 @@ export function resolveNewTaskWorkspaceSelection(input: {
 export function resolveNewTaskWorkspaceLabel(input: {
   readonly workspaceMode: WorkspaceMode;
   readonly worktreePath: string | null;
-}): "Current checkout" | "Current worktree" | "New worktree" {
+  readonly language?: "zh" | "en";
+}): string {
+  const t = (zh: string, en: string) => (input.language === "zh" ? zh : en);
   if (input.workspaceMode === "worktree") {
-    return "New worktree";
+    return t("新工作树", "New worktree");
   }
-  return input.worktreePath ? "Current worktree" : "Current checkout";
+  return input.worktreePath
+    ? t("当前工作树", "Current worktree")
+    : t("当前检出", "Current checkout");
 }
 
 export function resolveNewTaskBranchWorktreePath(input: {

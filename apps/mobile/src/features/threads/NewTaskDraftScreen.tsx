@@ -554,6 +554,7 @@ export function NewTaskDraftScreen(props: {
     pullRequestReference: flow.pullRequestReference,
   });
   const workspaceLabel = resolveNewTaskWorkspaceLabel({
+    language,
     workspaceMode: flow.workspaceMode,
     worktreePath: flow.selectedWorktreePath,
   });

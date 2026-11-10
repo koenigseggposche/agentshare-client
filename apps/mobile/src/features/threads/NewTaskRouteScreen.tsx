@@ -144,6 +144,8 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
   const screenTitle = incomingShare
     ? t("开始任务", "Start a task")
     : t("选择项目", "Choose project");
+  const scratchTitle = t("不关联项目", "No project");
+  const scratchDescription = t("开始不关联项目的会话", "Start a task without a project");
   const projectEmptyState = deriveProjectEmptyState(catalogState, language);
   const serverConfigs = useServerConfigs();
   const listScopes = pickableProjectGroups(projectScopes).filter(
@@ -315,8 +317,8 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
               <View collapsable={false} className="overflow-hidden rounded-[28px] bg-grouped-card">
                 <NavigationRow
                   className="bg-grouped-card"
-                  title="No project"
-                  subtitle="Start a task without a project"
+                  title={scratchTitle}
+                  subtitle={scratchDescription}
                   disabled={!canStartScratch}
                   onPress={() => void startScratch()}
                   leading={
@@ -333,7 +335,7 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
               <View collapsable={false} className="overflow-hidden rounded-[24px] bg-grouped-card">
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="No project"
+                  accessibilityLabel={scratchTitle}
                   disabled={!canStartScratch}
                   onPress={() => void startScratch()}
                   className={cn(
@@ -350,9 +352,9 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
                     />
                   </View>
                   <View className="min-w-0 flex-1">
-                    <Text className="text-base font-t3-bold leading-snug">No project</Text>
+                    <Text className="text-base font-t3-bold leading-snug">{scratchTitle}</Text>
                     <Text className="text-xs leading-snug text-foreground-muted" numberOfLines={1}>
-                      Start a task without a project
+                      {scratchDescription}
                     </Text>
                   </View>
                   <SymbolView

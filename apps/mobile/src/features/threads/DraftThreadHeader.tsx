@@ -15,6 +15,7 @@ import { useEnvironmentScope } from "../../state/session";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { vcsActionManager, vcsEnvironment } from "../../state/vcs";
 import { useVcsActionState } from "../../state/use-vcs-action-state";
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { ThreadHeader } from "./ThreadHeader";
 
 export function DraftThreadHeader(props: {
@@ -23,6 +24,7 @@ export function DraftThreadHeader(props: {
   readonly cwd: string | null;
 }) {
   const navigation = useNavigation();
+  const language = useWorkbenchLanguage();
   const { themeVariables } = useAppearancePreferences();
   const environmentId = props.thread.environmentId;
   const canReadFiles = useEnvironmentScope(environmentId, AuthFilesystemReadScope);
@@ -49,7 +51,7 @@ export function DraftThreadHeader(props: {
   return (
     <ThreadHeader
       draft
-      title="New thread"
+      title={language === "zh" ? "新建会话" : "New thread"}
       subtitle=""
       headerColor={themeVariables["--color-header"]}
       usesNativeHeaderGlass={NATIVE_LIQUID_GLASS_SUPPORTED}

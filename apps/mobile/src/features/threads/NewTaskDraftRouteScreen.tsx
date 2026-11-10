@@ -20,6 +20,7 @@ import { useProjects } from "../../state/entities";
 import { appAtomRegistry } from "../../state/atom-registry";
 import { rootNavigationRef } from "../../lib/rootNavigation";
 import { threadSelectionDeferral } from "../layout/deferred-navigation";
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { useWorkspaceState } from "../../state/workspace";
 import { vcsEnvironment } from "../../state/vcs";
 import { checkoutNewTaskBranch } from "./checkout-new-task-branch";
@@ -88,6 +89,7 @@ const idleBranchCheckoutAtom = Atom.make(AsyncResult.initial<BranchCheckoutResul
 );
 
 export function NewTaskDraftRouteScreen({ route }: StaticScreenProps<NewTaskDraftRouteParams>) {
+  const language = useWorkbenchLanguage();
   const currentRoute = useRoute();
   const params = route.params ?? {};
   const draftId = Array.isArray(params.draftId) ? params.draftId[0] : params.draftId;
@@ -198,9 +200,13 @@ export function NewTaskDraftRouteScreen({ route }: StaticScreenProps<NewTaskDraf
     <>
       {preparingBranch ? (
         <ThreadScreenFallback>
-          <NativeStackScreenOptions options={{ title: "New thread" }} />
+          <NativeStackScreenOptions
+            options={{ title: language === "zh" ? "新建会话" : "New thread" }}
+          />
           <View className="flex-1 items-center justify-center bg-screen">
-            <Text className="text-foreground">Switching branch...</Text>
+            <Text className="text-foreground">
+              {language === "zh" ? "正在切换分支…" : "Switching branch..."}
+            </Text>
           </View>
         </ThreadScreenFallback>
       ) : (
