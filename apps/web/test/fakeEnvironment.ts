@@ -17,6 +17,7 @@ import {
   TurnItemId,
   WS_METHODS,
   WsRpcGroup,
+  type AuthEnvironmentScope,
   type VcsStatusStreamEvent,
   type OrchestrationProjectShell,
   type OrchestrationV2ProjectedTurnItem,
@@ -433,7 +434,10 @@ const encodedDescriptor = Schema.encodeSync(ExecutionEnvironmentDescriptor)(
 );
 
 /** Serves the environment's HTTP API and these threads until disposed. */
-export function installFakeEnvironment(fixtures: ReadonlyArray<FakeThread>): Disposable {
+export function installFakeEnvironment(
+  fixtures: ReadonlyArray<FakeThread>,
+  scopes: ReadonlyArray<AuthEnvironmentScope> = AuthStandardClientScopes,
+): Disposable {
   threads = fixtures;
   globalThis.fetch = async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : String(input), window.location.href);
@@ -443,7 +447,7 @@ export function installFakeEnvironment(fixtures: ReadonlyArray<FakeThread>): Dis
       return json({
         authenticated: true,
         auth,
-        scopes: AuthStandardClientScopes,
+        scopes,
         sessionMethod: "browser-session-cookie",
         expiresAt: "2099-01-01T00:00:00.000Z",
       });

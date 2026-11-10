@@ -3,6 +3,7 @@ export const DEFAULT_COMPOSER_PLACEHOLDER = "Ask anything. @ files, $ skills, / 
 export const composerPlaceholderLabels = {
   en: {
     default: DEFAULT_COMPOSER_PLACEHOLDER,
+    readOnly: "This connection is read-only.",
     approvalFeedback: "Send feedback to decline this request",
     approvalRedirect: "Send a message to decline and redirect the agent",
     chooseOption: "Choose an option above",
@@ -13,6 +14,7 @@ export const composerPlaceholderLabels = {
   },
   zh: {
     default: "输入你的问题。用 @ 引用文件，$ 选择技能，/ 输入命令",
+    readOnly: "当前连接为只读。",
     approvalFeedback: "发送反馈以拒绝此请求",
     approvalRedirect: "发送消息以拒绝此请求，并告诉助手接下来怎么做",
     chooseOption: "从上方选择一个选项",

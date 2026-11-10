@@ -1201,6 +1201,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     (!isComposerCollapsedMobile && showPlanFollowUpPrompt && activeProposedPlan !== null);
   const showCollapsedMobilePromptRow = isComposerCollapsedMobile;
   const showComposerAttachAction =
+    canOperateThread &&
     fileStagingLimit !== null &&
     (!activePendingProgress ||
       (supportsQuestionAttachments &&
@@ -3230,7 +3231,10 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
           onToggleMenu={toggleStashMenuStable}
         />
       </ComposerBanner.Dock>
-      <div className="relative">
+      {!canOperateThread && (
+        <p className="px-3 py-3 text-sm text-muted-foreground">{placeholderLabels.readOnly}</p>
+      )}
+      <div className="relative" hidden={!canOperateThread}>
         <ComposerSurface.Main
           ref={composerMainSurfaceRef}
           data-inline-resting-controls="true"
@@ -3415,23 +3419,26 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     onCitationDraftSave={saveCitationDraftToPromptStable}
                     onPaste={onComposerPasteStable}
                     placeholder={
-                      isComposerApprovalState
-                        ? activePendingApproval?.supportsFeedback
-                          ? placeholderLabels.approvalFeedback
-                          : placeholderLabels.approvalRedirect
-                        : activePendingProgress
-                          ? isChoiceOnlyPendingQuestion
-                            ? placeholderLabels.chooseOption
-                            : placeholderLabels.customAnswer
-                          : showPlanFollowUpPrompt && activeProposedPlan
-                            ? placeholderLabels.refinePlan
-                            : projectSelectionRequired
-                              ? placeholderLabels.chooseProject
-                              : showProviderUnavailable
-                                ? placeholderLabels.enableProvider
-                                : placeholderLabels.default
+                      !canOperateThread
+                        ? ""
+                        : isComposerApprovalState
+                          ? activePendingApproval?.supportsFeedback
+                            ? placeholderLabels.approvalFeedback
+                            : placeholderLabels.approvalRedirect
+                          : activePendingProgress
+                            ? isChoiceOnlyPendingQuestion
+                              ? placeholderLabels.chooseOption
+                              : placeholderLabels.customAnswer
+                            : showPlanFollowUpPrompt && activeProposedPlan
+                              ? placeholderLabels.refinePlan
+                              : projectSelectionRequired
+                                ? placeholderLabels.chooseProject
+                                : showProviderUnavailable
+                                  ? placeholderLabels.enableProvider
+                                  : placeholderLabels.default
                     }
                     disabled={
+                      !canOperateThread ||
                       projectSelectionRequired ||
                       isChoiceOnlyPendingQuestion ||
                       activePendingIsResponding

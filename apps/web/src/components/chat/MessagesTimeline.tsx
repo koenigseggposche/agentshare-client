@@ -23,6 +23,7 @@ import { parseScopedThreadKey } from "@t3tools/client-runtime/environment";
 import { resolveWorkGroupScrollAnchor } from "@t3tools/client-runtime/work-log/scroll-anchor";
 import type { WorkflowOpening } from "@t3tools/client-runtime/state/subagentRuntime";
 import { observeResize } from "~/lib/observeResize";
+import { useClientSettings } from "~/hooks/useSettings";
 import { useStableCallback } from "~/hooks/useStableCallback";
 
 const NOOP_USE_ARTIFACT_TEMPLATE = () => {};
@@ -406,6 +407,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
   topFadeEnabled = false,
   historyControls,
 }: MessagesTimelineProps) {
+  const uiLanguage = useClientSettings((settings) => settings.uiLanguage);
   const listIdentityKey = displayThreadKey ?? routeThreadKey;
   // Snapshot restore positions on identity changes; ongoing scroll writes must not move them.
   // Find open at the opening is part of the snapshot: opening find later
@@ -1277,6 +1279,14 @@ const ConversationTimeline = memo(function ConversationTimeline({
         </>
       );
     }
+    const emptyMessage =
+      uiLanguage === "zh"
+        ? canOperateThread
+          ? "发送消息以开始对话。"
+          : "暂无消息。"
+        : canOperateThread
+          ? "Send a message to start the conversation."
+          : "No messages yet.";
     return (
       <>
         {activityAnnouncer}
@@ -1284,7 +1294,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
           className="flex h-full items-center justify-center ps-(--chat-lane-inset-start) pe-(--chat-lane-inset-end)"
           style={{ paddingBottom: emptyPlaceholderInset }}
         >
-          <p className="text-sm text-muted-foreground">Send a message to start the conversation.</p>
+          <p className="text-sm text-muted-foreground">{emptyMessage}</p>
         </div>
       </>
     );
