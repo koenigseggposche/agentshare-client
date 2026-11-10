@@ -1,3 +1,4 @@
+import { providerStreamInterruption } from "@t3tools/client-runtime/errors";
 import type {
   ThreadPendingApproval,
   ThreadPendingUserInput,
@@ -581,6 +582,10 @@ function itemSummary(
   if (item.type === "notification") return item.summary;
   if (item.type === "system_notice") return item.message;
   if (item.type === "compaction") return contextCompactionLabel(item);
+  if (item.type === "error" && item.retry === undefined) {
+    const interruption = providerStreamInterruption(item.failure);
+    if (interruption !== undefined) return interruption.label;
+  }
   const title =
     (item.type === "dynamic_tool"
       ? dynamicToolTitle(item.toolName, item.input, item.title)
@@ -672,7 +677,10 @@ function itemPreview(item: OrchestrationV2TurnItem): string | null {
     case "system_notice":
       return item.message || null;
     case "error":
-      return item.failure.message;
+      return (
+        (item.retry === undefined ? providerStreamInterruption(item.failure)?.detail : undefined) ??
+        item.failure.message
+      );
     case "compaction":
     case "handoff":
       return item.summary ?? null;

@@ -20,6 +20,7 @@ function actions(
   primary: EnvironmentId | null,
   localRoot: string | null,
   remoteRoot: string | null = "/remote/scratch",
+  canOperate: (id: EnvironmentId) => boolean = () => true,
 ) {
   const environments = [
     scratchEnvironment(local, localRoot),
@@ -30,6 +31,7 @@ function actions(
     environments: () => environments,
     primaryEnvironmentId: () => primary,
     registry: AtomRegistry.make(),
+    canOperate,
     handleNewThread: async () => null,
   });
 }
@@ -38,6 +40,20 @@ describe("scratchEnvironmentId", () => {
   it("prefers the primary environment over the one on screen", () => {
     expect(actions(local, "/local/scratch").scratchEnvironmentId(remote)).toBe(local);
     expect(actions(local, "/local/scratch").scratchEnvironmentId(null)).toBe(local);
+  });
+
+  it("ignores a read-only workbench even when it has a scratch root", async () => {
+    const writableRemote = actions(
+      local,
+      "/local/scratch",
+      "/remote/scratch",
+      (id) => id === remote,
+    );
+    expect(writableRemote.scratchEnvironmentId(local)).toBe(remote);
+    expect(await writableRemote.openScratchProject(local)).toBeNull();
+    expect(
+      actions(local, "/local/scratch", "/remote/scratch", () => false).scratchEnvironmentId(local),
+    ).toBeNull();
   });
 
   it("falls back when the primary environment offers no scratch root", () => {

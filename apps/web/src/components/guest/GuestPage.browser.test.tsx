@@ -282,8 +282,8 @@ describe("GuestPage", () => {
     await expect.element(screen.getByText("notes.txt")).not.toBeInTheDocument();
   });
 
-  it("follows the end as replies stream, and shows the guest's own message even after they scrolled up", async () => {
-    using _page = visit(`/guest?share=${SHARE_ID}`);
+  it.each([360, 900])("follows replies and the guest’s own message at %i px", async (width) => {
+    using _page = visit(`/guest?share=${SHARE_ID}-${width}`);
     using _session = vi
       .spyOn(window, "fetch")
       .mockImplementation(async () => new Response(null, { status: 204 }));
@@ -304,7 +304,7 @@ describe("GuestPage", () => {
     const send = (event: GuestStreamEvent) =>
       sources.at(-1)!.dispatchEvent(new MessageEvent("message", { data: encodeEvent(event) }));
     const container = document.createElement("div");
-    container.style.cssText = "height: 600px; width: 900px; display: flex; flex-direction: column;";
+    container.style.cssText = `height: 600px; width: ${width}px; display: flex; flex-direction: column;`;
     await using screen = await render(<GuestPage />, { container });
     await expect.element(screen.getByText("Reply 11")).toBeInTheDocument();
     const scroller = () =>

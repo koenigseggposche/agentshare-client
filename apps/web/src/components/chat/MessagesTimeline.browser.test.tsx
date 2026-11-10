@@ -15,6 +15,7 @@ import {
   TurnItemId,
   ScheduledTaskId,
   ThreadId,
+  type OrchestrationV2ProviderFailure,
   type OrchestrationV2Subagent,
 } from "@t3tools/contracts";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
@@ -596,7 +597,7 @@ describe("MessagesTimeline messages", () => {
   });
 });
 
-function usageLimitEntries(resetAt: string) {
+function failureEntries(failure: OrchestrationV2ProviderFailure) {
   const threadId = ThreadId.make("usage-limit-thread");
   const at = DateTime.makeUnsafe(CREATED_AT);
   return deriveTimelineEntriesFromVisibleTurnItems({
@@ -622,19 +623,40 @@ function usageLimitEntries(resetAt: string) {
           updatedAt: at,
           type: "error",
           status: "failed",
-          failure: {
-            class: "usage_limit",
-            message: "You've hit your usage limit.",
-            code: null,
-            retryable: true,
-            resetAt,
-          },
+          failure,
         },
       },
     ],
     optimisticMessages: [],
   });
 }
+
+function usageLimitEntries(resetAt: string) {
+  return failureEntries({
+    class: "usage_limit",
+    message: "You've hit your usage limit.",
+    code: null,
+    retryable: true,
+    resetAt,
+  });
+}
+
+it("explains interrupted model output alongside the original diagnostic", async () => {
+  const diagnostic = "Transport error: Error decoding response body";
+  await using screen = await renderTimeline([
+    message("Partial model output", { role: "assistant" }),
+    ...failureEntries({
+      class: "provider_error",
+      code: "responseStreamDisconnected",
+      message: diagnostic,
+      retryable: null,
+    }),
+  ]);
+  expect(screen.text()).toContain("Partial model output");
+  expect(screen.text()).toContain("Model response interrupted");
+  expect(screen.text()).toContain("Check any partial output or changes before retrying.");
+  expect(screen.text()).toContain(diagnostic);
+});
 
 describe("MessagesTimeline usage limit notice", () => {
   it("labels the retry time with the viewer's timezone", async () => {

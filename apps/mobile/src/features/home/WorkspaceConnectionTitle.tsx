@@ -13,6 +13,7 @@ import {
 } from "../../components/CompactBrandTitle";
 import { useDeadlinePassed } from "../../lib/clock";
 import { useWorkspaceState } from "../../state/workspace";
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import {
   workspaceConnectionStatusPresentation,
   type WorkspaceConnectionStatusPresentation,
@@ -36,7 +37,8 @@ const ConnectionStatusContext = createContext<ConnectionStatus | null>(null);
  */
 export function WorkspaceConnectionStatusProvider(props: { readonly children: ReactNode }) {
   const { state } = useWorkspaceState();
-  const presentation = workspaceConnectionStatusPresentation(state);
+  const language = useWorkbenchLanguage();
+  const presentation = workspaceConnectionStatusPresentation(state, language);
   const hasStatus = presentation !== null;
   // When the current status run began; a gap in the status restarts the delay.
   const [statusSince, setStatusSince] = useState(() => (hasStatus ? Date.now() : null));

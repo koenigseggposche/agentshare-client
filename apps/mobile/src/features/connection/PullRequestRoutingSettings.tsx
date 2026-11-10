@@ -15,38 +15,59 @@ import { SymbolView } from "../../components/ui/AppSymbol";
 import { environmentCatalog } from "../../connection/catalog";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { SettingsSection } from "../settings/components/SettingsSection";
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 
 const options: ReadonlyArray<{
   value: PullRequestRoutingPermission;
-  label: string;
-  description: string;
+  label: readonly [zh: string, en: string];
+  description: readonly [zh: string, en: string];
 }> = [
-  { value: "off", label: "Off", description: "Keep source control requests on this environment." },
+  {
+    value: "off",
+    label: ["关闭", "Off"],
+    description: [
+      "代码托管请求留在当前工作台。",
+      "Keep source control requests on this environment.",
+    ],
+  },
   {
     value: "read",
-    label: "Read PRs",
-    description: "Share PR data with other enabled environments.",
+    label: ["读取 PR", "Read PRs"],
+    description: [
+      "与其他已启用的工作台共享 PR 数据。",
+      "Share PR data with other enabled environments.",
+    ],
   },
   {
     value: "read-write",
-    label: "Read and act",
-    description:
+    label: ["读取并操作", "Read and act"],
+    description: [
+      "操作可能使用比原工作台更广的代码托管权限。",
       "Actions may use broader source control permissions than the original environment.",
+    ],
   },
 ];
 
 export function PullRequestRoutingSettings() {
+  const language = useWorkbenchLanguage();
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const catalog = useAtomValue(environmentCatalog.catalogValueAtom);
   const permissions = useAtomValue(environmentCatalog.pullRequestRoutingPermissionsValueAtom);
   const update = useAtomCommand(environmentCatalog.setPullRequestRoutingPermission);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  if (catalog.entries.size === 0) return null;
+  const entries = [...catalog.entries.values()];
+  // Keep existing grants visible so they can still be revoked after removing a peer.
+  if (
+    entries.length < 2 &&
+    !entries.some((entry) => pullRequestRoutingPermissionFor(entry, permissions) !== "off")
+  )
+    return null;
 
   return (
     <View className="mt-5 gap-3">
-      <SettingsSection title="Pull request routing">
-        {[...catalog.entries.values()].map((entry) => {
+      <SettingsSection title={t("跨工作台 PR 路由", "Pull request routing")}>
+        {entries.map((entry) => {
           const environmentId = entry.target.environmentId;
           const selected = pullRequestRoutingPermissionFor(entry, permissions);
           const disabled =
@@ -55,7 +76,10 @@ export function PullRequestRoutingSettings() {
             <View key={environmentId}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`${entry.target.label} pull request routing`}
+                accessibilityLabel={t(
+                  `${entry.target.label} 的 PR 路由`,
+                  `${entry.target.label} pull request routing`,
+                )}
                 accessibilityState={{ expanded: expanded === environmentId }}
                 className="flex-row items-center gap-3 p-4"
                 onPress={() => setExpanded(expanded === environmentId ? null : environmentId)}
@@ -69,7 +93,11 @@ export function PullRequestRoutingSettings() {
                   </Text>
                 </View>
                 <Text className="text-sm text-foreground-muted">
-                  {options.find((option) => option.value === selected)?.label}
+                  {
+                    options.find((option) => option.value === selected)?.label[
+                      language === "zh" ? 0 : 1
+                    ]
+                  }
                 </Text>
                 <SymbolView
                   name={expanded === environmentId ? "chevron.up" : "chevron.down"}
@@ -81,8 +109,8 @@ export function PullRequestRoutingSettings() {
                 ? options.map((option) => (
                     <ListChoiceRow
                       key={option.value}
-                      label={option.label}
-                      description={option.description}
+                      label={t(...option.label)}
+                      description={t(...option.description)}
                       selected={selected === option.value}
                       disabled={disabled}
                       onPress={() => {
@@ -91,8 +119,11 @@ export function PullRequestRoutingSettings() {
                           setSaving(false);
                           if (result._tag === "Failure")
                             Dialog.alert(
-                              "Could not save pull request routing permission",
-                              "Try again before leaving this screen.",
+                              t(
+                                "无法保存 PR 路由权限",
+                                "Could not save pull request routing permission",
+                              ),
+                              t("请重试。", "Try again before leaving this screen."),
                             );
                         });
                       }}
@@ -104,8 +135,10 @@ export function PullRequestRoutingSettings() {
         })}
       </SettingsSection>
       <Text className="px-2 text-sm text-foreground-muted">
-        Choose environments you trust to share PR data and use each other's source control access.
-        Enable both environments. This applies only to this client.
+        {t(
+          "启用两台互相信任的工作台后，可以共享 PR 数据并使用对方的代码托管权限。设置仅在此客户端生效。",
+          "Choose environments you trust to share PR data and use each other's source control access. Enable both environments. This applies only to this client.",
+        )}
       </Text>
     </View>
   );

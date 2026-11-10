@@ -49,6 +49,12 @@ describe("wallet money display", () => {
 });
 
 describe("wallet status display", () => {
+  it("shows the charge from the Consumer side and pending earnings from the Provider side", () => {
+    expect(walletRecordStatus("estimated", "spending", "zh")).toBe("已按估算用量扣费");
+    expect(walletRecordStatus("estimated", "earnings", "zh")).toBe("待结算（用量估算）");
+    expect(walletRecordStatus("charged", "earnings", "en")).toBe("Pending settlement");
+  });
+
   it("distinguishes settlement, a credited top-up, and a recorded payout", () => {
     expect(walletRecordStatus("settled", "spending", "zh")).toBe("已结算");
     expect(walletRecordStatus("settled", "earnings", "en")).toBe("Settled");

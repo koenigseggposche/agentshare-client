@@ -1568,7 +1568,7 @@ it("stops stranded thinking after a steer and follows the next thought or tool",
   expect(first.status).toBe("running");
 });
 
-it.each(["provider_error", "usage_limit"] as const)(
+it.each(["provider_error", "usage_limit", "transport_error"] as const)(
   "keeps a historical %s failure and preceding work visible without disclosures",
   (failureClass) => {
     const at = "2026-06-20T00:00:03.000Z";
@@ -1578,7 +1578,10 @@ it.each(["provider_error", "usage_limit"] as const)(
       status: "failed",
       failure: {
         class: failureClass,
-        message: "The provider stopped this turn.\nRetry later.",
+        message:
+          failureClass === "transport_error"
+            ? "Stream disconnected before completion: generated failure"
+            : "The provider stopped this turn.\nRetry later.",
         code: null,
         retryable: true,
       },
@@ -1619,7 +1622,11 @@ it.each(["provider_error", "usage_limit"] as const)(
       "failure",
     ]);
     expect(activities.at(-1)).toMatchObject({
-      detail: error.failure.message,
+      detail:
+        failureClass === "transport_error"
+          ? expect.stringContaining("Check any partial output or changes before retrying.")
+          : error.failure.message,
+      ...(failureClass === "transport_error" ? { summary: "Model response interrupted" } : {}),
       createdAt: at,
       canExpand: false,
       prominent: true,

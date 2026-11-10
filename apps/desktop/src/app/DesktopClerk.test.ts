@@ -41,6 +41,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as ElectronApp from "../electron/ElectronApp.ts";
 import * as ElectronShell from "../electron/ElectronShell.ts";
 import * as ElectronWindow from "../electron/ElectronWindow.ts";
+import * as DesktopWindow from "../window/DesktopWindow.ts";
 import * as DesktopClerk from "./DesktopClerk.ts";
 import * as DesktopWebLinks from "./DesktopWebLinks.ts";
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
@@ -65,6 +66,7 @@ const layerDesktopClerk = (
     copyText: () => Effect.void,
   },
   listeners = new Map<string, (...args: unknown[]) => void>(),
+  activate = Effect.void,
 ) => {
   const environment = DesktopEnvironment.DesktopEnvironment.of({
     stateDir: clerkStateDir,
@@ -82,9 +84,10 @@ const layerDesktopClerk = (
       events.push("requestSingleInstanceLock");
       return requestSingleInstanceLockMock();
     }),
-    quit: Effect.sync(() => {
-      events.push("quit");
-    }),
+    exit: (code: number) =>
+      Effect.sync(() => {
+        events.push(`exit:${code}`);
+      }),
     on: (name: string, listener: (...args: unknown[]) => void) =>
       Effect.acquireRelease(
         Effect.sync(() => {
@@ -99,6 +102,11 @@ const layerDesktopClerk = (
   } as unknown as ElectronApp.ElectronApp["Service"];
 
   return DesktopClerk.layer.pipe(
+    Layer.provideMerge(
+      Layer.succeed(DesktopWindow.DesktopWindow, {
+        activate,
+      } as unknown as DesktopWindow.DesktopWindow["Service"]),
+    ),
     Layer.provide(
       Layer.mergeAll(
         NodePathLayer.layerPosix,
@@ -183,14 +191,13 @@ describe("DesktopClerk", () => {
   );
 
   it.effect.each(["before configure", "after configure"] as const)(
-    "reveals the running window when a second instance launches %s",
+    "activates the workbench without an existing window when a second instance launches %s",
     (entry) => {
       storageMock.mockReturnValue(storageAdapter);
       createClerkBridgeMock.mockReturnValue({ cleanup: vi.fn(), isPrimaryInstance: true });
       const quit = vi.fn();
       const listeners = new Map<string, (...args: unknown[]) => void>();
-      const revealed = Promise.withResolvers<unknown>();
-      const window = { id: 1 };
+      const activated = Promise.withResolvers<void>();
       const electronApp = {
         quit: Effect.sync(quit),
         on: (eventName: string, listener: (...args: unknown[]) => void) =>
@@ -199,9 +206,9 @@ describe("DesktopClerk", () => {
           }),
       } as unknown as ElectronApp.ElectronApp["Service"];
       const electronWindow = {
-        currentMainOrFirst: Effect.succeedSome(window),
-        reveal: (value: unknown) => Effect.sync(() => revealed.resolve(value)),
+        currentMainOrFirst: Effect.succeedNone,
       } as unknown as ElectronWindow.ElectronWindow["Service"];
+      const activate = Effect.sync(() => activated.resolve());
 
       return Effect.gen(function* () {
         const clerk = yield* DesktopClerk.DesktopClerk;
@@ -210,10 +217,12 @@ describe("DesktopClerk", () => {
 
         assert.equal(quit.mock.calls.length, 0);
         if (entry === "after configure") listeners.get("second-instance")!({}, ["t3"]);
-        assert.strictEqual(yield* Effect.promise(() => revealed.promise), window);
+        yield* Effect.promise(() => activated.promise);
       }).pipe(
         Effect.scoped,
-        Effect.provide(layerDesktopClerk(true, [], "darwin", undefined, undefined, listeners)),
+        Effect.provide(
+          layerDesktopClerk(true, [], "darwin", undefined, undefined, listeners, activate),
+        ),
         Effect.provideService(ElectronApp.ElectronApp, electronApp),
         Effect.provideService(ElectronWindow.ElectronWindow, electronWindow),
         Effect.provideService(DesktopWebLinks.DesktopWebLinks, ignoreWebLinks),
@@ -295,7 +304,7 @@ describe("DesktopClerk", () => {
         assert.deepEqual(events, [
           "setPath:userData:/tmp/app-data/agentshare-client",
           "requestSingleInstanceLock",
-          "quit",
+          "exit:0",
         ]);
         assert.equal(createClerkBridgeMock.mock.calls.length, 0);
         assert.equal(storageMock.mock.calls.length, 0);

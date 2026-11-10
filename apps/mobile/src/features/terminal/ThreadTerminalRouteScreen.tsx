@@ -849,8 +849,7 @@ function ThreadTerminal(props: {
             <EnvironmentConnectionNotice
               environmentLabel={
                 environment.presentation?.entry.target.label ??
-                selectedEnvironmentConnection?.environmentLabel ??
-                "Environment"
+                selectedEnvironmentConnection?.environmentLabel
               }
               connection={
                 environment.presentation?.connection ?? {

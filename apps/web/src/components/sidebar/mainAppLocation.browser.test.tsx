@@ -1,5 +1,5 @@
 import { EnvironmentId, MessageId, ThreadId, type AssistantCitation } from "@t3tools/contracts";
-import type { AnyRouter } from "@tanstack/react-router";
+import { useNavigate, type AnyRouter } from "@tanstack/react-router";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 
@@ -51,7 +51,46 @@ async function settled(router: AnyRouter, navigation: Promise<void>) {
   );
 }
 
+function KeyboardOpenControls() {
+  const navigate = useNavigate();
+  const close = useCloseAppModal();
+  return (
+    <>
+      <button type="button" onClick={() => void navigate({ href: "/settings/agentshare" })}>
+        Browse models
+      </button>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.currentTarget.blur();
+          void close();
+        }}
+      >
+        Close settings
+      </button>
+    </>
+  );
+}
+
 describe("main app return location", () => {
+  it("returns keyboard focus to the control that opened Settings", async () => {
+    await using screen = await render(<KeyboardOpenControls />, { router: THREAD_PATH });
+    const router = screen.router!;
+    using _tracking = { [Symbol.dispose]: startMainAppLocationTracking(router) };
+    const opener = screen.getByRole("button", { name: "Browse models" }).element();
+    await userEvent.tab();
+    expect(document.activeElement).toBe(opener);
+    expect(opener.matches(":focus-visible")).toBe(true);
+    await userEvent.keyboard("{Enter}");
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe("/settings/agentshare"));
+    await userEvent.tab();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Close settings" }).element(),
+    );
+    await userEvent.keyboard("{Enter}");
+    await vi.waitFor(() => expect(document.activeElement).toBe(opener));
+  });
+
   it("returns to the thread without re-opening the quote source it was opened at", async () => {
     await using screen = await render(<ReturnControls />, { router: THREAD_PATH });
     const router = screen.router!;

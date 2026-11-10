@@ -19,6 +19,7 @@ const SHELL_LESS_PATHS = new Set(["/pair", "/connect", "/connect-agent", GUEST_P
 
 let mainAppHref: string | null = null;
 let appModalReturnHref: string | null = null;
+let appModalKeyboardOpener: HTMLElement | null = null;
 
 /** Remembers where Settings, Usage, and the utility pages lead back to. */
 export function startMainAppLocationTracking(router: AnyRouter): () => void {
@@ -26,11 +27,34 @@ export function startMainAppLocationTracking(router: AnyRouter): () => void {
     const { pathname } = router.state.location;
     if (isAppModalPage(pathname) || SHELL_LESS_PATHS.has(pathname)) return;
     const href = withoutAssistantCitationHash(router.state.location.href);
+    const opener = href === appModalReturnHref ? appModalKeyboardOpener : null;
+    appModalKeyboardOpener = null;
+    if (opener?.isConnected && document.activeElement === document.body) {
+      opener.focus({ preventScroll: true });
+    }
     appModalReturnHref = href;
     if (!isSidebarUtilityPage(pathname)) mainAppHref = href;
   };
   record();
-  return router.subscribe("onResolved", record);
+  const stopRecording = router.subscribe("onResolved", record);
+  const stopCapturingOpener = router.subscribe(
+    "onBeforeNavigate",
+    ({ fromLocation, toLocation }) => {
+      if (
+        (fromLocation !== undefined && isAppModalPage(fromLocation.pathname)) ||
+        !isAppModalPage(toLocation.pathname)
+      )
+        return;
+      const focused = document.activeElement;
+      appModalKeyboardOpener =
+        focused instanceof HTMLElement && focused.matches(":focus-visible") ? focused : null;
+    },
+  );
+  return () => {
+    stopRecording();
+    stopCapturingOpener();
+    appModalKeyboardOpener = null;
+  };
 }
 
 export function useNavigateToMainApp() {

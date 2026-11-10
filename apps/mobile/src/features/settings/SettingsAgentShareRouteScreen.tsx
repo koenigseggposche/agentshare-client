@@ -374,7 +374,7 @@ function HostAccount({
   );
 }
 
-function HostModels({
+export function HostModels({
   environmentId,
   owner,
   language,
@@ -426,6 +426,9 @@ function HostModels({
         ))}
       </View>
       <ListActionRow label={t("刷新模型", "Refresh models")} onPress={query.refresh} />
+      {!allowed ? (
+        <Text>{t("此连接没有添加模型的权限。", "This connection cannot add models.")}</Text>
+      ) : null}
       {message ? <Text>{message}</Text> : null}
       {query.error ? (
         <Text>{t("暂时无法读取模型目录。", "The model catalog could not be loaded.")}</Text>

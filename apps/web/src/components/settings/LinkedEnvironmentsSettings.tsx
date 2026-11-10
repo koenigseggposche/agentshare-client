@@ -325,7 +325,7 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
                   onChange={(event) => setPairingCode(event.target.value)}
                   placeholder={
                     machine === null
-                      ? "From that environment's Connections, or t3 pair there"
+                      ? "From that computer’s Sharing & access settings"
                       : "Paste the code"
                   }
                   disabled={busy}
@@ -335,8 +335,8 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
                 />
                 {machine !== null ? (
                   <span className="block text-xs text-muted-foreground">
-                    Create a link on {machine.label}: Settings → Connections → Create link, then
-                    paste its code here.
+                    Create a link on {machine.label}: Settings → Sharing & access → Create link,
+                    then paste its code here.
                   </span>
                 ) : null}
               </label>

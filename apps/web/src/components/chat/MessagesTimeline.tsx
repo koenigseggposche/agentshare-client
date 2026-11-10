@@ -301,6 +301,7 @@ interface MessagesTimelineProps {
   liveFollowEnabled: boolean;
   /** Receives the list's viewport when it mounts; the returned cleanup runs when it goes away. */
   onViewportAttach?: (viewport: TimelineViewport) => () => void;
+  onListLoad?: () => void;
   /** The footer's content grew, such as a new queued turn or status line. */
   onFooterGrow?: () => void;
   findOpen?: boolean;
@@ -398,6 +399,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
   onIsAtEndChange,
   liveFollowEnabled,
   onViewportAttach,
+  onListLoad,
   onFooterGrow,
   hideEmptyPlaceholder = false,
   emptyPlaceholderInset,
@@ -776,6 +778,7 @@ const ConversationTimeline = memo(function ConversationTimeline({
   const handleListLoad = () => {
     onCitationListLoad();
     setFindListReady(true);
+    onListLoad?.();
   };
   const [minimapHasPersistentGutter, setMinimapHasPersistentGutter] = useState(false);
   // Every full-screen viewer reports false when it unmounts, so a row that leaves the list

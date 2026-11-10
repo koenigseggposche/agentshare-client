@@ -49,6 +49,8 @@ import {
   pullRequestProjectChoices,
 } from "./pullRequestList";
 import { useDebouncedValue } from "../../state/queries";
+import { openSettings } from "../settings/settings-navigation";
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { useWorkspaceTabs } from "../workspace/WorkspaceTabsContext";
 import { useSearchScrollRestoration } from "../workspace/useSearchScrollRestoration";
 import { useSelectWorkspaceDetail } from "../workspace/useSelectWorkspaceDetail";
@@ -108,6 +110,7 @@ export function PullRequestsScreen(
   } = {},
 ) {
   const navigation = useNavigation();
+  const language = useWorkbenchLanguage();
   const primaryColumn = use(NativePrimaryColumnContext);
   const workspace = useWorkspaceTabs()!;
   const { environments } = useWorkspaceState();
@@ -270,6 +273,26 @@ export function PullRequestsScreen(
         labelColors,
       }),
   });
+  if (environments.length === 0) {
+    const empty = (
+      <View
+        className={sidebar ? "flex-1 justify-center bg-drawer" : "flex-1 justify-center bg-screen"}
+      >
+        <EmptyState
+          title={language === "zh" ? "尚未连接电脑" : "No computer connected"}
+          detail={
+            language === "zh"
+              ? "连接一台电脑，即可查看它的拉取请求。"
+              : "Connect a computer to browse its pull requests."
+          }
+          actionLabel={language === "zh" ? "连接电脑" : "Connect a computer"}
+          onAction={() => openSettings(navigation, "SettingsEnvironments")}
+          variant="plain"
+        />
+      </View>
+    );
+    return props.renderFrame ? props.renderFrame(null, empty) : empty;
+  }
   const renderPullRequest = ({ item }: { readonly item: EnvironmentPullRequestListEntry }) => (
     <PullRequestListRow
       item={item}

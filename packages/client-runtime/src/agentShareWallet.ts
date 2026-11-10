@@ -1,4 +1,6 @@
 import type { AgentShareWalletHistoryKind } from "@t3tools/contracts";
+import * as DateTime from "effect/DateTime";
+import * as Option from "effect/Option";
 
 export function formatWalletAmount(
   micros: number,
@@ -32,6 +34,20 @@ export function formatWalletAmount(
   } catch {
     return `${currency} ${micros < 0 ? "-" : ""}${whole}.${fraction}`;
   }
+}
+
+export function formatWalletDate(
+  value: string | undefined,
+  language: "zh" | "en",
+): string | undefined {
+  if (!value) return undefined;
+  const date = DateTime.make(value);
+  return Option.isSome(date)
+    ? new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(date.value.epochMilliseconds)
+    : value;
 }
 
 export function walletMinorFactor(currency: string): number | undefined {
@@ -82,7 +98,7 @@ export function walletFundStatus(
 const dealStatuses = new Map<string, readonly [string, string]>([
   ["started", ["处理中", "In progress"]],
   ["review", ["待审核", "Under review"]],
-  ["estimated", ["费用已预估", "Estimated"]],
+  ["estimated", ["已按估算用量扣费", "Charged on estimated usage"]],
   ["charged", ["已扣费", "Charged"]],
   ["settled", ["已结算", "Settled"]],
   ["released", ["冻结金额已释放", "Hold released"]],
@@ -97,5 +113,35 @@ export function walletRecordStatus(
   if (kind === "topups" || kind === "withdrawals") {
     return walletFundStatus(status, kind === "topups" ? "topup" : "withdraw", language);
   }
+  if (kind === "earnings") {
+    if (status === "charged") return language === "zh" ? "待结算" : "Pending settlement";
+    if (status === "estimated") {
+      return language === "zh" ? "待结算（用量估算）" : "Pending settlement (estimated usage)";
+    }
+  }
   return dealStatuses.get(status)?.[language === "zh" ? 0 : 1] ?? status;
+}
+
+export function walletDealAmountLabels(
+  detail: { readonly status: string; readonly usage: { readonly estimated?: boolean } },
+  language: "zh" | "en",
+) {
+  const estimated = detail.status === "estimated" || detail.usage.estimated === true;
+  const pending = detail.status === "estimated" || detail.status === "charged";
+  return {
+    charge: estimated
+      ? language === "zh"
+        ? "按估算用量扣费"
+        : "Charge based on estimated usage"
+      : language === "zh"
+        ? "扣费"
+        : "Charge",
+    earnings: pending
+      ? language === "zh"
+        ? "Provider 待结算收益"
+        : "Pending Provider earnings"
+      : language === "zh"
+        ? "Provider 收益"
+        : "Provider earnings",
+  };
 }

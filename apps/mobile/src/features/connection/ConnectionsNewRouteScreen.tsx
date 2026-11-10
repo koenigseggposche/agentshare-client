@@ -221,13 +221,23 @@ function PairingForm({
         }}
       >
         <View collapsable={false} className="gap-6.5">
-          <PairingScanCard
-            cameraActive={cameraPermission?.granted === true && screenFocused && !scanComplete}
-            onScan={handleQrScan}
-            onScanPress={() => {
-              void handleScanPress();
-            }}
-          />
+          {reviewAddress ? null : (
+            <View className="gap-2">
+              <PairingScanCard
+                cameraActive={cameraPermission?.granted === true && screenFocused && !scanComplete}
+                onScan={handleQrScan}
+                onScanPress={() => {
+                  void handleScanPress();
+                }}
+              />
+              <Text className="px-4 text-sm leading-normal text-foreground-muted">
+                {t(
+                  "在要连接的电脑上打开 AgentShare 的 Settings → Sharing & access，点击 Authorized clients 旁的 Create link。若 Network access 未开启，请先开启并按提示重启。",
+                  "On the computer you want to connect to, open AgentShare Settings → Sharing & access and click Create link next to Authorized clients. If Network access is off, turn it on first and restart when prompted.",
+                )}
+              </Text>
+            </View>
+          )}
 
           <View collapsable={false} className="gap-2">
             <Text className="px-4 text-sm font-t3-medium text-foreground-muted">
@@ -370,10 +380,7 @@ function PairingScanCard(props: {
           )}
         </View>
         <Text className={cn("text-center text-sm", light ? "text-black/70" : "text-white/80")}>
-          {t(
-            "扫描 t3 pair 命令或桌面连接设置中的二维码",
-            "Scan the code from t3 pair or desktop Connections settings",
-          )}
+          {t("扫描电脑上的配对二维码", "Scan the pairing QR code on your computer")}
         </Text>
       </View>
     </Pressable>

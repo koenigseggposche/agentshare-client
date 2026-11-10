@@ -1,3 +1,4 @@
+import { workspaceConnectionEmptyState } from "../connection/workspace-empty-state";
 import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { usePaneRole } from "../../components/ui/Pane";
 import { useActiveNewTask } from "../../state/active-new-task";
@@ -108,6 +109,7 @@ interface HomeScreenProps {
   readonly onEnvironmentChange: (environmentId: EnvironmentId | null) => void;
   readonly onProjectChange: (projectKey: string | null) => void;
   readonly onAddConnection: () => void;
+  readonly onOpenEnvironments: () => void;
   readonly onOpenSettings: () => void;
   readonly onStartNewTask: () => void;
   readonly onSelectThread: (thread: EnvironmentThreadShell) => void;
@@ -150,52 +152,9 @@ function deriveEmptyState(props: {
   readonly language: ReturnType<typeof useWorkbenchLanguage>;
 }): { readonly title: string; readonly detail: string; readonly loading: boolean } {
   const { catalogState, language } = props;
-  if (catalogState.isLoadingConnections) {
-    return {
-      title: "Loading environments",
-      detail: "Checking saved environments on this device.",
-      loading: true,
-    };
-  }
-
-  if (!catalogState.hasConnections) {
-    return {
-      title: "No environments connected",
-      detail: "Add an environment to load projects and start coding sessions.",
-      loading: false,
-    };
-  }
-
-  if (
-    (catalogState.connectionState === "available" ||
-      catalogState.connectionState === "offline" ||
-      catalogState.connectionState === "error" ||
-      catalogState.connectionState === "unsupported") &&
-    !catalogState.hasLoadedShellSnapshot
-  ) {
-    return {
-      title:
-        catalogState.connectionState === "unsupported"
-          ? "Client not supported"
-          : "Environment unavailable",
-      detail:
-        catalogState.connectionError ??
-        "The saved environment is offline. Check the URL or start the environment, then retry.",
-      loading: false,
-    };
-  }
-
-  if (
-    catalogState.hasConnectingEnvironment &&
-    !catalogState.hasLoadedShellSnapshot &&
-    catalogState.connectionError === null
-  ) {
-    return {
-      title: "Connecting to environment",
-      detail: "Loading projects and threads from the saved environment.",
-      loading: true,
-    };
-  }
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
+  const connection = workspaceConnectionEmptyState(catalogState, language);
+  if (connection) return connection;
 
   if (props.projectCount === 0 && catalogState.hasLoadedShellSnapshot) {
     return {
@@ -209,8 +168,11 @@ function deriveEmptyState(props: {
   }
 
   return {
-    title: "No threads yet",
-    detail: "Create a task to start a new coding runtime in one of your connected projects.",
+    title: t("还没有会话", "No threads yet"),
+    detail: t(
+      "新建任务即可在已连接的项目中开始会话。",
+      "Create a task to start a conversation in one of your connected projects.",
+    ),
     loading: false,
   };
 }
@@ -676,6 +638,19 @@ export function HomeScreen(props: HomeScreenProps) {
     language,
   });
 
+  const showEnvironmentAction = !props.catalogState.hasReadyEnvironment && !emptyState.loading;
+  const hasSavedEnvironments = props.catalogState.hasConnections;
+  const environmentActionLabel = hasSavedEnvironments
+    ? language === "zh"
+      ? "查看已保存环境"
+      : "View saved environments"
+    : language === "zh"
+      ? "添加环境"
+      : "Add environment";
+  const onEnvironmentAction = hasSavedEnvironments
+    ? props.onOpenEnvironments
+    : props.onAddConnection;
+
   if (!hasAnyThreads) {
     return (
       <View className={containerClassName}>
@@ -696,16 +671,16 @@ export function HomeScreen(props: HomeScreenProps) {
             <EmptyState
               title={emptyState.title}
               detail={emptyState.detail}
-              actionLabel={!props.catalogState.hasReadyEnvironment ? "Add environment" : undefined}
-              onAction={!props.catalogState.hasReadyEnvironment ? props.onAddConnection : undefined}
+              actionLabel={showEnvironmentAction ? environmentActionLabel : undefined}
+              onAction={showEnvironmentAction ? onEnvironmentAction : undefined}
               action={
-                Platform.OS === "android" && !props.catalogState.hasReadyEnvironment ? (
+                Platform.OS === "android" && showEnvironmentAction ? (
                   <FloatingActionButton
-                    label="Add environment"
-                    icon="plus"
+                    label={environmentActionLabel}
+                    icon={hasSavedEnvironments ? "desktopcomputer" : "plus"}
                     variant="extended"
                     tone="primary"
-                    onPress={props.onAddConnection}
+                    onPress={onEnvironmentAction}
                   />
                 ) : undefined
               }

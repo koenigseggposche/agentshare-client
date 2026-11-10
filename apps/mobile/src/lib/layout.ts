@@ -110,6 +110,7 @@ export function deriveLayout(input: {
   readonly height: number;
   readonly nativeMetrics?: NativeLayoutMetrics | null;
   readonly nativeWorkspace?: boolean;
+  readonly forceCompact?: boolean;
 }): Layout {
   const { width, height } = input;
   const metrics = input.nativeMetrics;
@@ -123,8 +124,9 @@ export function deriveLayout(input: {
     (metrics.hasHinge === true ||
       metrics.verticalBarEdge !== "none" ||
       metrics.reservedRegions.some((region) => region.kind === "division"));
-  const variant: LayoutVariant =
-    metrics && (input.nativeWorkspace || hasDuoGeometry)
+  const variant: LayoutVariant = input.forceCompact
+    ? "compact"
+    : metrics && (input.nativeWorkspace || hasDuoGeometry)
       ? metrics.horizontalSizeClass === "regular" &&
         usableWidth >= SPLIT_SIDEBAR_MIN_WIDTH + 320 &&
         (input.nativeWorkspace || height >= 400)

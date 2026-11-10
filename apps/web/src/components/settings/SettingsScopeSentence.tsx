@@ -3,6 +3,7 @@ import { useLocation } from "@tanstack/react-router";
 import { CheckIcon, ChevronDownIcon, LayersIcon } from "lucide-react";
 import { Fragment, useState, type ReactNode } from "react";
 
+import { useClientSettings } from "../../hooks/useSettings";
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
 import { useEnvironments, type EnvironmentPresentation } from "../../state/environments";
 import { EnvironmentMachineIcon } from "../EnvironmentMachineIcon";
@@ -64,6 +65,7 @@ interface SettingsScopeMenuProps {
 
 export function SettingsScopeSentence() {
   const scope = useOptionalSettingsScope();
+  const language = useClientSettings((settings) => settings.uiLanguage);
   const pathname = useLocation({ select: (location) => location.pathname });
   const { environments } = useEnvironments();
   if (scope === null || SETTINGS_DEVICE_ONLY_PATHS.has(pathname)) return null;
@@ -75,10 +77,11 @@ export function SettingsScopeSentence() {
     onChange: scope.selectScope,
   };
   if (pathname === "/settings/agentshare") {
+    const hostLabel = language === "zh" ? "执行电脑" : "Execution host";
     return (
       <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <span>执行电脑 / Execution host</span>
-        <EnvironmentScopeMenu {...props} singleEnvironment />
+        <span>{hostLabel}</span>
+        <EnvironmentScopeMenu {...props} singleEnvironment ariaLabel={hostLabel} />
       </p>
     );
   }
@@ -239,7 +242,8 @@ function EnvironmentScopeMenu({
   environments,
   onChange,
   singleEnvironment,
-}: SettingsScopeMenuProps) {
+  ariaLabel = "Environment scope",
+}: SettingsScopeMenuProps & { readonly ariaLabel?: string }) {
   const resolved = resolveSettingsScope(value, groups, environments);
   const environmentValue = environmentAxisValue(
     value,
@@ -257,7 +261,7 @@ function EnvironmentScopeMenu({
     : environments;
   return (
     <ScopeMenu
-      ariaLabel="Environment scope"
+      ariaLabel={ariaLabel}
       icon={
         selected ? (
           <EnvironmentMachineIcon

@@ -23,17 +23,24 @@ import { environmentPresentations } from "../../state/presentation";
 import { ConnectionDiagnosisDetails, useConnectionDiagnosis } from "./ConnectionDiagnosisDetails";
 import { ConnectionFormField } from "./ConnectionFormField";
 import { ConnectionStatusDot } from "./ConnectionStatusDot";
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { environmentStatusText } from "./environmentStatusText";
 
-function connectionStatusLabel(environment: ConnectedEnvironmentSummary): string | null {
+function connectionStatusLabel(
+  environment: ConnectedEnvironmentSummary,
+  language: "zh" | "en",
+): string | null {
   if (!environment.isEnabled && environment.connectionState !== "unsupported") {
-    return "Off";
+    return language === "zh" ? "已关闭" : "Off";
   }
-  return environmentStatusText({
-    phase: environment.connectionState,
-    error: environment.connectionError,
-    traceId: environment.connectionErrorTraceId,
-  });
+  return environmentStatusText(
+    {
+      phase: environment.connectionState,
+      error: environment.connectionError,
+      traceId: environment.connectionErrorTraceId,
+    },
+    language,
+  );
 }
 
 export function ConnectionEnvironmentRow(props: {
@@ -49,6 +56,7 @@ export function ConnectionEnvironmentRow(props: {
     updates: { readonly label: string; readonly displayUrl: string },
   ) => Promise<AtomCommandResult<unknown, unknown>>;
 }) {
+  const language = useWorkbenchLanguage();
   const [label, setLabel] = useState(props.environment.environmentLabel);
   const [url, setUrl] = useState(props.environment.displayUrl);
   const serverConfig = useAtomValue(
@@ -63,10 +71,24 @@ export function ConnectionEnvironmentRow(props: {
     props.environment.environmentId,
     presentation,
   );
+  const name = props.environment.environmentLabel;
+  const rowLabel = props.opensDetails
+    ? language === "zh"
+      ? `管理 ${name}`
+      : `Manage ${name}`
+    : props.expanded
+      ? language === "zh"
+        ? `收起 ${name} 的详情`
+        : `Collapse details for ${name}`
+      : language === "zh"
+        ? `展开 ${name} 的详情`
+        : `Expand details for ${name}`;
   const enabled = props.environment.isEnabled && !unsupported;
-  const statusLabel = connectionStatusLabel(props.environment);
+  const statusLabel = connectionStatusLabel(props.environment, language);
+  const isOffline = connectionState.network === "offline" || connectionState.phase === "offline";
+  const diagnosisHeadline = isOffline && language === "zh" ? "设备未联网" : diagnosis?.headline;
   const displayUrl = props.environment.isRelayManaged ? "" : props.environment.displayUrl.trim();
-  const accessibilityStatus = [displayUrl, diagnosis?.headline ?? statusLabel]
+  const accessibilityStatus = [displayUrl, diagnosisHeadline ?? statusLabel]
     .filter(Boolean)
     .join(", ");
   const statusTraceId = enabled ? props.environment.connectionErrorTraceId : null;
@@ -76,6 +98,7 @@ export function ConnectionEnvironmentRow(props: {
     : null;
   const isRetrying =
     enabled &&
+    !isOffline &&
     (props.environment.connectionState === "connecting" ||
       props.environment.connectionState === "reconnecting");
   const handleSave = async () => {
@@ -100,11 +123,7 @@ export function ConnectionEnvironmentRow(props: {
         <Pressable
           className="min-w-0 flex-1 gap-0.5 active:opacity-70"
           accessibilityRole="button"
-          accessibilityLabel={
-            props.opensDetails
-              ? `Manage ${props.environment.environmentLabel}`
-              : `${props.expanded ? "Collapse" : "Expand"} details for ${props.environment.environmentLabel}`
-          }
+          accessibilityLabel={rowLabel}
           accessibilityValue={{ text: accessibilityStatus }}
           onPress={props.onToggle}
         >
@@ -133,10 +152,12 @@ export function ConnectionEnvironmentRow(props: {
           ) : null}
           {diagnosis ? (
             <>
-              <Text className="text-xs text-danger-foreground">{diagnosis.headline}</Text>
-              {connectionState.attempt > 0 ? (
+              <Text className="text-xs text-danger-foreground">{diagnosisHeadline}</Text>
+              {isRetrying && connectionState.attempt > 0 ? (
                 <Text className="text-xs text-foreground-muted">
-                  {`Retrying · attempt ${connectionState.attempt}`}
+                  {language === "zh"
+                    ? `正在重试 · 第 ${connectionState.attempt} 次`
+                    : `Retrying · attempt ${connectionState.attempt}`}
                 </Text>
               ) : null}
             </>
@@ -170,19 +191,16 @@ export function ConnectionEnvironmentRow(props: {
         </Pressable>
 
         <ThemedSwitch
-          accessibilityLabel={`Enable ${props.environment.environmentLabel}`}
+          accessibilityLabel={language === "zh" ? `启用 ${name}` : `Enable ${name}`}
           style={{ alignSelf: "center" }}
           disabled={unsupported && !canRetry}
           onValueChange={(next) => props.onSetEnabled(props.environment.environmentId, next)}
           value={enabled}
         />
         <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={
-            props.opensDetails
-              ? `Manage ${props.environment.environmentLabel}`
-              : `${props.expanded ? "Collapse" : "Expand"} details for ${props.environment.environmentLabel}`
-          }
+          accessible={false}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
           onPress={props.onToggle}
           style={{
             minWidth: 44,

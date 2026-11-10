@@ -7,7 +7,7 @@ import {
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import type { EnvironmentId } from "@t3tools/contracts";
+import { AuthOrchestrationOperateScope, type EnvironmentId } from "@t3tools/contracts";
 import type { AtomRegistry } from "effect/reactivity";
 import { useContext } from "react";
 
@@ -18,6 +18,7 @@ import {
   usePrimaryEnvironmentId,
 } from "~/state/environments";
 import { projectEnvironment } from "~/state/projects";
+import { useEnvironmentsWithScope } from "~/state/session";
 import { type NewThreadHandler, useNewThreadHandler } from "./useHandleNewThread";
 
 function reportScratchFailure(title: string, error: unknown) {
@@ -38,6 +39,7 @@ export function createScratchProjectActions(input: {
   readonly environments: () => Iterable<ScratchEnvironment>;
   readonly primaryEnvironmentId: () => EnvironmentId | null;
   readonly registry: AtomRegistry.AtomRegistry;
+  readonly canOperate: (environmentId: EnvironmentId) => boolean;
   readonly handleNewThread: NewThreadHandler;
 }) {
   const scratchWorkspaceRootFor = (environmentId: EnvironmentId | null): string | null => {
@@ -51,11 +53,11 @@ export function createScratchProjectActions(input: {
   // The primary (local) environment wins; `fallback` only applies when it offers no scratch root.
   const scratchEnvironmentId = (fallback: EnvironmentId | null): EnvironmentId | null => {
     const primary = input.primaryEnvironmentId();
-    if (primary !== null && scratchWorkspaceRootFor(primary) !== null) return primary;
-    if (fallback !== null && scratchWorkspaceRootFor(fallback) !== null) return fallback;
-    const offering = [...input.environments()].filter(
-      (entry) => scratchWorkspaceRootFor(entry.environmentId) !== null,
-    );
+    const canStart = (environmentId: EnvironmentId) =>
+      input.canOperate(environmentId) && scratchWorkspaceRootFor(environmentId) !== null;
+    if (primary !== null && canStart(primary)) return primary;
+    if (fallback !== null && canStart(fallback)) return fallback;
+    const offering = [...input.environments()].filter((entry) => canStart(entry.environmentId));
     return offering.length === 1 ? (offering[0]?.environmentId ?? null) : null;
   };
 
@@ -63,6 +65,7 @@ export function createScratchProjectActions(input: {
     environmentId: EnvironmentId,
     failureTitle = "Could not start without a project",
   ): Promise<EnvironmentProject | null> => {
+    if (!input.canOperate(environmentId)) return null;
     const command = projectEnvironment.openScratch;
     const result = await runAtomCommand(
       input.registry,
@@ -96,10 +99,17 @@ export function useScratchProject() {
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const registry = useContext(RegistryContext);
   const handleNewThread = useNewThreadHandler();
-  return createScratchProjectActions({
-    environments: () => environments,
-    primaryEnvironmentId: () => primaryEnvironmentId,
-    registry,
-    handleNewThread,
-  });
+  const writable = useEnvironmentsWithScope(environments, AuthOrchestrationOperateScope);
+  return {
+    ...createScratchProjectActions({
+      environments: () => environments,
+      primaryEnvironmentId: () => primaryEnvironmentId,
+      registry,
+      canOperate: (id) => writable.has(id),
+      handleNewThread,
+    }),
+    canCreateProject: environments.some(
+      (entry) => entry.connection.phase === "connected" && writable.has(entry.environmentId),
+    ),
+  };
 }

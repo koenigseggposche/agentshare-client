@@ -1447,6 +1447,9 @@ function ImportStep({
     );
   }
 
+  const noProjectsToImport =
+    candidates.length === 0 && scans.every((scan) => !scan.isPending && scan.error === null);
+
   return (
     <StepShell
       title="Import your projects"
@@ -1534,18 +1537,26 @@ function ImportStep({
         <p className="mt-3 text-sm text-destructive">{visibleImportError}</p>
       ) : null}
       <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-        <Button variant="ghost-muted" disabled={isImporting} onClick={finishAfterImport}>
-          Do not import projects
-        </Button>
-        <Button
-          autoFocus
-          disabled={!canImport || isImporting || selected.length === 0}
-          onClick={() => void runImport(selected)}
-        >
-          {isImporting
-            ? "Importing…"
-            : `Import ${selected.length} ${selected.length === 1 ? "project" : "projects"}`}
-        </Button>
+        {noProjectsToImport ? (
+          <Button autoFocus onClick={finishAfterImport}>
+            Finish setup
+          </Button>
+        ) : (
+          <>
+            <Button variant="ghost-muted" disabled={isImporting} onClick={finishAfterImport}>
+              Do not import projects
+            </Button>
+            <Button
+              autoFocus
+              disabled={!canImport || isImporting || selected.length === 0}
+              onClick={() => void runImport(selected)}
+            >
+              {isImporting
+                ? "Importing…"
+                : `Import ${selected.length} ${selected.length === 1 ? "project" : "projects"}`}
+            </Button>
+          </>
+        )}
       </div>
     </StepShell>
   );

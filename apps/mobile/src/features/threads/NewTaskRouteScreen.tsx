@@ -1,3 +1,4 @@
+import { workspaceConnectionEmptyState } from "../connection/workspace-empty-state";
 import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { isDraftThreadRoute } from "./thread-route-state";
 import * as Dialog from "../../components/ui/Dialog";
@@ -13,6 +14,7 @@ import {
 import { SymbolView } from "../../components/ui/AppSymbol";
 import { pickableProjectGroups } from "@t3tools/client-runtime/state/project-grouping";
 import { isScratchProject } from "@t3tools/client-runtime/state/projects";
+import { AuthOrchestrationOperateScope } from "@t3tools/contracts";
 import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
@@ -29,11 +31,13 @@ import { AppText as Text } from "../../components/ui/AppText";
 import { ProjectFavicon } from "../../components/ProjectFavicon";
 import { useProjects, useServerConfigs } from "../../state/entities";
 import { projectEnvironment } from "../../state/projects";
+import { useEnvironmentsWithScope } from "../../state/session";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { useRemoteConnectionStatus } from "../../state/use-remote-environment-registry";
 import type { WorkspaceState } from "../../state/workspaceModel";
 import { useWorkspaceState } from "../../state/workspace";
 
+import { openSettings } from "../settings/settings-navigation";
 import { useIncomingShare } from "../sharing/IncomingShareProvider";
 import { useNewTaskFlow } from "./new-task-flow-provider";
 import {
@@ -60,52 +64,8 @@ function deriveProjectEmptyState(
   readonly detail: string;
   readonly loading: boolean;
 } {
-  if (catalogState.isLoadingConnections) {
-    return {
-      title: "Loading environments",
-      detail: "Checking saved environments on this device.",
-      loading: true,
-    };
-  }
-
-  if (!catalogState.hasConnections) {
-    return {
-      title: "No environments connected",
-      detail: "Add an environment before creating a task.",
-      loading: false,
-    };
-  }
-
-  if (
-    (catalogState.connectionState === "available" ||
-      catalogState.connectionState === "offline" ||
-      catalogState.connectionState === "error" ||
-      catalogState.connectionState === "unsupported") &&
-    !catalogState.hasLoadedShellSnapshot
-  ) {
-    return {
-      title:
-        catalogState.connectionState === "unsupported"
-          ? "Client not supported"
-          : "Environment unavailable",
-      detail:
-        catalogState.connectionError ??
-        "The saved environment is offline. Check the URL or start the environment, then retry.",
-      loading: false,
-    };
-  }
-
-  if (
-    catalogState.hasConnectingEnvironment &&
-    !catalogState.hasLoadedShellSnapshot &&
-    catalogState.connectionError === null
-  ) {
-    return {
-      title: "Connecting to environment",
-      detail: "Loading projects from the saved environment.",
-      loading: true,
-    };
-  }
+  const connection = workspaceConnectionEmptyState(catalogState, language);
+  if (connection) return connection;
 
   return {
     title: language === "zh" ? "还没有项目" : "No projects found",
@@ -179,8 +139,11 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
         ? `Choose a project for the ${incomingShare.attachments[0]?.type === "image" ? "image" : "file"} you shared`
         : `Choose a project for the ${incomingShare.attachments.length} ${incomingShare.attachments.every((attachment) => attachment.type === "image") ? "images" : "files"} you shared`
     : null;
-  const screenTitle = incomingShare ? "Start a task" : "Choose project";
   const language = useWorkbenchLanguage();
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
+  const screenTitle = incomingShare
+    ? t("开始任务", "Start a task")
+    : t("选择项目", "Choose project");
   const projectEmptyState = deriveProjectEmptyState(catalogState, language);
   const serverConfigs = useServerConfigs();
   const listScopes = pickableProjectGroups(projectScopes).filter(
@@ -204,13 +167,23 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
       .filter((environment) => environment.connectionState === "connected")
       .map((environment) => environment.environmentId),
   );
+  const writableEnvironmentIds = useEnvironmentsWithScope(
+    connectedEnvironments,
+    AuthOrchestrationOperateScope,
+  );
+  const writableEnvironments = connectedEnvironments.filter((environment) =>
+    writableEnvironmentIds.has(environment.environmentId),
+  );
+  const canAddProject = writableEnvironments.some(
+    (environment) => environment.connectionState === "connected",
+  );
   const openScratch = useAtomCommand(projectEnvironment.openScratch, {
     reportFailure: false,
   });
   const scratchOption =
     reservedDestinationProject === null
       ? resolveNewTaskScratchOption({
-          environments: connectedEnvironments,
+          environments: writableEnvironments,
           serverConfigs,
           selectedEnvironmentId,
         })
@@ -315,7 +288,7 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
       <NewTaskHeader
         title={screenTitle}
         subtitle={incomingShareSubtitle}
-        canAddProject={catalogState.hasReadyEnvironment}
+        canAddProject={canAddProject}
         searchText={searchText}
         onSearchTextChange={setSearchText}
       />
@@ -409,51 +382,45 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
               <Text className="text-center text-sm leading-normal text-foreground-muted">
                 {projectEmptyState.detail}
               </Text>
-              {Platform.OS === "android" ? (
+              {catalogState.hasReadyEnvironment && !canAddProject ? (
+                <Text className="text-center text-sm leading-normal text-foreground-muted">
+                  {t(
+                    "当前连接为只读。需要工作台的操作权限才能开始任务。",
+                    "This connection is read-only. Workbench access is required to start a task.",
+                  )}
+                </Text>
+              ) : null}
+              {!projectEmptyState.loading &&
+              (!catalogState.hasReadyEnvironment || canAddProject) ? (
                 <>
-                  <Button
-                    label={catalogState.hasReadyEnvironment ? "Add new project" : "Add environment"}
-                    tone="primary"
-                    onPress={() =>
-                      catalogState.hasReadyEnvironment
-                        ? navigation.dispatch(StackActions.push("AddProject"))
-                        : navigation.navigate("ConnectionsNew")
-                    }
-                  />
-                  {canStartScratch ? (
+                  <View className={Platform.OS === "android" ? undefined : "mt-1"}>
                     <Button
-                      label="Start without a project"
-                      tone="secondary"
-                      onPress={() => void startScratch()}
-                    />
-                  ) : null}
-                </>
-              ) : !catalogState.hasReadyEnvironment ? (
-                <View className="mt-1">
-                  <Button
-                    label="Add environment"
-                    tone="primary"
-                    onPress={() => navigation.navigate("ConnectionsNew")}
-                  />
-                </View>
-              ) : (
-                <>
-                  <View className="mt-1">
-                    <Button
-                      label="Add new project"
+                      label={
+                        catalogState.hasReadyEnvironment
+                          ? t("添加新项目", "Add new project")
+                          : catalogState.hasConnections
+                            ? t("查看已保存环境", "View saved environments")
+                            : t("添加环境", "Add environment")
+                      }
                       tone="primary"
-                      onPress={() => navigation.dispatch(StackActions.push("AddProject"))}
+                      onPress={() =>
+                        catalogState.hasReadyEnvironment
+                          ? navigation.dispatch(StackActions.push("AddProject"))
+                          : catalogState.hasConnections
+                            ? openSettings(navigation, "SettingsEnvironments")
+                            : navigation.navigate("ConnectionsNew")
+                      }
                     />
                   </View>
                   {canStartScratch ? (
                     <Button
-                      label="Start without a project"
+                      label={t("不选项目，直接开始", "Start without a project")}
                       tone="secondary"
                       onPress={() => void startScratch()}
                     />
                   ) : null}
                 </>
-              )}
+              ) : null}
             </View>
           ) : visibleScopes.length === 0 ? (
             <View className="items-center gap-2 px-6 py-8">

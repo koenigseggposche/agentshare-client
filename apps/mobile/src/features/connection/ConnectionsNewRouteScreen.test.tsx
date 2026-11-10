@@ -99,6 +99,9 @@ it("does not show another feature's error as a pairing failure", () => {
 
   expect(container.textContent).not.toContain("Could not send the message.");
   expect(container.textContent).toContain("For machines on your local network or tailnet.");
+  expect(container.textContent).toContain("Settings → Sharing & access");
+  expect(container.textContent).toContain("click Create link next to Authorized clients");
+  expect(container.textContent).toContain("restart when prompted");
 
   act(() => root.unmount());
   // Leaving the form must not wipe an error that belongs to another screen.
@@ -121,6 +124,7 @@ it.each([
     act(() => root.render(<ConnectionsNewRouteScreen route={route} />));
     expect(container.textContent).toContain(review);
     expect(container.textContent).toContain(code);
+    expect(container.textContent).not.toContain(language === "zh" ? "扫描" : "Scan");
   } finally {
     act(() => root.unmount());
     harness.language = "en";

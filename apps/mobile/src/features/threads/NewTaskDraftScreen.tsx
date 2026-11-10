@@ -1,4 +1,8 @@
-import { useWorkbenchLabels } from "../workspace/navigation-tabs";
+import { HostModels } from "../settings/SettingsAgentShareRouteScreen";
+import { Sheet } from "../../components/ui/Sheet";
+import { agentShareEnvironment } from "../../state/agentShare";
+import { useEnvironmentQuery } from "../../state/query";
+import { useWorkbenchLabels, useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { DraftEnvironmentControl } from "./DraftEnvironmentControl";
 import { NativeScrollEdgeEffectsContext } from "../../native/NativeScrollViewMarker";
 import { DraftThreadHeader } from "./DraftThreadHeader";
@@ -32,7 +36,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, View } from "react-native";
 import { ScreenScrollView as ScrollView } from "../../components/ui/ScreenScrollView";
-import { KeyboardController } from "react-native-keyboard-controller";
+import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller";
 
 import {
   AuthOrchestrationOperateScope,
@@ -155,9 +159,18 @@ export function NewTaskDraftScreen(props: {
   readonly incomingShareId?: string;
 }) {
   const labels = useWorkbenchLabels();
+  const language = useWorkbenchLanguage();
   const [creationMetadata] = useState(makeTurnCommandMetadata);
   const projects = useProjects();
   const flow = useNewTaskFlow();
+  const [showModelCatalog, setShowModelCatalog] = useState(false);
+  const modelCatalogEnvironmentId =
+    showModelCatalog && !flow.selectedModel ? flow.selectedEnvironmentId : null;
+  const modelCatalogHost = useEnvironmentQuery(
+    modelCatalogEnvironmentId
+      ? agentShareEnvironment.state({ environmentId: modelCatalogEnvironmentId, input: {} })
+      : null,
+  );
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const goBack = useWorkspaceBackNavigation("threads");
@@ -868,18 +881,58 @@ export function NewTaskDraftScreen(props: {
           />
         }
       >
-        <View className="flex-1 justify-end gap-3 p-4">
-          {environmentControl}
-          <Text className="text-foreground-muted">{labels.localDraftNeedsConnection}</Text>
-          <ComposerEditor
-            draftKey={flow.draftKey}
-            value={flow.prompt}
-            onChangeText={flow.setPrompt}
-            placeholder={labels.composerPlaceholder}
-            multiline
-            style={{ minHeight: 64 }}
-          />
-        </View>
+        <KeyboardAvoidingView automaticOffset behavior="padding" className="flex-1">
+          <ScrollView
+            className="flex-1"
+            contentContainerClassName="grow justify-end gap-3 p-4"
+            contentInsetAdjustmentBehavior="never"
+            keyboardShouldPersistTaps="handled"
+          >
+            {environmentControl}
+            <ComposerInlineControl
+              label={labels.chooseModel}
+              icon="slider.horizontal.3"
+              disabled={!flow.selectedEnvironmentId}
+              onPress={() => {
+                void KeyboardController.dismiss({ animated: true });
+                setShowModelCatalog(true);
+              }}
+            />
+            <Text className="text-foreground-muted">
+              {flow.selectedEnvironmentId
+                ? labels.localDraftNeedsModel
+                : labels.localDraftNeedsConnection}
+            </Text>
+            <ComposerEditor
+              draftKey={flow.draftKey}
+              value={flow.prompt}
+              onChangeText={flow.setPrompt}
+              placeholder={labels.composerPlaceholder}
+              multiline
+              style={{ minHeight: 64 }}
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
+        {modelCatalogEnvironmentId ? (
+          <Sheet title={labels.chooseModel} onClose={() => setShowModelCatalog(false)}>
+            <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerClassName="p-4">
+              {modelCatalogHost.data && !modelCatalogHost.error ? (
+                <HostModels
+                  key={modelCatalogHost.data.host.owner}
+                  environmentId={modelCatalogEnvironmentId}
+                  owner={modelCatalogHost.data.host.owner}
+                  language={language}
+                />
+              ) : (
+                <Text>
+                  {modelCatalogHost.isPending
+                    ? labels.loadingModelCatalog
+                    : labels.modelCatalogUnavailable}
+                </Text>
+              )}
+            </ScrollView>
+          </Sheet>
+        ) : null}
       </ThreadScreenFallback>
     );
   }

@@ -1,4 +1,8 @@
-import { AuthPreviewOperateScope, type EnvironmentId } from "@t3tools/contracts";
+import {
+  AuthOrchestrationOperateScope,
+  AuthPreviewOperateScope,
+  type EnvironmentId,
+} from "@t3tools/contracts";
 import type { AnyRouter } from "@tanstack/react-router";
 
 import { stackedThreadToast, toastManager } from "~/components/ui/toast";
@@ -42,6 +46,7 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
       ),
     primaryEnvironmentId: () => appAtomRegistry.get(primaryEnvironmentIdAtom),
     registry: appAtomRegistry,
+    canOperate: (id) => readEnvironmentScope(id, AuthOrchestrationOperateScope),
     handleNewThread,
   });
 

@@ -17,6 +17,7 @@ const homeLabels = {
     home: "Home",
     heading: "What should we work on?",
     addFirstProject: "Add a project to start your first thread.",
+    needsTaskAccess: "Starting a thread requires task access on a connected workbench.",
     chooseHowToStart: "Add a project, or start without one.",
     startWithoutProject: "Start without a project",
   },
@@ -24,6 +25,7 @@ const homeLabels = {
     home: "首页",
     heading: "今天想做什么？",
     addFirstProject: "添加项目，开始第一次会话。",
+    needsTaskAccess: "连接有任务操作权限的工作台后，即可开始会话。",
     chooseHowToStart: "添加项目，也可以直接开始会话。",
     startWithoutProject: "直接开始会话",
   },
@@ -34,7 +36,7 @@ export function NoProjectsHero() {
   const labels = homeLabels[language];
   const contentArea = workspaceAreaProps("home", 1, labels.home);
   const primaryEnvironmentId = usePrimaryEnvironmentId();
-  const { scratchEnvironmentId, startScratchThread } = useScratchProject();
+  const { canCreateProject, scratchEnvironmentId, startScratchThread } = useScratchProject();
   const scratchTargetEnvironmentId = scratchEnvironmentId(primaryEnvironmentId);
 
   return (
@@ -51,15 +53,19 @@ export function NoProjectsHero() {
             <EmptyHeader className="max-w-none">
               <EmptyTitle>{labels.heading}</EmptyTitle>
               <EmptyDescription>
-                {scratchTargetEnvironmentId === null
-                  ? labels.addFirstProject
-                  : labels.chooseHowToStart}
+                {!canCreateProject
+                  ? labels.needsTaskAccess
+                  : scratchTargetEnvironmentId === null
+                    ? labels.addFirstProject
+                    : labels.chooseHowToStart}
               </EmptyDescription>
               <div className="mt-6 flex justify-center gap-2">
-                <Button size="sm" onClick={() => openCommandPalette({ open: "add-project" })}>
-                  <PlusIcon className="size-4" />
-                  {workbenchLabels[language].addProject}
-                </Button>
+                {canCreateProject ? (
+                  <Button size="sm" onClick={() => openCommandPalette({ open: "add-project" })}>
+                    <PlusIcon className="size-4" />
+                    {workbenchLabels[language].addProject}
+                  </Button>
+                ) : null}
                 {scratchTargetEnvironmentId === null ? null : (
                   <Button
                     size="sm"

@@ -292,6 +292,19 @@ function setup() {
   return now;
 }
 
+it("offers a single finish action when a completed scan finds no projects", async () => {
+  using _now = setup();
+  state.candidates = [];
+  await using _screen = await mountImport();
+
+  expect(pageText()).toContain("No existing Claude Code or Codex projects found.");
+  expect(pageText()).not.toContain("Import 0 projects");
+  await click("Finish setup");
+  expect(state.onDone).toHaveBeenCalledOnce();
+  expect(state.createProject).not.toHaveBeenCalled();
+  expect(state.importThreads).not.toHaveBeenCalled();
+});
+
 it("keeps the project selection after going back a stage", async () => {
   using _now = setup();
   await using _screen = await mountImport();

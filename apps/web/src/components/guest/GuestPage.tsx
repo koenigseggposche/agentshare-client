@@ -538,6 +538,10 @@ function GuestThread({
             liveFollowEnabled={follow.timelineLiveFollowEnabled}
             onIsAtEndChange={follow.onIsAtEndChangeStable}
             onViewportAttach={follow.attachTimelineViewport}
+            onListLoad={() => {
+              // The virtual list can finish its first layout before reaching the measured end.
+              if (following.current) scrollToEnd();
+            }}
             footer={
               unplaced.length === 0 ? null : (
                 <ol ref={footerRef} className="chat-content-lane flex flex-col gap-4 pb-4">

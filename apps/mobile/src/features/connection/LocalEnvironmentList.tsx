@@ -46,9 +46,13 @@ export function LocalEnvironmentList({
     );
   }
 
+  // Keep the original order within each group so saved hosts stay easy to find.
+  const orderedEnvironments = [...environments].sort(
+    (left, right) => Number(right.isEnabled) - Number(left.isEnabled),
+  );
   return (
     <View collapsable={false} className="overflow-hidden rounded-[24px] bg-grouped-card">
-      {environments.map((environment) => (
+      {orderedEnvironments.map((environment) => (
         <View key={environment.environmentId} collapsable={false}>
           <ConnectionEnvironmentRow
             environment={environment}

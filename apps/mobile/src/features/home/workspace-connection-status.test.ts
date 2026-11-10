@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
+import { workspaceConnectionEmptyState } from "../connection/workspace-empty-state";
 import type { WorkspaceState } from "../../state/workspaceModel";
 import { workspaceConnectionStatusPresentation } from "./workspace-connection-status";
 
@@ -22,6 +23,26 @@ function workspaceState(overrides: Partial<WorkspaceState> = {}): WorkspaceState
 }
 
 describe("workspace connection status", () => {
+  it("shows reconnecting instead of an empty project list when only cached data is available", () => {
+    const state = workspaceState({
+      hasReadyEnvironment: false,
+      hasConnectingEnvironment: true,
+      connectionState: "reconnecting",
+      connectionError: "Previous connection timed out",
+    });
+
+    expect(workspaceConnectionEmptyState(state, "zh")).toMatchObject({
+      title: "正在连接工作台",
+      loading: true,
+    });
+  });
+
+  it("keeps the project empty state available when a secondary environment is reconnecting", () => {
+    expect(
+      workspaceConnectionEmptyState(workspaceState({ hasConnectingEnvironment: true }), "en"),
+    ).toBeNull();
+  });
+
   it.each([
     ["reconnecting", "Could not reach sleeping laptop"],
     ["error", "Could not reach sleeping laptop"],

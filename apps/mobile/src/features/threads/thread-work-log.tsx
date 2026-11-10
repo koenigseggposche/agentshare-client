@@ -956,9 +956,10 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
     const label = warning
       ? `Usage limit reached.${resetTime ? ` Retry after ${resetTime}.` : ""}`
       : row.summary;
+    const detail = row.detail ?? failureItem.failure.message;
     const errorRow = (
       <WorkLogPressable
-        accessibilityLabel={warning ? label : `${row.summary}: ${failureItem.failure.message}`}
+        accessibilityLabel={warning ? label : `${label}: ${detail}`}
         accessibilityHint="Long press to copy."
         onLongPress={() => props.onCopyRow(row.id, row.getCopyText())}
       >
@@ -999,7 +1000,7 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
           </View>
           {!warning ? (
             <Text selectable className="ml-7 text-sm text-foreground">
-              {failureItem.failure.message}
+              {detail}
             </Text>
           ) : null}
           {failureItem.failure.code === ORCHESTRATION_V2_WORKSPACE_PREPARATION_FAILURE_CODE &&

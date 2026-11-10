@@ -99,6 +99,7 @@ import {
   NativeWorkspaceInspectorContext,
 } from "../../native/v5-workspace-context";
 
+import { NATIVE_WORKSPACE_COLUMNS_SUPPORTED } from "../../native/NativeWorkspaceColumns";
 import { useNativeLayoutMetrics } from "../../native/native-layout-metrics";
 import { AndroidHingeObserver } from "../../native/AndroidHingeObserver";
 import { WindowHingeContext } from "../../native/window-hinge-context";
@@ -258,7 +259,16 @@ function AdaptiveWorkspaceLayoutContent(
   // re-renders on any layout state change, and the inspector registration then loops: each
   // re-register re-renders its screen, which hands over a new inspector renderer.
   const baseLayout = useMemo(
-    () => deriveLayout({ width: viewportWidth, height, nativeMetrics, nativeWorkspace }),
+    () =>
+      deriveLayout({
+        width: viewportWidth,
+        height,
+        nativeMetrics,
+        nativeWorkspace,
+        // The legacy tab bar is inside the stack and cannot span the two panes.
+        forceCompact:
+          Platform.OS === "ios" && Platform.isPad && !NATIVE_WORKSPACE_COLUMNS_SUPPORTED,
+      }),
     [height, viewportWidth, nativeMetrics, nativeWorkspace],
   );
   // The overlay sidebar closes when a page opens from it, and stays open on a list or on the

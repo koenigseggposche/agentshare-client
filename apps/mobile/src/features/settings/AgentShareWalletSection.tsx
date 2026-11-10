@@ -12,6 +12,8 @@ import type {
 } from "@t3tools/contracts";
 import {
   formatWalletAmount,
+  formatWalletDate,
+  walletDealAmountLabels,
   walletMinorFactor,
   walletRecordStatus,
 } from "@t3tools/client-runtime/agentShareWallet";
@@ -101,11 +103,13 @@ export function AgentShareWalletView({
   };
 }) {
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
+  const [detailSource, setDetailSource] = useState<AgentShareWalletReadInput | null>(null);
   const [commandPending, setCommandPending] = useState(false);
   const [commandUnconfirmed, setCommandUnconfirmed] = useState(false);
   const value = query.error ? undefined : query.data;
   const overview = value?.action === "overview" ? value.data : undefined;
   const detail = value?.action === "detail" ? value.data : undefined;
+  const amountLabels = detail ? walletDealAmountLabels(detail, language) : undefined;
   const money = (micros: number, currency: string) =>
     formatWalletAmount(micros, currency, language);
   const kinds: ReadonlyArray<readonly [AgentShareWalletHistoryKind, string]> = [
@@ -138,13 +142,15 @@ export function AgentShareWalletView({
           item.currency ?? "USD",
         ),
         walletRecordStatus(item.status, recordKind, language),
-        item.started_at ?? item.created_at,
+        formatWalletDate(item.started_at ?? item.created_at, language),
       ]
         .filter(Boolean)
         .join(" · ")}
       disabled={!item.request_id}
       onPress={() => {
-        if (item.request_id) setSelection({ action: "detail", owner, request_id: item.request_id });
+        if (!item.request_id) return;
+        setDetailSource(selection);
+        setSelection({ action: "detail", owner, request_id: item.request_id });
       }}
     />
   );
@@ -192,11 +198,17 @@ export function AgentShareWalletView({
       {(taskId === undefined ? selection.action !== "overview" : selection.action === "detail") ? (
         <ListActionRow
           label={
-            taskId === undefined
-              ? t("返回余额", "Back to balances")
-              : t("返回任务账单", "Back to task charges")
+            taskId !== undefined
+              ? t("返回任务账单", "Back to task charges")
+              : selection.action === "detail" && detailSource?.action === "history"
+                ? t("返回记录", "Back to records")
+                : t("返回余额", "Back to balances")
           }
-          onPress={() =>
+          onPress={() => {
+            if (selection.action === "detail" && detailSource) {
+              setSelection(detailSource);
+              return;
+            }
             setSelection(
               taskId === undefined
                 ? { action: "overview", owner }
@@ -207,8 +219,8 @@ export function AgentShareWalletView({
                     cursor: "",
                     workbench_task_id: taskId,
                   },
-            )
-          }
+            );
+          }}
         />
       ) : null}
       {query.error ? (
@@ -345,7 +357,7 @@ export function AgentShareWalletView({
           ) : null}
         </>
       ) : null}
-      {detail ? (
+      {detail && amountLabels ? (
         <>
           <Text selectable className="px-5 py-2" textRole="body">
             {detail.request_id}
@@ -355,11 +367,10 @@ export function AgentShareWalletView({
             {walletRecordStatus(detail.status, "spending", language)}
           </Text>
           <Text className="px-5 py-2" textRole="body">
-            {t("扣费", "Charge")}: {money(detail.charged_micros, detail.currency)}
+            {amountLabels.charge}: {money(detail.charged_micros, detail.currency)}
           </Text>
           <Text className="px-5 py-2" textRole="body">
-            {t("Provider 收益", "Provider earnings")}:{" "}
-            {money(detail.earned_micros, detail.currency)}
+            {amountLabels.earnings}: {money(detail.earned_micros, detail.currency)}
           </Text>
           <Text className="px-5 py-2" textRole="body">
             {t("输入 / 输出 Token", "Input / output tokens")}: {detail.usage.input_tokens ?? 0} /{" "}

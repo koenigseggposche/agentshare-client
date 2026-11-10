@@ -10,6 +10,8 @@ import type {
 } from "@t3tools/contracts";
 import {
   formatWalletAmount,
+  formatWalletDate,
+  walletDealAmountLabels,
   walletMinorFactor,
   walletRecordStatus,
 } from "@t3tools/client-runtime/agentShareWallet";
@@ -36,6 +38,7 @@ export function AgentShareWallet({
       ? { action: "overview", owner }
       : { action: "history", owner, kind: "spending", cursor: "", workbench_task_id: taskId };
   const [selection, setSelection] = useState<AgentShareWalletReadInput>(initial);
+  const [detailSource, setDetailSource] = useState<AgentShareWalletReadInput | null>(null);
   const query = useEnvironmentQuery(
     agentShareEnvironment.wallet({ environmentId, input: selection }),
   );
@@ -50,6 +53,7 @@ export function AgentShareWallet({
   const value = query.error ? undefined : query.data;
   const overview = value?.action === "overview" ? value.data : undefined;
   const details = value?.action === "detail" ? value.data : undefined;
+  const amountLabels = details ? walletDealAmountLabels(details, language) : undefined;
   const kinds: ReadonlyArray<readonly [AgentShareWalletHistoryKind, string]> = [
     ["spending", t("消费记录", "Spending")],
     ["earnings", t("收益记录", "Earnings")],
@@ -63,6 +67,7 @@ export function AgentShareWallet({
   const record = (item: AgentShareWalletRecord, index: number) => (
     <SettingsRow
       key={item.request_id ?? item.id ?? index}
+      className="wrap-anywhere"
       title={
         item.model ??
         item.rate?.model ??
@@ -73,7 +78,7 @@ export function AgentShareWallet({
       }
       description={[
         walletRecordStatus(item.status, recordKind, language),
-        item.started_at ?? item.created_at,
+        formatWalletDate(item.started_at ?? item.created_at, language),
         item.request_id,
       ]
         .filter(Boolean)
@@ -96,8 +101,9 @@ export function AgentShareWallet({
               size="sm"
               variant="outline"
               onClick={() => {
-                if (item.request_id)
-                  setSelection({ action: "detail", owner, request_id: item.request_id });
+                if (!item.request_id) return;
+                setDetailSource(selection);
+                setSelection({ action: "detail", owner, request_id: item.request_id });
               }}
             >
               {t("详情", "Details")}
@@ -140,10 +146,18 @@ export function AgentShareWallet({
         {(
           taskId === undefined ? selection.action !== "overview" : selection.action === "detail"
         ) ? (
-          <Button size="sm" variant="outline" onClick={() => setSelection(initial)}>
-            {taskId === undefined
-              ? t("返回余额", "Back to balances")
-              : t("返回任务账单", "Back to task charges")}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              setSelection(selection.action === "detail" ? (detailSource ?? initial) : initial)
+            }
+          >
+            {taskId !== undefined
+              ? t("返回任务账单", "Back to task charges")
+              : selection.action === "detail" && detailSource?.action === "history"
+                ? t("返回记录", "Back to records")
+                : t("返回余额", "Back to balances")}
           </Button>
         ) : null}
         {taskId === undefined ? (
@@ -322,10 +336,15 @@ export function AgentShareWallet({
           ) : null}
         </>
       ) : null}
-      {details ? (
+      {details && amountLabels ? (
         <>
-          <SettingsRow title={t("请求编号", "Request")} description={details.request_id} />
           <SettingsRow
+            className="wrap-anywhere"
+            title={t("请求编号", "Request")}
+            description={details.request_id}
+          />
+          <SettingsRow
+            className="wrap-anywhere"
             title={t("模型", "Model")}
             description={details.model ?? details.rate.model ?? ""}
           />
@@ -334,11 +353,11 @@ export function AgentShareWallet({
             description={walletRecordStatus(details.status, "spending", language)}
           />
           <SettingsRow
-            title={t("扣费", "Charge")}
+            title={amountLabels.charge}
             control={<span>{money(details.charged_micros, details.currency)}</span>}
           />
           <SettingsRow
-            title={t("Provider 收益", "Provider earnings")}
+            title={amountLabels.earnings}
             control={<span>{money(details.earned_micros, details.currency)}</span>}
           />
           <SettingsRow

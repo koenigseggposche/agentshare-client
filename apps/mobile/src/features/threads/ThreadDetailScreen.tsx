@@ -470,6 +470,14 @@ function ThreadDetailBody(
   };
   const windowHeight = useWindowDimensions().height;
   const navigationHeaderHeight = useContext(HeaderHeightContext) ?? insets.top + 44;
+  // The legacy iPad stack draws its bar over the feed without adjusting the scroll inset.
+  const feedTopInset =
+    Platform.OS === "ios" &&
+    Platform.isPad &&
+    !usesNativeWorkspaceColumns &&
+    !props.usesAutomaticContentInsets
+      ? navigationHeaderHeight
+      : 0;
   const [screenMetrics, setScreenMetrics] = useState<NativeLayoutMetrics | null>(null);
   const columnMetrics = useNativeColumnLayoutMetrics();
   const windowMetrics = useNativeLayoutMetrics();
@@ -1472,7 +1480,7 @@ function ThreadDetailBody(
                 keyboardOffset={composerKeyboardOffset}
                 sendingWithKeyboard={sendingWithKeyboard}
                 fitShortFeedToViewport={questionInFlow && !isKeyboardVisible}
-                contentTopInset={0}
+                contentTopInset={feedTopInset}
                 contentBottomInset={
                   questionInFlow
                     ? 0

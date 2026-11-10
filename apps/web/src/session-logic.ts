@@ -1,3 +1,4 @@
+import { providerStreamInterruption } from "@t3tools/client-runtime/errors";
 import type { ThreadStructure, ThreadStructureRuntime } from "@t3tools/client-runtime/state/shell";
 import { resolveThreadWorkingStartedAt } from "@t3tools/client-runtime/state/models";
 import {
@@ -365,6 +366,8 @@ export function providerErrorPresentation(
   item: Extract<OrchestrationV2TurnItem, { readonly type: "error" }>,
 ): { readonly label: string; readonly detail: string } {
   if (item.retry === undefined) {
+    const interruption = providerStreamInterruption(item.failure);
+    if (interruption !== undefined) return interruption;
     return {
       label:
         item.failure.class === "usage_limit"

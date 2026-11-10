@@ -252,7 +252,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       >
         {!warning ? (
           <p className="ms-7 whitespace-pre-wrap break-words py-1 text-sm leading-relaxed text-foreground/80">
-            {failureItem.failure.message}
+            {workEntry.detail ?? failureItem.failure.message}
           </p>
         ) : null}
         {workEntry.projectedItem ? (
