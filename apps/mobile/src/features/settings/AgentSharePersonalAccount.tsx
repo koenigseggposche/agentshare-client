@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Linking } from "react-native";
 
 import { AppText as Text } from "../../components/ui/AppText";
+import { accountConsoleUrl } from "../agentshare/accountLayer";
 import * as Runtime from "../../lib/runtime";
 import { ListActionRow } from "../../components/ui/ListActionRow";
 import { SettingsSection } from "./components/SettingsSection";
@@ -54,7 +55,6 @@ export function AgentSharePersonalAccount({ language }: { language: "zh" | "en" 
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const [snapshot, setSnapshot] = useState<DeviceLogin.DeviceLoginState>();
   const [error, setError] = useState<string | null>(null);
-  const [serviceUrl, setServiceUrl] = useState<string>();
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
   const mounted = useRef(false);
@@ -77,7 +77,6 @@ export function AgentSharePersonalAccount({ language }: { language: "zh" | "en" 
       );
     } else {
       setError(null);
-      setServiceUrl(result.value.consoleUrl);
     }
     setSnapshot(Exit.isSuccess(result) ? result.value : undefined);
   }, []);
@@ -116,11 +115,9 @@ export function AgentSharePersonalAccount({ language }: { language: "zh" | "en" 
             "Sign in on this device to view your balances and records.",
           )}
         </Text>
-        {serviceUrl ? (
-          <Text className="px-5 py-2" textRole="footnote">
-            {serviceUrl}
-          </Text>
-        ) : null}
+        <Text className="px-5 py-2" textRole="footnote">
+          {snapshot?.consoleUrl || accountConsoleUrl}
+        </Text>
         {error ? (
           <Text className="px-5 py-2" textRole="body" accessibilityRole="alert">
             {error === "secure-storage-unavailable"
@@ -140,10 +137,20 @@ export function AgentSharePersonalAccount({ language }: { language: "zh" | "en" 
                     )
                   : error === "sign-in-required"
                     ? t("登录已失效，请重新登录。", "Your sign-in has expired. Sign in again.")
-                    : t(
-                        "未能确认操作结果。请刷新检查；若退出时断网，可在控制台设备列表撤销此设备。",
-                        "The outcome could not be confirmed. Refresh to check. If sign-out lost connectivity, revoke this device in the Console device list.",
-                      )}
+                    : error === "account-changed"
+                      ? t(
+                          "此设备保存的登录与当前账号服务不匹配。请核对上方地址，退出此设备账号后重新登录。",
+                          "The saved sign-in does not match this account service. Check the address above, sign out on this device, then sign in again.",
+                        )
+                      : error === "rejected"
+                        ? t(
+                            "账号服务拒绝了请求。请核对上方地址后刷新。",
+                            "The account service rejected the request. Check the address above and refresh.",
+                          )
+                        : t(
+                            "未能确认操作结果。请刷新检查；若退出时断网，可在控制台设备列表撤销此设备。",
+                            "The outcome could not be confirmed. Refresh to check. If sign-out lost connectivity, revoke this device in the Console device list.",
+                          )}
           </Text>
         ) : null}
         <ListActionRow

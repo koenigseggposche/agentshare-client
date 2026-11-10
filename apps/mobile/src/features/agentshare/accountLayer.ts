@@ -28,10 +28,12 @@ const layerCredentials = Layer.effect(
   }),
 );
 
+export const accountConsoleUrl =
+  process.env.EXPO_PUBLIC_AGENTSHARE_CONSOLE_URL?.trim() ||
+  "https://agentshare.taofanke.fun/console";
+
 const layerConfig = Layer.succeed(DeviceCredentials.DeviceLoginConfig, {
-  consoleUrl:
-    process.env.EXPO_PUBLIC_AGENTSHARE_CONSOLE_URL?.trim() ||
-    "https://agentshare.taofanke.fun/console",
+  consoleUrl: accountConsoleUrl,
   deviceName: Device.modelName || "AgentShare mobile",
   verifier: Effect.fn("AgentShareMobile.verifier")(() =>
     Effect.tryPromise({
