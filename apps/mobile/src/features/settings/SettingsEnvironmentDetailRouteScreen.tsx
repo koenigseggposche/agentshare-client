@@ -191,7 +191,11 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                 expanded={connectionExpanded}
                 onToggle={() => setConnectionExpanded((value) => !value)}
                 onReconnect={connections.onReconnectEnvironment}
-                onRemove={connections.onRemoveEnvironmentPress}
+                onRemove={(id) =>
+                  connections.onRemoveEnvironmentPress(id, () => {
+                    if (navigation.isFocused()) navigation.goBack();
+                  })
+                }
                 onSetEnabled={connections.onSetEnvironmentEnabled}
                 onUpdate={connections.onUpdateEnvironment}
               />

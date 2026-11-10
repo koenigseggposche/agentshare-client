@@ -175,7 +175,7 @@ export function useRemoteConnections() {
     updates: { readonly label: string; readonly displayUrl: string },
   ) => controller.updateEnvironment(environmentId, updates);
 
-  const onRemoveEnvironmentPress = (environmentId: EnvironmentId) => {
+  const onRemoveEnvironmentPress = (environmentId: EnvironmentId, onRemoved?: () => void) => {
     const environment = connectedEnvironments.find(
       (candidate) => candidate.environmentId === environmentId,
     );
@@ -185,8 +185,9 @@ export function useRemoteConnections() {
     const remove = {
       text: "Remove",
       style: "destructive",
-      onPress: () => {
-        void controller.removeEnvironment(environmentId);
+      onPress: async () => {
+        const result = await controller.removeEnvironment(environmentId);
+        if (AsyncResult.isSuccess(result)) onRemoved?.();
       },
     } as const;
     if (environment.isRelayManaged) {
