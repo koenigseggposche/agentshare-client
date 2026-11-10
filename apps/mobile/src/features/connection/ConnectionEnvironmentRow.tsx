@@ -86,11 +86,7 @@ export function ConnectionEnvironmentRow(props: {
   const enabled = props.environment.isEnabled && !unsupported;
   const statusLabel = connectionStatusLabel(props.environment, language);
   const isOffline = connectionState.network === "offline" || connectionState.phase === "offline";
-  const diagnosisHeadline = isOffline && language === "zh" ? "设备未联网" : diagnosis?.headline;
   const displayUrl = props.environment.isRelayManaged ? "" : props.environment.displayUrl.trim();
-  const accessibilityStatus = [displayUrl, diagnosisHeadline ?? statusLabel]
-    .filter(Boolean)
-    .join(", ");
   const statusTraceId = enabled ? props.environment.connectionErrorTraceId : null;
   const hasConnectionFailure = enabled && props.environment.connectionError !== null;
   const freeze = enabled
@@ -101,6 +97,19 @@ export function ConnectionEnvironmentRow(props: {
     !isOffline &&
     (props.environment.connectionState === "connecting" ||
       props.environment.connectionState === "reconnecting");
+  const diagnosisHeadline = diagnosis
+    ? environmentStatusText(
+        {
+          phase: isOffline ? "offline" : props.environment.connectionState,
+          error: null,
+          traceId: null,
+        },
+        language,
+      )
+    : null;
+  const accessibilityStatus = [displayUrl, diagnosisHeadline ?? statusLabel]
+    .filter(Boolean)
+    .join(", ");
   const handleSave = async () => {
     const result = await props.onUpdate(props.environment.environmentId, {
       label: label.trim(),
@@ -151,16 +160,7 @@ export function ConnectionEnvironmentRow(props: {
             </Text>
           ) : null}
           {diagnosis ? (
-            <>
-              <Text className="text-xs text-danger-foreground">{diagnosisHeadline}</Text>
-              {isRetrying && connectionState.attempt > 0 ? (
-                <Text className="text-xs text-foreground-muted">
-                  {language === "zh"
-                    ? `正在重试 · 第 ${connectionState.attempt} 次`
-                    : `Retrying · attempt ${connectionState.attempt}`}
-                </Text>
-              ) : null}
-            </>
+            <Text className="text-xs text-danger-foreground">{diagnosisHeadline}</Text>
           ) : statusLabel ? (
             <Text
               className={cn(

@@ -54,6 +54,7 @@ export function ConnectionDiagnosisDetails(props: {
   const { moreInfoUrl } = diagnosis;
   return (
     <View className="gap-3">
+      <Text className="text-sm font-t3-bold text-foreground">{diagnosis.headline}</Text>
       <View className="gap-0.5">
         {diagnosis.hops.map((hop) => (
           <Text
