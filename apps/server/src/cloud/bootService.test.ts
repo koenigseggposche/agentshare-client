@@ -1,5 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { expect, it } from "@effect/vitest";
+import { expect, it, it as rootIt } from "@effect/vitest";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import * as ConfigProvider from "effect/ConfigProvider";
 import * as Duration from "effect/Duration";
@@ -7,7 +7,6 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
-import * as TestClock from "effect/testing/TestClock";
 import { HttpClient } from "effect/http";
 import * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 
@@ -964,15 +963,13 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
     }),
   );
 
-  it.effect("waits for an asynchronously removed launch agent before bootstrapping", () =>
+  rootIt.live("waits for an asynchronously removed launch agent before bootstrapping", () =>
     Effect.gen(function* () {
       const { service, control, commands } = yield* makeHarness("darwin");
       yield* service.install();
       commands.length = 0;
       control.launchdPollsAfterStop = 2;
-      yield* Effect.all([service.restart, TestClock.adjust("1 second")], {
-        concurrency: "unbounded",
-      });
+      yield* service.restart;
       const stop = commands.indexOf("launchctl bootout gui/501/app.agentshare.client.service");
       const bootstrap = commands.findIndex((command) => command.startsWith("launchctl bootstrap "));
       expect(stop).toBeGreaterThanOrEqual(0);
@@ -982,7 +979,7 @@ it.layer(NodeServices.layer)("boot service install", (it) => {
           .filter((command) => command.startsWith("launchctl print ")),
       ).toHaveLength(3);
       expect(bootstrap).toBeGreaterThan(stop);
-    }),
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
   );
 
   it.effect("ignores a bootout for an agent that is not loaded", () =>

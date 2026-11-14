@@ -84,8 +84,27 @@ const layerTest = (input: {
     ),
   );
 
+  // Keep real system-wide editor installations out of generated fixture discovery.
+  const fixtureFileSystem = Layer.effect(
+    FileSystem.FileSystem,
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const fixturePath = (value: string) =>
+        value.startsWith("/Applications/") || value === "/Applications"
+          ? `${input.env?.HOME ?? "/nonexistent"}/uninstalled-system-apps${value}`
+          : value;
+      return FileSystem.FileSystem.of({
+        ...fs,
+        stat: (value) => fs.stat(fixturePath(value)),
+        readDirectory: (value, options) => fs.readDirectory(fixturePath(value), options),
+      });
+    }),
+  ).pipe(Layer.provide(NodeServices.layer));
+
   return Layer.mergeAll(
-    ExternalLauncher.layer.pipe(Layer.provide(Layer.merge(NodeServices.layer, layerSpawner))),
+    ExternalLauncher.layer.pipe(
+      Layer.provide(Layer.mergeAll(NodeServices.layer, layerSpawner, fixtureFileSystem)),
+    ),
     Layer.succeed(HostProcess.Platform, input.platform),
     Layer.succeed(
       SpawnExecutableResolution,
