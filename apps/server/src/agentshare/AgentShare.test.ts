@@ -20,8 +20,9 @@ describe("AgentShare public service", () => {
       Effect.gen(function* () {
         const privateFailure = new AgentShareCoreError({
           operation,
-          category: "denied",
-          status: 403,
+          category: "rejected",
+          status: 400,
+          reason: "model_resource_budget_exceeded",
           cause: new Error("Authorization: Bearer generated-private-capability"),
         });
         const service = yield* AgentShare.AgentShare.pipe(
@@ -48,8 +49,9 @@ describe("AgentShare public service", () => {
               ? service.read("status")
               : service.command({ operation: "signOut" })
         ).pipe(Effect.flip);
-        assert.equal(failure.category, "denied");
-        assert.equal(failure.status, 403);
+        assert.equal(failure.category, "rejected");
+        assert.equal(failure.status, 400);
+        assert.equal(failure.reason, "model_resource_budget_exceeded");
         assert.isUndefined(failure.cause);
         const encoded = yield* encodeCoreError(failure);
         assert.notInclude(JSON.stringify(encoded), "generated-private-capability");

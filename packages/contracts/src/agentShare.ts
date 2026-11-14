@@ -275,6 +275,12 @@ export const AgentShareWorkbenchState = Schema.Struct({
 });
 export type AgentShareWorkbenchState = typeof AgentShareWorkbenchState.Type;
 
+export const AgentShareModelErrorReason = Schema.Literals([
+  "model_resource_budget_exceeded",
+  "invalid_model_resource_budget",
+  "stop_models_before_lowering_budget",
+]);
+
 export class AgentShareCoreError extends Schema.TaggedError<AgentShareCoreError>()(
   "AgentShareCoreError",
   {
@@ -290,6 +296,7 @@ export class AgentShareCoreError extends Schema.TaggedError<AgentShareCoreError>
       "outcome-unknown",
     ]),
     status: Schema.optionalKey(Schema.Number),
+    reason: Schema.optionalKey(AgentShareModelErrorReason),
     cause: Schema.optionalKey(Schema.Defect()),
   },
 ) {

@@ -1,5 +1,6 @@
 import {
   AgentShareCoreError,
+  AgentShareModelErrorReason,
   AgentShareHostIdentity,
   AgentShareModelCatalog,
   AgentShareWorkbenchTaskId,
@@ -38,6 +39,7 @@ const Runtime = Schema.Struct({
   pid: Schema.Number,
 });
 const isCoreError = Schema.is(AgentShareCoreError);
+const isModelErrorReason = Schema.is(AgentShareModelErrorReason);
 const decodeRuntime = Schema.decodeUnknownEffect(Schema.fromJsonString(Runtime));
 
 export function isLocalRuntimeUrl(raw: string): boolean {
@@ -214,6 +216,13 @@ const make = Effect.gen(function* () {
                           ? "network-unavailable"
                           : "rejected",
                     status: response.status,
+                    ...(response.status === 400 &&
+                    typeof body === "object" &&
+                    body !== null &&
+                    "error" in body &&
+                    isModelErrorReason(body.error)
+                      ? { reason: body.error }
+                      : {}),
                   }),
                 ),
               ),

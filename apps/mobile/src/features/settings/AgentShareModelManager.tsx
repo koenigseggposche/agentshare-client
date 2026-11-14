@@ -10,6 +10,7 @@ import type {
 import {
   formatModelBytes,
   modelManagerEntries,
+  modelBudgetFailureMessage,
   modelOperationPresentation,
   modelOperationSubmissionState,
   parseModelBudget,
@@ -61,17 +62,18 @@ export function AgentShareModelManager({
     const outcome = modelOperationSubmissionState(result);
     if (longOperation) setSubmissionUnknown(outcome === "unknown");
     setMessage(
-      result?._tag === "Success"
-        ? t("操作已接受，请查看下方状态。", "Operation accepted. Check the status below.")
-        : outcome === "rejected"
-          ? t(
-              "请求未被接受，请检查路径、账号和执行电脑状态后重试。",
-              "The request was not accepted. Check the path, account and host status before retrying.",
-            )
-          : t(
-              "未能确认操作结果。请刷新状态后再决定是否重试。",
-              "The outcome could not be confirmed. Refresh the status before retrying.",
-            ),
+      modelBudgetFailureMessage(result, language) ??
+        (result?._tag === "Success"
+          ? t("操作已接受，请查看下方状态。", "Operation accepted. Check the status below.")
+          : outcome === "rejected"
+            ? t(
+                "请求未被接受，请检查路径、账号和执行电脑状态后重试。",
+                "The request was not accepted. Check the path, account and host status before retrying.",
+              )
+            : t(
+                "未能确认操作结果。请刷新状态后再决定是否重试。",
+                "The outcome could not be confirmed. Refresh the status before retrying.",
+              )),
     );
     setPending(false);
   };

@@ -53,6 +53,7 @@ const publicCoreError = (error: AgentShareCoreError) =>
     operation: error.operation,
     category: error.category,
     ...(error.status === undefined ? {} : { status: error.status }),
+    ...(error.reason === undefined ? {} : { reason: error.reason }),
   });
 
 const decodeStatus = Schema.decodeUnknownEffect(AgentShareDeviceStatus);

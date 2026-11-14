@@ -63,9 +63,17 @@ const fixture = Effect.fn("CoreClient.test.fixture")(function* (
 describe("AgentShare Core client", () => {
   it.live("classifies Gateway connection failures without retaining response details", () =>
     Effect.gen(function* () {
-      for (const code of ["console_connection_unavailable", "unknown-private-error"]) {
+      for (const [code, status, reason] of [
+        ["console_connection_unavailable", 502, undefined],
+        ["unknown-private-error", 400, undefined],
+        ["model_resource_budget_exceeded", 400, "model_resource_budget_exceeded"],
+        ["invalid_model_resource_budget", 400, "invalid_model_resource_budget"],
+        ["stop_models_before_lowering_budget", 400, "stop_models_before_lowering_budget"],
+        ["model_resource_budget_exceeded", 502, undefined],
+        ["model_resource_budget_exceeded", 403, undefined],
+      ] as const) {
         const url = yield* listen((_request, response) => {
-          response.writeHead(502, { "Content-Type": "application/json" });
+          response.writeHead(status, { "Content-Type": "application/json" });
           response.end(JSON.stringify({ error: code, diagnostic: "private-diagnostic" }));
         });
         const client = yield* fixture(url);
@@ -74,9 +82,14 @@ describe("AgentShare Core client", () => {
           .pipe(Effect.flip);
         assert.equal(
           error.category,
-          code === "console_connection_unavailable" ? "network-unavailable" : "rejected",
+          status === 403
+            ? "denied"
+            : code === "console_connection_unavailable"
+              ? "network-unavailable"
+              : "rejected",
         );
-        assert.equal(error.status, 502);
+        assert.equal(error.status, status);
+        assert.equal(error.reason, reason);
         assert.equal(error.cause, undefined);
         assert.isFalse(JSON.stringify(error).includes("private-diagnostic"));
       }

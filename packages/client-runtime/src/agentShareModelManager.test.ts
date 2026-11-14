@@ -8,10 +8,13 @@ import {
 } from "@t3tools/contracts";
 import {
   modelManagerEntries,
+  modelBudgetFailureMessage,
   parseModelBudget,
   modelOperationPresentation,
   modelOperationSubmissionState,
 } from "./agentShareModelManager.ts";
+
+const isCoreError = Schema.is(AgentShareCoreError);
 
 const model = {
   id: "generated-model",
@@ -235,4 +238,33 @@ it("lets a rejected library request be corrected without treating it as an unkno
   expect(modelOperationSubmissionState(failed("outcome-unknown"))).toBe("unknown");
   expect(modelOperationSubmissionState(failed("invalid-response"))).toBe("unknown");
   expect(modelOperationSubmissionState(null)).toBe("unknown");
+});
+
+it("shows budget remediation only for a confirmed bounded rejection", () => {
+  for (const reason of [
+    "model_resource_budget_exceeded",
+    "invalid_model_resource_budget",
+    "stop_models_before_lowering_budget",
+  ] as const) {
+    const failure = (status: number) => ({
+      _tag: "Failure" as const,
+      cause: Cause.fail(
+        new AgentShareCoreError({ operation: "modelBudget", category: "rejected", status, reason }),
+      ),
+    });
+    expect(modelBudgetFailureMessage(failure(400), "en")).toBeDefined();
+    expect(modelBudgetFailureMessage(failure(400), "zh")).toBeDefined();
+    expect(modelBudgetFailureMessage(failure(503), "en")).toBeUndefined();
+  }
+  expect(modelBudgetFailureMessage(null, "zh")).toBeUndefined();
+  expect(modelBudgetFailureMessage({ _tag: "Success" }, "en")).toBeUndefined();
+  expect(
+    isCoreError({
+      _tag: "AgentShareCoreError",
+      operation: "modelBudget",
+      category: "rejected",
+      status: 400,
+      reason: "private diagnostic",
+    }),
+  ).toBe(false);
 });

@@ -242,3 +242,30 @@ export function modelOperationSubmissionState(
   }
   return "unknown";
 }
+
+export function modelBudgetFailureMessage(
+  result: Parameters<typeof modelOperationSubmissionState>[0],
+  language: Language,
+): string | undefined {
+  if (result?._tag !== "Failure" || modelOperationSubmissionState(result) !== "rejected") return;
+  const error = Cause.squash(result.cause);
+  if (!isCoreError(error) || error.category !== "rejected" || error.status !== 400) return;
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
+  switch (error.reason) {
+    case "model_resource_budget_exceeded":
+      return t(
+        "模型所需资源超出设备预算。请停止一个模型，或在硬件允许范围内增加内存或显存预算。",
+        "The model exceeds the device budget. Stop a model or increase the RAM or VRAM budget within your hardware limits.",
+      );
+    case "invalid_model_resource_budget":
+      return t(
+        "请设置有效的内存和显存预算，并选择 1–8 条并发请求。请为其他应用保留内存。",
+        "Choose valid RAM and VRAM budgets and 1–8 concurrent requests. Leave memory for other apps.",
+      );
+    case "stop_models_before_lowering_budget":
+      return t(
+        "新预算低于当前资源用量。请等待请求完成或停止模型，再降低预算。",
+        "The new budget is below current use. Wait for requests to finish or stop models before reducing it.",
+      );
+  }
+}
