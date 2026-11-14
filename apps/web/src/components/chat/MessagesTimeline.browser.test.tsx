@@ -1,3 +1,4 @@
+import { __setClientSettingsForTests, getClientSettings } from "../../hooks/useSettings";
 import { flushSync } from "react-dom";
 import { AudioPreview } from "../files/AudioPreview";
 import { cdp, page } from "vite-plus/test/browser";
@@ -642,6 +643,9 @@ function usageLimitEntries(resetAt: string) {
 }
 
 it("explains interrupted model output alongside the original diagnostic", async () => {
+  const previous = getClientSettings();
+  __setClientSettingsForTests({ ...previous, uiLanguage: "en" });
+  onTestFinished(() => __setClientSettingsForTests(previous));
   const diagnostic = "Transport error: Error decoding response body";
   await using screen = await renderTimeline([
     message("Partial model output", { role: "assistant" }),
@@ -659,6 +663,9 @@ it("explains interrupted model output alongside the original diagnostic", async 
 });
 
 it("explains a failed model connection without displaying its internal proxy address", async () => {
+  const previous = getClientSettings();
+  __setClientSettingsForTests({ ...previous, uiLanguage: "en" });
+  onTestFinished(() => __setClientSettingsForTests(previous));
   await using screen = await renderTimeline([
     message("Partial model output", { role: "assistant" }),
     ...failureEntries({
@@ -673,6 +680,27 @@ it("explains a failed model connection without displaying its internal proxy add
   expect(screen.text()).toContain("Model connection interrupted");
   expect(screen.text()).toContain("The request was not retried automatically.");
   expect(screen.text()).not.toContain("127.0.0.1");
+});
+
+it.each(["zh", "en"] as const)("renders managed connection guidance in %s", async (language) => {
+  const previous = getClientSettings();
+  __setClientSettingsForTests({ ...previous, uiLanguage: language });
+  onTestFinished(() => __setClientSettingsForTests(previous));
+  const message =
+    "Cannot reach Gateway. Check the execution computer's network connection and local network access, then retry.";
+  await using screen = await renderTimeline(
+    failureEntries({
+      class: "provider_error",
+      code: null,
+      message,
+      retryable: null,
+    }),
+  );
+  expect(screen.text()).toContain(
+    language === "zh"
+      ? "无法连接 Gateway。请检查执行电脑的网络连接和本地网络访问权限，然后重试。"
+      : message,
+  );
 });
 
 describe("MessagesTimeline usage limit notice", () => {

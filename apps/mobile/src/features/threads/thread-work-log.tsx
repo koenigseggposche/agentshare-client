@@ -1,3 +1,5 @@
+import { localizeModelConnectionMessage } from "@t3tools/client-runtime/errors";
+import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { TaskChargesButton } from "./TaskChargesButton";
 import { Button } from "../../components/ui/Button";
 import { ThreadSubagentGroup } from "./thread-subagent-group";
@@ -930,6 +932,7 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
   },
 ) {
   const { row, expanded } = props;
+  const language = useWorkbenchLanguage();
   const openLinkedThread = useOpenLinkedThread();
   const streamsOutput =
     useCommandOutputStreaming(props.environmentId) &&
@@ -955,8 +958,11 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
       : null;
     const label = warning
       ? `Usage limit reached.${resetTime ? ` Retry after ${resetTime}.` : ""}`
-      : row.summary;
-    const detail = row.detail ?? failureItem.failure.message;
+      : localizeModelConnectionMessage(row.summary, language);
+    const detail = localizeModelConnectionMessage(
+      row.detail ?? failureItem.failure.message,
+      language,
+    );
     const errorRow = (
       <WorkLogPressable
         accessibilityLabel={warning ? label : `${label}: ${detail}`}

@@ -1,3 +1,5 @@
+import { localizeModelConnectionMessage } from "@t3tools/client-runtime/errors";
+import { useClientSettings } from "../../hooks/useSettings";
 import { TaskChargesButton } from "./TaskChargesButton";
 import { TimelinePendingApprovalRow } from "./TimelinePendingApprovalRow";
 import { WorkLogDetails, WorkLogRow } from "./WorkLog";
@@ -173,6 +175,7 @@ export const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: WorkEn
 });
 
 function WorkEntryLogRow(props: WorkEntryRowProps) {
+  const language = useClientSettings((settings) => settings.uiLanguage);
   const { workEntry, workspaceRoot, displayLabel } = props;
   const ctx = use(TimelineRowCtx);
   const { threadRef, onImageExpand, timestampFormat } = ctx;
@@ -218,7 +221,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       : null;
     const label = warning
       ? `Usage limit reached.${resetTime ? ` Retry after ${resetTime}.` : ""}`
-      : workEntry.label;
+      : localizeModelConnectionMessage(workEntry.label, language);
     const retryRunId =
       failureItem.runId !== null &&
       retryableWorkspacePreparationRunIds.has(failureItem.runId) &&
@@ -252,7 +255,10 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
       >
         {!warning ? (
           <p className="ms-7 whitespace-pre-wrap break-words py-1 text-sm leading-relaxed text-foreground/80">
-            {workEntry.detail ?? failureItem.failure.message}
+            {localizeModelConnectionMessage(
+              workEntry.detail ?? failureItem.failure.message,
+              language,
+            )}
           </p>
         ) : null}
         {workEntry.projectedItem ? (
