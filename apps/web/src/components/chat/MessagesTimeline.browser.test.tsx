@@ -1428,6 +1428,64 @@ function ChangedFilesTimeline() {
   );
 }
 
+function ResizingNestedTimeline() {
+  return (
+    <LegendList
+      data={["nested", "after"]}
+      recycleItems={false}
+      keyExtractor={(item) => item}
+      estimatedItemSize={100}
+      className="h-[600px]"
+      renderItem={({ item }) =>
+        item === "nested" ? (
+          <LegendList
+            data={["output"]}
+            recycleItems={false}
+            style={{ maxHeight: 400 }}
+            keyExtractor={(entry) => entry}
+            estimatedItemSize={48}
+            renderItem={() => (
+              <button
+                type="button"
+                style={{ height: 48 }}
+                onClick={(event) => {
+                  const target = event.currentTarget;
+                  target.style.height = target.style.height === "48px" ? "300px" : "48px";
+                }}
+              >
+                Toggle output
+              </button>
+            )}
+          />
+        ) : (
+          <div data-testid="after-nested">After nested output</div>
+        )
+      }
+    />
+  );
+}
+
+it("settles nested output resizing without a ResizeObserver loop", async () => {
+  const errors: string[] = [];
+  const onError = (event: ErrorEvent) => errors.push(event.message);
+  window.addEventListener("error", onError);
+  onTestFinished(() => window.removeEventListener("error", onError));
+  await using screen = await render(<ResizingNestedTimeline />);
+  const toggle = screen.getByRole("button", { name: "Toggle output" });
+  const after = screen.getByTestId("after-nested");
+  await expect.element(toggle).toHaveStyle({ height: "48px", pointerEvents: "auto" });
+  for (const height of [300, 48, 300]) {
+    await toggle.click();
+    await vi.waitFor(() => {
+      expect(toggle.element().getBoundingClientRect().height).toBe(height);
+      expect(after.element().getBoundingClientRect().top).toBe(
+        toggle.element().getBoundingClientRect().bottom,
+      );
+    });
+    expect(errors).toEqual([]);
+  }
+});
+
 describe("ChangedFilesCard", () => {
   it.each(["folder", "all folders"])(
     "measures %s collapse and expansion in the same commit",

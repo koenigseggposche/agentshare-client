@@ -1549,10 +1549,68 @@ index 40e87cda8c9bc79a889e5542f29af429a24b24d4..c2ca39bab6ea1ebaaed25190a01e8cf2
        recycleItems,
        refreshControl: refreshControlElement ? stylePaddingTopState > 0 ? React2.cloneElement(refreshControlElement, {
 diff --git a/react-native.web.js b/react-native.web.js
-index 914d2dafaafa001c9ab6791a0a0581659295e333..8b88b09d1269acef77c6ce0f8aaa1049d4fa26e9 100644
+index 914d2dafaafa001c9ab6791a0a0581659295e333..4200c181161032cb49176222a08457e0aac87897 100644
 --- a/react-native.web.js
 +++ b/react-native.web.js
-@@ -5651,6 +5651,18 @@ var ContainerSlot = typedMemo(function ContainerSlot2(props) {
+@@ -5269,19 +5269,43 @@ function Separator({ ItemSeparatorComponent, leadingItem }) {
+
+ // src/hooks/createResizeObserver.ts
+ var globalResizeObserver = null;
++var pendingResizeEntries = new Map();
++var measuredResizeElements = new WeakSet();
+ function getGlobalResizeObserver() {
+   if (!globalResizeObserver) {
++    let pendingFrame;
+     globalResizeObserver = new ResizeObserver((entries) => {
+       batchItemSizeUpdates(() => {
+         for (const entry of entries) {
+-          const callbacks = callbackMap.get(entry.target);
+-          if (callbacks) {
+-            for (const callback of callbacks) {
+-              callback(entry);
+-            }
++          if (measuredResizeElements.has(entry.target)) {
++            pendingResizeEntries.set(entry.target, entry);
++          } else {
++            // Bootstrap needs the first measurement before deciding which rows to mount.
++            measuredResizeElements.add(entry.target);
++            const callbacks = callbackMap.get(entry.target);
++            if (callbacks) for (const callback of callbacks) callback(entry);
+           }
+         }
+       });
++      if (pendingResizeEntries.size === 0) return;
++      if (pendingFrame !== void 0) return;
++      // A nested list's measurements also resize its ancestors. Commit outside
++      // ResizeObserver delivery so those ancestors can be measured next frame.
++      pendingFrame = requestAnimationFrame(() => {
++        pendingFrame = void 0;
++        const measurements = Array.from(pendingResizeEntries.values());
++        pendingResizeEntries.clear();
++        batchItemSizeUpdates(() => {
++          for (const entry of measurements) {
++            const callbacks = callbackMap.get(entry.target);
++            if (callbacks) {
++              for (const callback of callbacks) {
++                callback(entry);
++              }
++            }
++          }
++        });
++      });
+     });
+   }
+   return globalResizeObserver;
+@@ -5304,6 +5328,8 @@ function createResizeObserver(element, callback) {
+     callbacks.delete(callback);
+     if (callbacks.size === 0) {
+       callbackMap.delete(element);
++      pendingResizeEntries.delete(element);
++      measuredResizeElements.delete(element);
+       observer.unobserve(element);
+     }
+   };
+@@ -5651,6 +5677,18 @@ var ContainerSlot = typedMemo(function ContainerSlot2(props) {
  });
  
  // src/utils/reordering.ts
@@ -1571,7 +1629,7 @@ index 914d2dafaafa001c9ab6791a0a0581659295e333..8b88b09d1269acef77c6ce0f8aaa1049
  function sortDOMElements(container, indexByElement) {
    const elements = Array.from(container.children);
    if (elements.length <= 1) return elements;
-@@ -5690,9 +5702,9 @@ function sortDOMElements(container, indexByElement) {
+@@ -5690,9 +5728,9 @@ function sortDOMElements(container, indexByElement) {
          }
        }
        if (nextStableElement) {
@@ -1584,10 +1642,68 @@ index 914d2dafaafa001c9ab6791a0a0581659295e333..8b88b09d1269acef77c6ce0f8aaa1049
      }
    }
 diff --git a/react-native.web.mjs b/react-native.web.mjs
-index 95465f2ab89ce41a10553f58af83618f7310e83c..d7cbe1cb43449cc29822b2646deabbddd67f1e7d 100644
+index 95465f2ab89ce41a10553f58af83618f7310e83c..eb024a3b5952df1f70da9e01e0d3c229bb095284 100644
 --- a/react-native.web.mjs
 +++ b/react-native.web.mjs
-@@ -5630,6 +5630,18 @@ var ContainerSlot = typedMemo(function ContainerSlot2(props) {
+@@ -5248,19 +5248,43 @@ function Separator({ ItemSeparatorComponent, leadingItem }) {
+
+ // src/hooks/createResizeObserver.ts
+ var globalResizeObserver = null;
++var pendingResizeEntries = new Map();
++var measuredResizeElements = new WeakSet();
+ function getGlobalResizeObserver() {
+   if (!globalResizeObserver) {
++    let pendingFrame;
+     globalResizeObserver = new ResizeObserver((entries) => {
+       batchItemSizeUpdates(() => {
+         for (const entry of entries) {
+-          const callbacks = callbackMap.get(entry.target);
+-          if (callbacks) {
+-            for (const callback of callbacks) {
+-              callback(entry);
+-            }
++          if (measuredResizeElements.has(entry.target)) {
++            pendingResizeEntries.set(entry.target, entry);
++          } else {
++            // Bootstrap needs the first measurement before deciding which rows to mount.
++            measuredResizeElements.add(entry.target);
++            const callbacks = callbackMap.get(entry.target);
++            if (callbacks) for (const callback of callbacks) callback(entry);
+           }
+         }
+       });
++      if (pendingResizeEntries.size === 0) return;
++      if (pendingFrame !== void 0) return;
++      // A nested list's measurements also resize its ancestors. Commit outside
++      // ResizeObserver delivery so those ancestors can be measured next frame.
++      pendingFrame = requestAnimationFrame(() => {
++        pendingFrame = void 0;
++        const measurements = Array.from(pendingResizeEntries.values());
++        pendingResizeEntries.clear();
++        batchItemSizeUpdates(() => {
++          for (const entry of measurements) {
++            const callbacks = callbackMap.get(entry.target);
++            if (callbacks) {
++              for (const callback of callbacks) {
++                callback(entry);
++              }
++            }
++          }
++        });
++      });
+     });
+   }
+   return globalResizeObserver;
+@@ -5283,6 +5307,8 @@ function createResizeObserver(element, callback) {
+     callbacks.delete(callback);
+     if (callbacks.size === 0) {
+       callbackMap.delete(element);
++      pendingResizeEntries.delete(element);
++      measuredResizeElements.delete(element);
+       observer.unobserve(element);
+     }
+   };
+@@ -5630,6 +5656,18 @@ var ContainerSlot = typedMemo(function ContainerSlot2(props) {
  });
  
  // src/utils/reordering.ts
@@ -1606,7 +1722,7 @@ index 95465f2ab89ce41a10553f58af83618f7310e83c..d7cbe1cb43449cc29822b2646deabbdd
  function sortDOMElements(container, indexByElement) {
    const elements = Array.from(container.children);
    if (elements.length <= 1) return elements;
-@@ -5669,9 +5681,9 @@ function sortDOMElements(container, indexByElement) {
+@@ -5669,9 +5707,9 @@ function sortDOMElements(container, indexByElement) {
          }
        }
        if (nextStableElement) {
@@ -1619,7 +1735,7 @@ index 95465f2ab89ce41a10553f58af83618f7310e83c..d7cbe1cb43449cc29822b2646deabbdd
      }
    }
 diff --git a/react.js b/react.js
-index 914d2dafaafa001c9ab6791a0a0581659295e333..8c320b0dfb3ea60ef145274b37b1297b7dee26dc 100644
+index 914d2dafaafa001c9ab6791a0a0581659295e333..6b19ae1f250b45d4d1979df4f4bfea627c96f06c 100644
 --- a/react.js
 +++ b/react.js
 @@ -1908,6 +1908,10 @@ function updateScroll(ctx, newScroll, forceUpdate, options) {
@@ -1779,7 +1895,65 @@ index 914d2dafaafa001c9ab6791a0a0581659295e333..8c320b0dfb3ea60ef145274b37b1297b
      }
    }, [ctx, containerLayoutEpoch]);
    return children;
-@@ -5651,6 +5692,18 @@ var ContainerSlot = typedMemo(function ContainerSlot2(props) {
+@@ -5269,19 +5310,43 @@ function Separator({ ItemSeparatorComponent, leadingItem }) {
+
+ // src/hooks/createResizeObserver.ts
+ var globalResizeObserver = null;
++var pendingResizeEntries = new Map();
++var measuredResizeElements = new WeakSet();
+ function getGlobalResizeObserver() {
+   if (!globalResizeObserver) {
++    let pendingFrame;
+     globalResizeObserver = new ResizeObserver((entries) => {
+       batchItemSizeUpdates(() => {
+         for (const entry of entries) {
+-          const callbacks = callbackMap.get(entry.target);
+-          if (callbacks) {
+-            for (const callback of callbacks) {
+-              callback(entry);
+-            }
++          if (measuredResizeElements.has(entry.target)) {
++            pendingResizeEntries.set(entry.target, entry);
++          } else {
++            // Bootstrap needs the first measurement before deciding which rows to mount.
++            measuredResizeElements.add(entry.target);
++            const callbacks = callbackMap.get(entry.target);
++            if (callbacks) for (const callback of callbacks) callback(entry);
+           }
+         }
+       });
++      if (pendingResizeEntries.size === 0) return;
++      if (pendingFrame !== void 0) return;
++      // A nested list's measurements also resize its ancestors. Commit outside
++      // ResizeObserver delivery so those ancestors can be measured next frame.
++      pendingFrame = requestAnimationFrame(() => {
++        pendingFrame = void 0;
++        const measurements = Array.from(pendingResizeEntries.values());
++        pendingResizeEntries.clear();
++        batchItemSizeUpdates(() => {
++          for (const entry of measurements) {
++            const callbacks = callbackMap.get(entry.target);
++            if (callbacks) {
++              for (const callback of callbacks) {
++                callback(entry);
++              }
++            }
++          }
++        });
++      });
+     });
+   }
+   return globalResizeObserver;
+@@ -5304,6 +5369,8 @@ function createResizeObserver(element, callback) {
+     callbacks.delete(callback);
+     if (callbacks.size === 0) {
+       callbackMap.delete(element);
++      pendingResizeEntries.delete(element);
++      measuredResizeElements.delete(element);
+       observer.unobserve(element);
+     }
+   };
+@@ -5651,6 +5718,18 @@ var ContainerSlot = typedMemo(function ContainerSlot2(props) {
  });
  
  // src/utils/reordering.ts
@@ -1798,7 +1972,7 @@ index 914d2dafaafa001c9ab6791a0a0581659295e333..8c320b0dfb3ea60ef145274b37b1297b
  function sortDOMElements(container, indexByElement) {
    const elements = Array.from(container.children);
    if (elements.length <= 1) return elements;
-@@ -5690,9 +5743,9 @@ function sortDOMElements(container, indexByElement) {
+@@ -5690,9 +5769,9 @@ function sortDOMElements(container, indexByElement) {
          }
        }
        if (nextStableElement) {
@@ -1810,7 +1984,7 @@ index 914d2dafaafa001c9ab6791a0a0581659295e333..8c320b0dfb3ea60ef145274b37b1297b
        }
      }
    }
-@@ -5734,37 +5787,55 @@ function findLIS(arr) {
+@@ -5734,37 +5813,55 @@ function findLIS(arr) {
  }
  
  // src/hooks/useDOMOrder.ts
@@ -1892,7 +2066,7 @@ index 914d2dafaafa001c9ab6791a0a0581659295e333..8c320b0dfb3ea60ef145274b37b1297b
  }
  function useFreshDataTransitionVisibility(readyToRender, transitionEpoch) {
    const [completedTransitionEpoch, setCompletedTransitionEpoch] = React3.useState(transitionEpoch);
-@@ -6446,8 +6517,8 @@ function ScrollAdjust() {
+@@ -6446,8 +6543,8 @@ function ScrollAdjust() {
                window.getComputedStyle(contentNode)[axis.paddingEndProp]
              );
              const temporaryPaddingEnd = `${(currentPaddingEnd || 0) + pad}px`;
@@ -1903,7 +2077,7 @@ index 914d2dafaafa001c9ab6791a0a0581659295e333..8c320b0dfb3ea60ef145274b37b1297b
              scrollBy();
              if (resetPaddingRafRef.current !== void 0) {
 diff --git a/react.mjs b/react.mjs
-index 95465f2ab89ce41a10553f58af83618f7310e83c..252a9d5b23e271c089d30c357a78dff754f1c899 100644
+index 95465f2ab89ce41a10553f58af83618f7310e83c..e5cbea39d18e026991e5450270ecbdeedcf560e4 100644
 --- a/react.mjs
 +++ b/react.mjs
 @@ -1887,6 +1887,10 @@ function updateScroll(ctx, newScroll, forceUpdate, options) {
@@ -2063,7 +2237,65 @@ index 95465f2ab89ce41a10553f58af83618f7310e83c..252a9d5b23e271c089d30c357a78dff7
      }
    }, [ctx, containerLayoutEpoch]);
    return children;
-@@ -5630,6 +5671,18 @@ var ContainerSlot = typedMemo(function ContainerSlot2(props) {
+@@ -5248,19 +5289,43 @@ function Separator({ ItemSeparatorComponent, leadingItem }) {
+
+ // src/hooks/createResizeObserver.ts
+ var globalResizeObserver = null;
++var pendingResizeEntries = new Map();
++var measuredResizeElements = new WeakSet();
+ function getGlobalResizeObserver() {
+   if (!globalResizeObserver) {
++    let pendingFrame;
+     globalResizeObserver = new ResizeObserver((entries) => {
+       batchItemSizeUpdates(() => {
+         for (const entry of entries) {
+-          const callbacks = callbackMap.get(entry.target);
+-          if (callbacks) {
+-            for (const callback of callbacks) {
+-              callback(entry);
+-            }
++          if (measuredResizeElements.has(entry.target)) {
++            pendingResizeEntries.set(entry.target, entry);
++          } else {
++            // Bootstrap needs the first measurement before deciding which rows to mount.
++            measuredResizeElements.add(entry.target);
++            const callbacks = callbackMap.get(entry.target);
++            if (callbacks) for (const callback of callbacks) callback(entry);
+           }
+         }
+       });
++      if (pendingResizeEntries.size === 0) return;
++      if (pendingFrame !== void 0) return;
++      // A nested list's measurements also resize its ancestors. Commit outside
++      // ResizeObserver delivery so those ancestors can be measured next frame.
++      pendingFrame = requestAnimationFrame(() => {
++        pendingFrame = void 0;
++        const measurements = Array.from(pendingResizeEntries.values());
++        pendingResizeEntries.clear();
++        batchItemSizeUpdates(() => {
++          for (const entry of measurements) {
++            const callbacks = callbackMap.get(entry.target);
++            if (callbacks) {
++              for (const callback of callbacks) {
++                callback(entry);
++              }
++            }
++          }
++        });
++      });
+     });
+   }
+   return globalResizeObserver;
+@@ -5283,6 +5348,8 @@ function createResizeObserver(element, callback) {
+     callbacks.delete(callback);
+     if (callbacks.size === 0) {
+       callbackMap.delete(element);
++      pendingResizeEntries.delete(element);
++      measuredResizeElements.delete(element);
+       observer.unobserve(element);
+     }
+   };
+@@ -5630,6 +5697,18 @@ var ContainerSlot = typedMemo(function ContainerSlot2(props) {
  });
  
  // src/utils/reordering.ts
@@ -2082,7 +2314,7 @@ index 95465f2ab89ce41a10553f58af83618f7310e83c..252a9d5b23e271c089d30c357a78dff7
  function sortDOMElements(container, indexByElement) {
    const elements = Array.from(container.children);
    if (elements.length <= 1) return elements;
-@@ -5669,9 +5722,9 @@ function sortDOMElements(container, indexByElement) {
+@@ -5669,9 +5748,9 @@ function sortDOMElements(container, indexByElement) {
          }
        }
        if (nextStableElement) {
@@ -2094,7 +2326,7 @@ index 95465f2ab89ce41a10553f58af83618f7310e83c..252a9d5b23e271c089d30c357a78dff7
        }
      }
    }
-@@ -5713,37 +5766,55 @@ function findLIS(arr) {
+@@ -5713,37 +5792,55 @@ function findLIS(arr) {
  }
  
  // src/hooks/useDOMOrder.ts
@@ -2176,7 +2408,7 @@ index 95465f2ab89ce41a10553f58af83618f7310e83c..252a9d5b23e271c089d30c357a78dff7
  }
  function useFreshDataTransitionVisibility(readyToRender, transitionEpoch) {
    const [completedTransitionEpoch, setCompletedTransitionEpoch] = useState(transitionEpoch);
-@@ -6425,8 +6496,8 @@ function ScrollAdjust() {
+@@ -6425,8 +6522,8 @@ function ScrollAdjust() {
                window.getComputedStyle(contentNode)[axis.paddingEndProp]
              );
              const temporaryPaddingEnd = `${(currentPaddingEnd || 0) + pad}px`;
