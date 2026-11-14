@@ -394,7 +394,8 @@ export default defineConfig(() => {
       projects: [
         defineProject(unitTestProject),
         defineProject(browserTestProject),
-        defineProject(renderScenariosProject),
+        // Render metrics require the report directory supplied by report:renders.
+        ...(process.env.T3CODE_RENDER_REPORT_DIR ? [defineProject(renderScenariosProject)] : []),
       ],
     },
   };

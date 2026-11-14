@@ -141,6 +141,8 @@ export default defineConfig({
                   ...TEST_EXCLUDE,
                   ...TEST_CONFIG_PACKAGES.map((dir) => `${dir}/**`),
                   "native/kde-snap-shot/**",
+                  // These CI helper suites use node:test, not Vitest.
+                  ".github/scripts/*.test.cjs",
                 ],
               },
             },
