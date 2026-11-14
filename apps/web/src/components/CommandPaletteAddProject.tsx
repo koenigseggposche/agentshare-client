@@ -122,6 +122,7 @@ export function NewProjectPublishHostPicker(props: {
 }
 
 export function NewProjectSummary(props: {
+  readonly language?: "en" | "zh";
   readonly name: string;
   readonly pathPreview: string;
   readonly projectsRoot: string | null;
@@ -135,13 +136,25 @@ export function NewProjectSummary(props: {
         </CommandPaletteTitleIcon>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-foreground text-sm">
-            {props.name.length > 0 ? props.name : "New project"}
+            {props.name.length > 0
+              ? props.name
+              : props.language === "zh"
+                ? "新建项目"
+                : "New project"}
           </span>
           <span className="truncate text-muted-foreground/85 text-xs">
             {props.name.length > 0
-              ? `Creates ${props.pathPreview}`
-              : `Goes in ${props.projectsRoot}`}
-            {props.environmentLabel === null ? null : ` on ${props.environmentLabel}`}
+              ? props.language === "zh"
+                ? `创建于 ${props.pathPreview}`
+                : `Creates ${props.pathPreview}`
+              : props.language === "zh"
+                ? `保存于 ${props.projectsRoot}`
+                : `Goes in ${props.projectsRoot}`}
+            {props.environmentLabel === null
+              ? null
+              : props.language === "zh"
+                ? `（${props.environmentLabel}）`
+                : ` on ${props.environmentLabel}`}
           </span>
         </span>
       </div>
@@ -150,13 +163,16 @@ export function NewProjectSummary(props: {
 }
 
 export function RemoteRepositorySummary(props: {
+  readonly language?: "en" | "zh";
   readonly source: AddProjectRemoteSource;
   readonly title: string;
   readonly description: string;
 }) {
   return (
     <div className="shrink-0 p-2 pb-0">
-      <div className="px-2 py-1.5 font-medium text-muted-foreground text-xs">Repository</div>
+      <div className="px-2 py-1.5 font-medium text-muted-foreground text-xs">
+        {props.language === "zh" ? "仓库" : "Repository"}
+      </div>
       <div className="flex min-h-8 items-center gap-2 rounded-sm px-2 py-1.5">
         <CommandPaletteTitleIcon>
           {remoteProjectSourceIcon(props.source, ITEM_ICON_CLASS)}

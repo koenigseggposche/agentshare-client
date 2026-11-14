@@ -2294,12 +2294,18 @@ function OpenCommandPaletteDialog(props: {
                 title:
                   newProjectPublishTargets.length > 1
                     ? t("创建私有仓库", "Create private repository")
-                    : `Create private repository on ${newProjectPublishTarget.definition.label}`,
+                    : t(
+                        `在 ${newProjectPublishTarget.definition.label} 创建私有仓库`,
+                        `Create private repository on ${newProjectPublishTarget.definition.label}`,
+                      ),
                 description:
                   newProjectName.length > 0
                     ? getNewProjectRepository(newProjectPublishTarget, newProjectPathPreview)
                     : (newProjectPublishTarget.owner ??
-                      `Your ${newProjectPublishTarget.definition.label} account`),
+                      t(
+                        `你的 ${newProjectPublishTarget.definition.label} 账号`,
+                        `Your ${newProjectPublishTarget.definition.label} account`,
+                      )),
                 icon: sourceControlHostIcon(newProjectPublishTarget.definition, ITEM_ICON_CLASS),
                 titleTrailingContent: (
                   <span className="ms-auto flex items-center gap-2">
@@ -2860,6 +2866,7 @@ function OpenCommandPaletteDialog(props: {
     >
       {newProjectPathPreview !== null ? (
         <NewProjectSummary
+          language={language}
           name={newProjectName}
           pathPreview={newProjectPathPreview}
           projectsRoot={newProjectsRoot}
@@ -2868,6 +2875,7 @@ function OpenCommandPaletteDialog(props: {
       ) : null}
       {addProjectCloneFlow?.step === "confirm" ? (
         <RemoteRepositorySummary
+          language={language}
           source={addProjectCloneFlow.source}
           title={
             addProjectCloneFlow.repository?.nameWithOwner ?? addProjectCloneFlow.repositoryInput
