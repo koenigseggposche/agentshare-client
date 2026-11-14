@@ -308,7 +308,7 @@ export function AgentShareSettings({ initialSection }: { initialSection: "accoun
               />
             </SettingsSection>
           </div>
-          <div hidden={section !== "tools"}>
+          <div hidden={section !== "tools"} className="space-y-6">
             {environmentId !== null && state.data && !state.error ? (
               <AgentShareManagedTerminal
                 key={`terminal:${environmentId}:${state.data.host.owner}`}

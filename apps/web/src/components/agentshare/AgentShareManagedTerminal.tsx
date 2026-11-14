@@ -114,139 +114,144 @@ export function AgentShareManagedTerminal({
   };
   return (
     <SettingsSection title={t("交互式编程终端", "Interactive coding terminal")}>
-      <p className="text-sm text-muted-foreground">
-        {t(
-          "在所选执行电脑上使用 Codex 或 Claude 原生终端。模型来源、登录和计费仍由当前账户管理。离开页面不会停止任务。",
-          "Use the native Codex or Claude terminal on this host. The current account manages model access and billing. Leaving this page keeps the task running.",
-        )}
-      </p>
-      {!supported ? (
-        <p>
+      <div className="space-y-4 p-4">
+        <p className="text-sm text-muted-foreground">
           {t(
-            "请更新执行电脑的共享服务以使用此功能。",
-            "Update this host’s sharing service to use this feature.",
+            "在所选执行电脑上使用 Codex 或 Claude 原生终端。模型来源、登录和计费仍由当前账户管理。离开页面不会停止任务。",
+            "Use the native Codex or Claude terminal on this host. The current account manages model access and billing. Leaving this page keeps the task running.",
           )}
         </p>
-      ) : (
-        <Button variant="outline" onClick={() => setExpanded(!expanded)}>
-          {expanded ? t("收起", "Collapse") : t("打开终端面板", "Open terminal panel")}
-        </Button>
-      )}
-      {expanded && supported ? (
-        <>
-          <label className="grid gap-1">
-            {t("模型与来源", "Model and source")}
-            <Select
-              value={selection || null}
-              onValueChange={(value) => setSelection(value ?? "")}
-              items={models.map((entry) => ({
-                value: JSON.stringify(entry.model),
-                label: `${entry.name} · ${entry.model.source} · ${entry.model.runtime}${entry.device_name ? ` · ${entry.device_name}` : ""}`,
-              }))}
-            >
-              <SelectTrigger aria-label={t("模型与来源", "Model and source")}>
-                <SelectValue placeholder={t("选择模型", "Choose a model")} />
-              </SelectTrigger>
-              <SelectPopup>
-                {models.map((entry) => (
-                  <SelectItem key={JSON.stringify(entry.model)} value={JSON.stringify(entry.model)}>
-                    {entry.name} · {entry.model.source} · {entry.model.runtime}
-                    {entry.device_name ? ` · ${entry.device_name}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectPopup>
-            </Select>
-          </label>
-          <label className="grid gap-1">
-            {t("执行电脑上的绝对目录", "Absolute directory on this host")}
-            <Input
-              value={directory}
-              onChange={(event) => setDirectory(event.target.value)}
-              placeholder={t(
-                "例如 /Users/me/git/project 或 C:\\work\\project",
-                "For example /Users/me/git/project or C:\\work\\project",
-              )}
-            />
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {projects.map((project) => (
-              <Button
-                key={project.id}
-                variant="outline"
-                size="sm"
-                onClick={() => setDirectory(project.workspaceRoot)}
+        {!supported ? (
+          <p>
+            {t(
+              "请更新执行电脑的共享服务以使用此功能。",
+              "Update this host’s sharing service to use this feature.",
+            )}
+          </p>
+        ) : (
+          <Button variant="outline" onClick={() => setExpanded(!expanded)}>
+            {expanded ? t("收起", "Collapse") : t("打开终端面板", "Open terminal panel")}
+          </Button>
+        )}
+        {expanded && supported ? (
+          <>
+            <label className="grid gap-1">
+              {t("模型与来源", "Model and source")}
+              <Select
+                value={selection || null}
+                onValueChange={(value) => setSelection(value ?? "")}
+                items={models.map((entry) => ({
+                  value: JSON.stringify(entry.model),
+                  label: `${entry.name} · ${entry.model.source} · ${entry.model.runtime}${entry.device_name ? ` · ${entry.device_name}` : ""}`,
+                }))}
               >
-                {project.title}
-              </Button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              disabled={
-                !allowed || pending || !directory.trim() || !selection || query.error !== null
-              }
-              onClick={() => void start()}
-            >
-              {pending ? t("处理中…", "Working…") : t("启动新终端", "Start new terminal")}
-            </Button>
-            <Button variant="outline" onClick={query.refresh}>
-              {t("刷新模型", "Refresh models")}
-            </Button>
-          </div>
-          {!allowed ? (
-            <p>
-              {t(
-                "此连接需要管理连接及操作终端权限。",
-                "This connection requires access management and terminal operation permissions.",
-              )}
-            </p>
-          ) : null}
-          {query.error ? (
-            <p role="alert">{t("模型目录暂时不可用。", "The model catalog is unavailable.")}</p>
-          ) : null}
-          {message ? <p role="status">{message}</p> : null}
-          <div className="flex flex-wrap gap-2">
-            {sessions.map((session) => (
-              <Button
-                key={session.terminalId}
-                variant="outline"
-                onClick={() => setActive({ terminalId: session.terminalId, cwd: session.cwd })}
-              >
-                {session.cwd} · {session.status}
-              </Button>
-            ))}
-          </div>
-          {active ? (
-            <>
-              <div className="flex gap-2">
+                <SelectTrigger aria-label={t("模型与来源", "Model and source")}>
+                  <SelectValue placeholder={t("选择模型", "Choose a model")} />
+                </SelectTrigger>
+                <SelectPopup>
+                  {models.map((entry) => (
+                    <SelectItem
+                      key={JSON.stringify(entry.model)}
+                      value={JSON.stringify(entry.model)}
+                    >
+                      {entry.name} · {entry.model.source} · {entry.model.runtime}
+                      {entry.device_name ? ` · ${entry.device_name}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectPopup>
+              </Select>
+            </label>
+            <label className="grid gap-1">
+              {t("执行电脑上的绝对目录", "Absolute directory on this host")}
+              <Input
+                value={directory}
+                onChange={(event) => setDirectory(event.target.value)}
+                placeholder={t(
+                  "例如 /Users/me/git/project 或 C:\\work\\project",
+                  "For example /Users/me/git/project or C:\\work\\project",
+                )}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {projects.map((project) => (
                 <Button
+                  key={project.id}
                   variant="outline"
-                  disabled={!allowed || pending}
-                  onClick={() => void stop()}
+                  size="sm"
+                  onClick={() => setDirectory(project.workspaceRoot)}
                 >
-                  {t("停止此终端", "Stop this terminal")}
+                  {project.title}
                 </Button>
-                <Button variant="outline" onClick={() => setActive(null)}>
-                  {t("隐藏终端", "Hide terminal")}
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                disabled={
+                  !allowed || pending || !directory.trim() || !selection || query.error !== null
+                }
+                onClick={() => void start()}
+              >
+                {pending ? t("处理中…", "Working…") : t("启动新终端", "Start new terminal")}
+              </Button>
+              <Button variant="outline" onClick={query.refresh}>
+                {t("刷新模型", "Refresh models")}
+              </Button>
+            </div>
+            {!allowed ? (
+              <p>
+                {t(
+                  "此连接需要管理连接及操作终端权限。",
+                  "This connection requires access management and terminal operation permissions.",
+                )}
+              </p>
+            ) : null}
+            {query.error ? (
+              <p role="alert">{t("模型目录暂时不可用。", "The model catalog is unavailable.")}</p>
+            ) : null}
+            {message ? <p role="status">{message}</p> : null}
+            <div className="flex flex-wrap gap-2">
+              {sessions.map((session) => (
+                <Button
+                  key={session.terminalId}
+                  variant="outline"
+                  onClick={() => setActive({ terminalId: session.terminalId, cwd: session.cwd })}
+                >
+                  {session.cwd} · {session.status}
                 </Button>
-              </div>
-              <div className="h-96 min-w-0 overflow-hidden rounded border bg-black">
-                <TerminalViewport
-                  advancedTypography={false}
-                  threadRef={{ environmentId, threadId }}
-                  threadId={threadId}
-                  terminalId={active.terminalId}
-                  terminalLabel="CLI"
-                  cwd={active.cwd}
-                  onSessionExited={() => {}}
-                  visible={visible && expanded}
-                  keybindings={config?.keybindings ?? []}
-                />
-              </div>
-            </>
-          ) : null}
-        </>
-      ) : null}
+              ))}
+            </div>
+            {active ? (
+              <>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={!allowed || pending}
+                    onClick={() => void stop()}
+                  >
+                    {t("停止此终端", "Stop this terminal")}
+                  </Button>
+                  <Button variant="outline" onClick={() => setActive(null)}>
+                    {t("隐藏终端", "Hide terminal")}
+                  </Button>
+                </div>
+                <div className="h-96 min-w-0 overflow-hidden rounded border bg-black">
+                  <TerminalViewport
+                    advancedTypography={false}
+                    threadRef={{ environmentId, threadId }}
+                    threadId={threadId}
+                    terminalId={active.terminalId}
+                    terminalLabel="CLI"
+                    cwd={active.cwd}
+                    onSessionExited={() => {}}
+                    visible={visible && expanded}
+                    keybindings={config?.keybindings ?? []}
+                  />
+                </div>
+              </>
+            ) : null}
+          </>
+        ) : null}
+      </div>
     </SettingsSection>
   );
 }
