@@ -534,6 +534,9 @@ const resolvePrimaryStartConfig = Effect.fn("desktop.backendConfiguration.resolv
         ELECTRON_RUN_AS_NODE: "1",
         ...(environment.isPackaged
           ? {
+              ...(environment.platform === "darwin"
+                ? { AGENTSHARE_DESKTOP_BUNDLE_IDENTIFIER: "app.agentshare.client" }
+                : {}),
               AGENTSHARE_CORE_EXECUTABLE: environment.path.join(
                 environment.resourcesPath,
                 "agentshare-core",

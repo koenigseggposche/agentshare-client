@@ -243,6 +243,7 @@ describe("DesktopBackendConfiguration", () => {
         assert.equal(first.cwd, environment.backendCwd);
         assert.equal(first.captureOutput, true);
         assert.equal(first.env.ELECTRON_RUN_AS_NODE, "1");
+        assert.equal(first.env.AGENTSHARE_DESKTOP_BUNDLE_IDENTIFIER, "app.agentshare.client");
         assert.equal(first.env.T3CODE_DESKTOP_SHELL_DISCOVERY_PENDING, "1");
         assert.isUndefined(first.env.AGENTSHARE_CLIENT_PORT);
         assert.isUndefined(first.env.AGENTSHARE_CLIENT_MODE);
@@ -820,6 +821,7 @@ describe("DesktopBackendConfiguration", () => {
           const config = yield* configuration.resolvePrimary;
 
           assert.equal(config.executablePath, process.execPath);
+          assert.isUndefined(config.env.AGENTSHARE_DESKTOP_BUNDLE_IDENTIFIER);
           assert.equal(config.bootstrap.t3Home, environment.baseDir);
           assert.isTrue(Option.isNone(config.preflightFailure));
         }).pipe(
