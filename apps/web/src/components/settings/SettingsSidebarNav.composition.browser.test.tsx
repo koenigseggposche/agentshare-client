@@ -1,4 +1,5 @@
-import { expect, it, vi } from "vite-plus/test";
+import { __setClientSettingsForTests, getClientSettings } from "../../hooks/useSettings";
+import { expect, it, onTestFinished, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
 import { act, render } from "../../../test/render";
@@ -8,10 +9,14 @@ import { SettingsSidebarNav } from "./SettingsSidebarNav";
 vi.mock("./useAvailableSettingsSearchItems", () => ({
   useAvailableSettingsSearchItems: () => [
     { id: "theme", title: "Theme", to: "/settings/appearance" },
+    { id: "archive", title: "Archived threads", to: "/settings/archived" },
   ],
 }));
 
 it("ignores composing keys in the search", async () => {
+  const previous = getClientSettings();
+  __setClientSettingsForTests({ ...previous, uiLanguage: "en" });
+  onTestFinished(() => __setClientSettingsForTests(previous));
   await using screen = await render(
     <SidebarProvider defaultOpen>
       <SettingsSidebarNav pathname="/settings/general" />
@@ -41,4 +46,23 @@ it("ignores composing keys in the search", async () => {
   await vi.waitFor(() =>
     expect(screen.router?.state.location.pathname).toBe("/settings/appearance"),
   );
+});
+
+it("finds archived chats with Chinese and English search words", async () => {
+  const previous = getClientSettings();
+  __setClientSettingsForTests({ ...previous, uiLanguage: "zh" });
+  onTestFinished(() => __setClientSettingsForTests(previous));
+  await using screen = await render(
+    <SidebarProvider defaultOpen>
+      <SettingsSidebarNav pathname="/settings/general" />
+    </SidebarProvider>,
+    { router: "/settings/general" },
+  );
+  const search = page.getByRole("combobox", { name: "搜索设置" });
+  for (const query of ["归档", "archived"]) {
+    await search.fill(query);
+    await expect.element(page.getByRole("option", { name: /已归档会话/ })).toBeVisible();
+  }
+  await userEvent.keyboard("{Enter}");
+  await vi.waitFor(() => expect(screen.router?.state.location.pathname).toBe("/settings/archived"));
 });

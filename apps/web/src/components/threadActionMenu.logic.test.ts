@@ -75,3 +75,18 @@ describe("buildThreadActionMenuItems", () => {
     expect(items.find((item) => item.id === "turn-into-project")?.disabled).toBe(true);
   });
 });
+
+it("localizes chat actions without translating project or branch names", () => {
+  const items = buildThreadActionMenuItems({
+    ...baseState,
+    language: "zh",
+    branch: "feature/report",
+    projectFilter: { label: "Revenue", isActive: false },
+  });
+  expect(items.find((item) => item.id === "rename")?.label).toBe("重命名会话");
+  expect(items.find((item) => item.id === "new-thread-on-branch")?.label).toBe(
+    "在 feature/report 新建会话",
+  );
+  expect(items.find((item) => item.id === "filter-by-project")?.label).toBe("筛选 Revenue");
+  expect(items.find((item) => item.id === "copy")?.children?.[0]?.label).toBe("路径");
+});

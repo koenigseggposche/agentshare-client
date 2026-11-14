@@ -1,3 +1,4 @@
+import { useClientSettings } from "../../hooks/useSettings";
 import { settingsScopeEnvironmentLabels } from "./settingsScopeAxis";
 import { Spinner } from "~/components/ui/spinner";
 import { ArchiveIcon, ArchiveX } from "lucide-react";
@@ -21,6 +22,8 @@ import { searchableSetting } from "./settingsSearch";
 import { ProjectFavicon } from "../ProjectFavicon";
 
 export function ArchivedThreadsPanel() {
+  const language = useClientSettings((settings) => settings.uiLanguage);
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const { scope, groups: projectGroups, environments } = useSettingsScope();
   const { unarchiveThread, confirmAndDeleteThread } = useThreadActions();
   const {
@@ -130,8 +133,8 @@ export function ArchivedThreadsPanel() {
     if (!api) return;
     const clicked = await api.contextMenu.show(
       [
-        { id: "unarchive", label: "Unarchive" },
-        { id: "delete", label: "Delete", destructive: true },
+        { id: "unarchive", label: t("恢复会话", "Unarchive") },
+        { id: "delete", label: t("删除", "Delete"), destructive: true },
       ],
       position,
     );
@@ -145,8 +148,9 @@ export function ArchivedThreadsPanel() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Failed to unarchive thread",
-            description: error instanceof Error ? error.message : "An error occurred.",
+            title: t("恢复会话失败", "Failed to unarchive thread"),
+            description:
+              error instanceof Error ? error.message : t("发生错误。", "An error occurred."),
           }),
         );
       }
@@ -162,8 +166,9 @@ export function ArchivedThreadsPanel() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Failed to delete thread",
-            description: error instanceof Error ? error.message : "An error occurred.",
+            title: t("删除会话失败", "Failed to delete thread"),
+            description:
+              error instanceof Error ? error.message : t("发生错误。", "An error occurred."),
           }),
         );
       }
@@ -175,7 +180,7 @@ export function ArchivedThreadsPanel() {
       {archivedGroups.length === 0 ? (
         <SettingsSection
           id={isLoadingArchive ? undefined : searchableSetting("archive").id}
-          title={searchableSetting("archive").title}
+          title={t("已归档会话", searchableSetting("archive").title)}
         >
           <SettingsRow
             title={
@@ -186,16 +191,17 @@ export function ArchivedThreadsPanel() {
                   <ArchiveIcon className="size-3.5 text-muted-foreground" />
                 )}
                 {isLoadingArchive
-                  ? "Loading archived threads"
+                  ? t("正在加载已归档会话", "Loading archived threads")
                   : archiveError
-                    ? "Could not load archived threads"
-                    : "No archived threads"}
+                    ? t("无法加载已归档会话", "Could not load archived threads")
+                    : t("暂无已归档会话", "No archived threads")}
               </span>
             }
             description={
               isLoadingArchive
-                ? "Checking connected environments."
-                : (archiveError ?? "Archived threads will appear here.")
+                ? t("正在检查已连接的执行电脑。", "Checking connected environments.")
+                : (archiveError ??
+                  t("已归档的会话会显示在这里。", "Archived threads will appear here."))
             }
           />
         </SettingsSection>
@@ -227,9 +233,11 @@ export function ArchivedThreadsPanel() {
                       toastManager.add(
                         stackedThreadToast({
                           type: "error",
-                          title: "Archived thread action failed",
+                          title: t("归档会话操作失败", "Archived thread action failed"),
                           description:
-                            error instanceof Error ? error.message : "An error occurred.",
+                            error instanceof Error
+                              ? error.message
+                              : t("发生错误。", "An error occurred."),
                         }),
                       );
                     }
@@ -239,8 +247,9 @@ export function ArchivedThreadsPanel() {
                 description={
                   <span className={hasMultipleEnvironments ? "block truncate" : undefined}>
                     {hasMultipleEnvironments ? `${thread.environmentLabel} · ` : null}
-                    Archived <RelativeTime timestamp={thread.archivedAt ?? thread.createdAt} />
-                    {" \u00b7 Created "}
+                    {t("归档于 ", "Archived ")}
+                    <RelativeTime timestamp={thread.archivedAt ?? thread.createdAt} />
+                    {t(" · 创建于 ", " · Created ")}
                     <RelativeTime timestamp={thread.createdAt} />
                   </span>
                 }
@@ -264,9 +273,11 @@ export function ArchivedThreadsPanel() {
                           toastManager.add(
                             stackedThreadToast({
                               type: "error",
-                              title: "Failed to unarchive thread",
+                              title: t("恢复会话失败", "Failed to unarchive thread"),
                               description:
-                                error instanceof Error ? error.message : "An error occurred.",
+                                error instanceof Error
+                                  ? error.message
+                                  : t("发生错误。", "An error occurred."),
                             }),
                           );
                         }
@@ -274,7 +285,7 @@ export function ArchivedThreadsPanel() {
                     }}
                   >
                     <ArchiveX className="size-3.5" />
-                    <span>Unarchive</span>
+                    <span>{t("恢复会话", "Unarchive")}</span>
                   </Button>
                 }
               />

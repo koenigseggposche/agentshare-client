@@ -1,3 +1,5 @@
+import { useClientSettings } from "../../hooks/useSettings";
+import { settingsLabel } from "./settingsLabels";
 import {
   WorkspaceBreadcrumb,
   WorkspaceBreadcrumbItem,
@@ -17,18 +19,19 @@ function settingsBreadcrumbLabel(pathname: string): string | null {
 }
 
 export function SettingsBreadcrumb({ pathname }: { pathname: string }) {
+  const language = useClientSettings((settings) => settings.uiLanguage);
   const sectionLabel = settingsBreadcrumbLabel(pathname);
 
   return (
-    <WorkspaceBreadcrumb ariaLabel="Settings breadcrumb">
+    <WorkspaceBreadcrumb ariaLabel={settingsLabel("Settings breadcrumb", language)}>
       {sectionLabel ? (
         <>
-          <WorkspaceBreadcrumbItem>Settings</WorkspaceBreadcrumbItem>
+          <WorkspaceBreadcrumbItem>{settingsLabel("Settings", language)}</WorkspaceBreadcrumbItem>
           <WorkspaceBreadcrumbSeparator />
         </>
       ) : null}
       <WorkspaceBreadcrumbItem current className="truncate">
-        {sectionLabel ?? "Settings"}
+        {settingsLabel(sectionLabel ?? "Settings", language)}
       </WorkspaceBreadcrumbItem>
     </WorkspaceBreadcrumb>
   );

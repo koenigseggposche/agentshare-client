@@ -81,6 +81,7 @@ export function buildDraftActionMenuItems(options: {
 }
 
 export interface ThreadActionMenuState {
+  readonly language?: "zh" | "en";
   readonly canOperate: boolean;
   readonly canFind?: boolean;
   readonly branch: string | null;
@@ -129,15 +130,16 @@ export function threadActionRequiresOperate(action: ThreadActionMenuId): boolean
 export function buildThreadActionMenuItems(
   state: ThreadActionMenuState,
 ): ReadonlyArray<ContextMenuItem<ThreadActionMenuId>> {
+  const t = (zh: string, en: string) => (state.language === "zh" ? zh : en);
   const items: ReadonlyArray<ContextMenuItem<ThreadActionMenuId>> = [
     ...(state.canFind
-      ? [{ id: "find" as const, label: "Find in thread", icon: "text-search" }]
+      ? [{ id: "find" as const, label: t("在会话中查找", "Find in thread"), icon: "text-search" }]
       : []),
     ...(state.branch
       ? [
           {
             id: "new-thread-on-branch" as const,
-            label: `New thread on ${state.branch}`,
+            label: t(`在 ${state.branch} 新建会话`, `New thread on ${state.branch}`),
             icon: "message-square-plus",
           },
         ]
@@ -145,24 +147,32 @@ export function buildThreadActionMenuItems(
     ...(state.supports.pinning
       ? [
           state.isPinned
-            ? { id: "unpin" as const, label: "Unpin thread", icon: "pin-off" }
-            : { id: "pin" as const, label: "Pin thread", icon: "pin" },
+            ? { id: "unpin" as const, label: t("取消置顶", "Unpin thread"), icon: "pin-off" }
+            : { id: "pin" as const, label: t("置顶会话", "Pin thread"), icon: "pin" },
         ]
       : []),
     ...(state.supports.settlement
       ? [
           state.isSettled
-            ? { id: "unsettle" as const, label: "Un-settle thread", icon: "circle-check" }
-            : { id: "settle" as const, label: "Settle thread", icon: "circle-check" },
+            ? {
+                id: "unsettle" as const,
+                label: t("重新打开会话", "Un-settle thread"),
+                icon: "circle-check",
+              }
+            : {
+                id: "settle" as const,
+                label: t("办结会话", "Settle thread"),
+                icon: "circle-check",
+              },
         ]
       : []),
     ...(state.supports.snooze
       ? [
           state.isSnoozed
-            ? { id: "unsnooze" as const, label: "Wake thread", icon: "clock" }
+            ? { id: "unsnooze" as const, label: t("唤醒会话", "Wake thread"), icon: "clock" }
             : {
                 id: "snooze" as const,
-                label: "Snooze",
+                label: t("稍后处理", "Snooze"),
                 icon: "clock",
                 disabled: !state.canSnoozeNow,
                 children: [
@@ -172,35 +182,48 @@ export function buildThreadActionMenuItems(
                   })),
                   {
                     id: "snooze:custom" as const,
-                    label: "Custom…",
+                    label: t("自定义…", "Custom…"),
                     separatorBefore: state.snoozePresets.length > 0,
                   },
                 ],
               },
         ]
       : []),
-    { id: "rename", label: "Rename thread", icon: "pencil", separatorBefore: true },
+    {
+      id: "rename",
+      label: t("重命名会话", "Rename thread"),
+      icon: "pencil",
+      separatorBefore: true,
+    },
     ...(state.supports.titleRegeneration
       ? [
           {
             id: "regenerate-title" as const,
-            label: state.isRegeneratingTitle ? "Regenerating…" : "Regenerate title",
+            label: state.isRegeneratingTitle
+              ? t("正在生成…", "Regenerating…")
+              : t("重新生成标题", "Regenerate title"),
             icon: "refresh-cw",
             disabled: state.isRegeneratingTitle,
           },
         ]
       : []),
-    { id: "mark-unread", label: "Mark unread", icon: "mail-open" },
+    { id: "mark-unread", label: t("标记为未读", "Mark unread"), icon: "mail-open" },
     ...(state.canShareWithGuest
-      ? [{ id: "share-guest" as const, label: "Share with guest", icon: "user-plus" }]
+      ? [
+          {
+            id: "share-guest" as const,
+            label: t("与访客分享", "Share with guest"),
+            icon: "user-plus",
+          },
+        ]
       : []),
     ...(state.projectFilter
       ? [
           {
             id: "filter-by-project" as const,
             label: state.projectFilter.isActive
-              ? "Show all projects"
-              : `Filter by ${state.projectFilter.label}`,
+              ? t("显示所有项目", "Show all projects")
+              : t(`筛选 ${state.projectFilter.label}`, `Filter by ${state.projectFilter.label}`),
             icon: "folder-tree",
           },
         ]
@@ -209,7 +232,7 @@ export function buildThreadActionMenuItems(
       ? [
           {
             id: "turn-into-project" as const,
-            label: "Turn into project",
+            label: t("转为项目", "Turn into project"),
             icon: "folder-plus",
             disabled: state.isRunning,
           },
@@ -219,17 +242,17 @@ export function buildThreadActionMenuItems(
       ? [
           {
             id: "auto-settle" as const,
-            label: "Auto-settle behavior",
+            label: t("自动办结", "Auto-settle behavior"),
             icon: "timer",
             children: [
               {
                 id: "auto-settle:enabled" as const,
-                label: "Enabled",
+                label: t("启用", "Enabled"),
                 checked: state.autoSettleEnabled,
               },
               {
                 id: "auto-settle:disabled" as const,
-                label: "Disabled",
+                label: t("停用", "Disabled"),
                 checked: !state.autoSettleEnabled,
               },
             ],
@@ -238,29 +261,29 @@ export function buildThreadActionMenuItems(
       : []),
     {
       id: "copy",
-      label: "Copy",
+      label: t("复制", "Copy"),
       icon: "copy",
       separatorBefore: true,
       children: [
-        { id: "copy-path", label: "Path", icon: "folder" },
+        { id: "copy-path", label: t("路径", "Path"), icon: "folder" },
         ...(state.branch
-          ? [{ id: "copy-branch" as const, label: "Branch", icon: "git-branch" }]
+          ? [{ id: "copy-branch" as const, label: t("分支", "Branch"), icon: "git-branch" }]
           : []),
-        { id: "copy-thread", label: "Thread", icon: "message-square" },
-        { id: "copy-thread-id", label: "Thread ID", icon: "hash" },
+        { id: "copy-thread", label: t("会话", "Thread"), icon: "message-square" },
+        { id: "copy-thread-id", label: t("会话 ID", "Thread ID"), icon: "hash" },
       ],
     },
-    { id: "project-settings", label: "Project settings", icon: "settings" },
+    { id: "project-settings", label: t("项目设置", "Project settings"), icon: "settings" },
     {
       id: "archive",
-      label: "Archive thread",
+      label: t("归档会话", "Archive thread"),
       icon: "archive",
       disabled: state.isRunning,
       separatorBefore: true,
     },
     {
       id: "delete",
-      label: "Delete",
+      label: t("删除", "Delete"),
       destructive: true,
       icon: "trash",
     },
