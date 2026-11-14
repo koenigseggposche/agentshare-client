@@ -3,6 +3,21 @@ const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 const fs = require("node:fs");
 const os = require("node:os");
+const { createHash } = require("node:crypto");
+const { assignMacBuildUUID } = require("./mac-build-uuid.cjs");
+
+function assignBuildIdentity({ appOutDir, electronPlatformName, packager }) {
+  if (electronPlatformName !== "darwin") return;
+  const product = packager.appInfo.productFilename;
+  const contents = path.join(appOutDir, product + ".app", "Contents");
+  const executable = path.join(contents, "MacOS", product);
+  const contentHash = createHash("sha256")
+    .update(fs.readFileSync(path.join(contents, "Resources", "app.asar")))
+    .digest("hex");
+  const identity = JSON.stringify([packager.appInfo.id, packager.appInfo.version, contentHash]);
+  fs.writeFileSync(executable, assignMacBuildUUID(fs.readFileSync(executable), identity));
+  console.log("[mac-build-uuid] Assigned application build identity before signing");
+}
 
 // afterPack runs before signing and installer creation, against the final ASAR layout.
 module.exports = async ({ appOutDir, electronPlatformName, arch, packager }) => {
@@ -24,6 +39,7 @@ module.exports = async ({ appOutDir, electronPlatformName, arch, packager }) => 
     console.log(
       `[server-compile-cache] Skipping unexecutable target ${electronPlatformName}/${targetArch}`,
     );
+    assignBuildIdentity({ appOutDir, electronPlatformName, packager });
     return;
   }
   const product = packager.appInfo.productFilename;
@@ -90,4 +106,5 @@ module.exports = async ({ appOutDir, electronPlatformName, arch, packager }) => 
   if (result.status !== 0)
     throw new Error(`Server compile cache generation failed: ${result.error || result.stderr}`);
   console.log("[server-compile-cache] Prepared server bytecode with packaged Electron");
+  assignBuildIdentity({ appOutDir, electronPlatformName, packager });
 };
