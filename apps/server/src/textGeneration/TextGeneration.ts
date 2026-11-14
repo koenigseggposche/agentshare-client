@@ -156,8 +156,27 @@ export const make = Effect.gen(function* () {
         service.generateReviewGuide({ ...input, modelSelection }),
       );
     }),
-    generateThreadTitle: Effect.fn("TextGeneration.generateThreadTitle")(function (input) {
-      return generate(
+    generateThreadTitle: Effect.fn("TextGeneration.generateThreadTitle")(function* (input) {
+      const settings = yield* serverSettings.getSettings.pipe(
+        Effect.mapError(
+          () =>
+            new TextGenerationError({
+              operation: "generateThreadTitle",
+              detail: "Could not read model settings.",
+            }),
+        ),
+      );
+      // The conversation already has a prompt-derived title. Missing or managed
+      // auxiliary connections should keep it without retries or paid requests.
+      if (
+        isAgentShareConnection(
+          settings.providerInstances[input.modelSelection.instanceId]?.config,
+        ) ||
+        !(yield* registry.getInstance(input.modelSelection.instanceId))
+      ) {
+        return { title: input.previousTitle ?? "New thread" };
+      }
+      return yield* generate(
         "generateThreadTitle",
         input.modelSelection,
         (textGeneration, modelSelection) =>

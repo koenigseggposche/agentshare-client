@@ -1,6 +1,10 @@
-import { filterAgentShareModels } from "@t3tools/shared/agentShareModelCatalog";
+import {
+  filterAgentShareModels,
+  hasAgentShareModelConnection,
+} from "@t3tools/shared/agentShareModelCatalog";
 import { Input } from "../ui/input";
 import { useState } from "react";
+import { useEnvironmentSettings } from "../../hooks/useSettings";
 import {
   modelSourceLabels,
   modelSourceOptions,
@@ -10,6 +14,7 @@ import {
 import { useAtomValue } from "@effect/atom-react";
 import {
   agentShareWorkbenchModels,
+  agentShareModelsMatch,
   type AgentShareModel,
   type EnvironmentId,
 } from "@t3tools/contracts";
@@ -40,10 +45,11 @@ export function AgentShareModels({
   const [source, setSource] = useState<ModelSourceFilter>("all");
   const [search, setSearch] = useState("");
   const sourceLabels = modelSourceLabels[language];
-  const [pending, setPending] = useState(false);
+  const instances = useEnvironmentSettings(environmentId, (settings) => settings.providerInstances);
+  const [pending, setPending] = useState<AgentShareModel | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const add = async (model: AgentShareModel) => {
-    setPending(true);
+    setPending(model);
     setFeedback(null);
     try {
       const result = await configure({
@@ -69,7 +75,7 @@ export function AgentShareModels({
         ),
       );
     }
-    setPending(false);
+    setPending(null);
   };
   const models = agentShareWorkbenchModels(query.data?.models ?? []);
   const visibleModels = filterAgentShareModels(models, source, search);
@@ -131,40 +137,55 @@ export function AgentShareModels({
           </p>
         ) : null}
       </div>
-      {visibleModels.map((entry) => (
-        <SettingsRow
-          key={[
-            entry.model.source,
-            entry.model.service,
-            entry.model.id,
-            entry.model.runtime,
-            entry.model.device ?? "",
-          ].join(":")}
-          title={entry.name}
-          description={[
-            sourceLabels[entry.model.source],
-            entry.device_name ?? "",
-            entry.model.runtime === "text"
-              ? t("纯文本，无文件和终端工具", "Text only, without file or terminal tools")
-              : entry.model.runtime === "claude"
-                ? "Claude Code"
-                : "Codex",
-            entry.available ? t("可用", "Available") : t("暂不可用", "Unavailable"),
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-          control={
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={pending || query.error !== null || !canConfigure || !entry.available}
-              onClick={() => void add(entry.model)}
-            >
-              {t("添加到工作台", "Add to workbench")}
-            </Button>
-          }
-        />
-      ))}
+      {visibleModels.map((entry) => {
+        const added = hasAgentShareModelConnection(instances, owner, entry.model);
+        return (
+          <SettingsRow
+            key={[
+              entry.model.source,
+              entry.model.service,
+              entry.model.id,
+              entry.model.runtime,
+              entry.model.device ?? "",
+            ].join(":")}
+            title={entry.name}
+            description={[
+              sourceLabels[entry.model.source],
+              entry.device_name ?? "",
+              entry.model.runtime === "text"
+                ? t("纯文本，无文件和终端工具", "Text only, without file or terminal tools")
+                : entry.model.runtime === "claude"
+                  ? "Claude Code"
+                  : "Codex",
+              entry.available ? t("可用", "Available") : t("暂不可用", "Unavailable"),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            control={
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={
+                  added ||
+                  pending !== null ||
+                  query.error !== null ||
+                  !canConfigure ||
+                  !entry.available
+                }
+                onClick={() => void add(entry.model)}
+              >
+                {added
+                  ? t("已添加", "Added")
+                  : pending !== null &&
+                      pending.runtime === entry.model.runtime &&
+                      agentShareModelsMatch(pending, entry.model)
+                    ? t("正在添加…", "Adding…")
+                    : t("添加到工作台", "Add to workbench")}
+              </Button>
+            }
+          />
+        );
+      })}
     </SettingsSection>
   );
 }

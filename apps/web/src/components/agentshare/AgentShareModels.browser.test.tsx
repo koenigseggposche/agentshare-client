@@ -1,10 +1,24 @@
-import { EnvironmentId, type AgentShareModelInfo } from "@t3tools/contracts";
+import {
+  EnvironmentId,
+  ProviderDriverKind,
+  ProviderInstanceId,
+  type ProviderInstanceConfigMap,
+  type AgentShareModelInfo,
+} from "@t3tools/contracts";
 import { expect, it, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 
 import { render } from "../../../test/render";
 
-const state = vi.hoisted(() => ({ configure: vi.fn(), refresh: vi.fn() }));
+const state = vi.hoisted(() => ({
+  configure: vi.fn(),
+  refresh: vi.fn(),
+  instances: {} as ProviderInstanceConfigMap,
+}));
+vi.mock(import("../../hooks/useSettings"), async (original) => ({
+  ...(await original()),
+  useEnvironmentSettings: (() => state.instances) as never,
+}));
 
 vi.mock(import("../../state/query"), async (original) => ({
   ...(await original()),
@@ -52,7 +66,17 @@ const community: AgentShareModelInfo = {
 };
 
 it("filters by source and adds the selected community connection", async () => {
-  state.configure.mockReset().mockResolvedValue({ _tag: "Success" });
+  state.instances = {};
+  state.configure.mockReset().mockImplementation(async ({ input }) => {
+    state.instances = {
+      [ProviderInstanceId.make("generated")]: {
+        driver: ProviderDriverKind.make("codex"),
+        enabled: true,
+        config: { agentShareOwner: input.owner, agentShareModel: input.model },
+      },
+    };
+    return { _tag: "Success" };
+  });
   const environmentId = EnvironmentId.make("generated-host");
   const owner = "generated-owner";
   await using _screen = await render(
@@ -69,6 +93,7 @@ it("filters by source and adds the selected community connection", async () => {
     input: { owner, model: community.model },
   });
 
+  await expect.element(page.getByRole("button", { name: "已添加", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "我的设备", exact: true }).click();
   await expect.element(page.getByText("这个来源暂时没有会话模型。")).toBeVisible();
   await page.getByRole("button", { name: "全部来源", exact: true }).click();

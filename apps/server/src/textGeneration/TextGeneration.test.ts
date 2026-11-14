@@ -64,6 +64,46 @@ describe("auxiliary generation policy", () => {
         .pipe(Effect.flip);
       assert.equal(failure.operation, "generateCommitMessage");
       assert.include(failure.detail, "disabled");
+      assert.deepEqual(
+        yield* service.generateThreadTitle({
+          cwd: "/generated/work",
+          message: "Summarize generated data",
+          previousTitle: "Generated data",
+          modelSelection: { instanceId, model: "generated" },
+        }),
+        { title: "Generated data" },
+      );
     }),
   );
 });
+
+it.effect("keeps the prompt-derived title when no auxiliary provider is registered", () =>
+  Effect.gen(function* () {
+    const service = yield* TextGeneration.TextGeneration.pipe(
+      Effect.provide(
+        TextGeneration.layer.pipe(
+          Layer.provide(
+            Layer.mock(ProviderInstanceRegistry.ProviderInstanceRegistry)({
+              getInstance: () => Effect.sync(() => undefined),
+              listInstances: Effect.die(
+                "An absent title model must not trigger fallback inference",
+              ),
+            }),
+          ),
+          Layer.provide(
+            Layer.mock(SourceControlProviderRegistry.SourceControlProviderRegistry)({
+              resolveLink: () => Effect.die("Unexpected title link lookup"),
+            }),
+          ),
+          Layer.provide(ServerSettings.layerTest()),
+        ),
+      ),
+    );
+    const result = yield* service.generateThreadTitle({
+      cwd: "/generated/work",
+      message: "Summarize generated data",
+      modelSelection: { instanceId: ProviderInstanceId.make("missing"), model: "generated" },
+    });
+    assert.deepEqual(result, { title: "New thread" });
+  }),
+);
