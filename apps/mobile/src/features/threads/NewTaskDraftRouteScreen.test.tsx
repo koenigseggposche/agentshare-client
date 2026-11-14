@@ -50,6 +50,9 @@ function useSnapshot(): Snapshot {
 vi.mock("react-native", () => ({
   View: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
+vi.mock("../workspace/navigation-tabs", () => ({
+  useWorkbenchLanguage: () => "en",
+}));
 vi.mock("../../components/ui/AppText", () => ({
   AppText: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 }));

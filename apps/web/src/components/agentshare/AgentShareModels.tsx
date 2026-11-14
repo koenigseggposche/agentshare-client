@@ -73,49 +73,51 @@ export function AgentShareModels({
     source === "all" ? models : models.filter((entry) => entry.model.source === source);
   return (
     <SettingsSection title={t("会话模型", "Conversation models")}>
-      <p className="text-sm text-muted-foreground">
-        {t(
-          "选择模型及来源，添加到工作台。本机纯文本模型在执行电脑运行；在线任务按所选来源的平台费率计费。",
-          "Choose a model and source for the workbench. Local text models run on the execution host; online tasks use the selected source’s platform rates.",
-        )}
-      </p>
-      <ToggleGroup
-        aria-label={t("模型来源", "Model source")}
-        className="max-w-full flex-wrap"
-        value={[source]}
-        onValueChange={(next) =>
-          setSource(modelSourceOptions.find((option) => option === next[0]) ?? "all")
-        }
-      >
-        {modelSourceOptions.map((option) => (
-          <Toggle key={option} value={option}>
-            {sourceLabels[option]}
-          </Toggle>
-        ))}
-      </ToggleGroup>
-      <Button size="sm" variant="outline" onClick={query.refresh}>
-        {t("刷新模型", "Refresh models")}
-      </Button>
-      {query.error ? (
-        <p role="alert">
+      <div className="space-y-3 px-3 py-3 sm:px-4">
+        <p className="text-sm text-muted-foreground">
           {t(
-            "暂时无法读取模型目录。请检查执行电脑的账号和连接。",
-            "The model catalog could not be loaded. Check this host’s account and connection.",
+            "选择模型及来源，添加到工作台。本机纯文本模型在执行电脑运行；在线任务按所选来源的平台费率计费。",
+            "Choose a model and source for the workbench. Local text models run on the execution host; online tasks use the selected source’s platform rates.",
           )}
         </p>
-      ) : null}
-      {feedback ? <p role="status">{feedback}</p> : null}
-      {!query.isPending && !query.error && models.length === 0 ? (
-        <p>
-          {t(
-            "暂无会话模型。可以启动本机模型，或登录并开启消费查看社区模型。",
-            "No conversation models are listed. Start a local model, or sign in and enable consumption to view community models.",
-          )}
-        </p>
-      ) : null}
-      {!query.isPending && !query.error && models.length > 0 && visibleModels.length === 0 ? (
-        <p>{t("这个来源暂时没有会话模型。", "No conversation models from this source.")}</p>
-      ) : null}
+        <ToggleGroup
+          aria-label={t("模型来源", "Model source")}
+          className="max-w-full flex-wrap"
+          value={[source]}
+          onValueChange={(next) =>
+            setSource(modelSourceOptions.find((option) => option === next[0]) ?? "all")
+          }
+        >
+          {modelSourceOptions.map((option) => (
+            <Toggle key={option} value={option}>
+              {sourceLabels[option]}
+            </Toggle>
+          ))}
+        </ToggleGroup>
+        <Button size="sm" variant="outline" onClick={query.refresh}>
+          {t("刷新模型", "Refresh models")}
+        </Button>
+        {query.error ? (
+          <p role="alert">
+            {t(
+              "暂时无法读取模型目录。请检查执行电脑的账号和连接。",
+              "The model catalog could not be loaded. Check this host’s account and connection.",
+            )}
+          </p>
+        ) : null}
+        {feedback ? <p role="status">{feedback}</p> : null}
+        {!query.isPending && !query.error && models.length === 0 ? (
+          <p>
+            {t(
+              "暂无会话模型。可以启动本机模型，或登录并开启消费查看社区模型。",
+              "No conversation models are listed. Start a local model, or sign in and enable consumption to view community models.",
+            )}
+          </p>
+        ) : null}
+        {!query.isPending && !query.error && models.length > 0 && visibleModels.length === 0 ? (
+          <p>{t("这个来源暂时没有会话模型。", "No conversation models from this source.")}</p>
+        ) : null}
+      </div>
       {visibleModels.map((entry) => (
         <SettingsRow
           key={[

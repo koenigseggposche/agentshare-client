@@ -49,6 +49,11 @@ vi.mock(import("@t3tools/client-runtime/state/session"), async (original) => {
     })) as never,
   };
 });
+vi.mock(import("../../hooks/useSettings"), async (original) => ({
+  ...(await original()),
+  useClientSettings: ((selector: (settings: { uiLanguage: "en" }) => unknown) =>
+    selector({ uiLanguage: "en" })) as never,
+}));
 vi.mock(import("../../cloud/publicConfig"), async (original) => ({
   ...(await original()),
   hasCloudPublicConfig: () => false,
@@ -252,6 +257,8 @@ async function mountImport(remote = false) {
     ),
   );
   await click("Continue");
+  expect(pageText()).not.toContain("Checking CLI");
+  expect(pageText()).not.toContain("Checking…");
   await click("Continue");
   expect(pageText()).toContain("Import your projects");
   stack.move();
@@ -311,7 +318,7 @@ it("keeps the project selection after going back a stage", async () => {
   await click("Select none");
   expect(pageText()).toContain("0 of 2 selected");
 
-  await clickStage("Agents, step 2");
+  await clickStage("Models, step 2");
   await click("Continue");
   expect(pageText()).toContain("Import your projects");
   expect(pageText()).toContain("0 of 2 selected");

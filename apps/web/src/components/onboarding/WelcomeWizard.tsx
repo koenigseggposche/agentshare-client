@@ -21,6 +21,7 @@ import {
   defaultInstanceIdForDriver,
   AuthOrchestrationOperateScope,
   isManagedDriverAllowed,
+  isAgentShareModelConnection,
   ProviderDriverKind,
   ThreadId,
 } from "@t3tools/contracts";
@@ -36,7 +37,9 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { AgentShareWelcomeModels } from "./AgentShareWelcomeModels";
 import { TYPOGRAPHY_ADVANCED_STORAGE_KEY } from "../../appearanceFonts";
+import { useClientSettings } from "../../hooks/useSettings";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import { hasCloudPublicConfig } from "../../cloud/publicConfig";
 import { useT3ConnectAuthPrompt } from "../clerk/useT3ConnectAuthPrompt";
@@ -54,7 +57,6 @@ import {
   getOnboardingProviderState,
   resolveOnboardingProviderInstallCommand,
   resolveOnboardingProviderLoginCommand,
-  selectOnboardingProvidersByDriver,
 } from "../../onboarding/providerReadiness.logic";
 import { newProjectId, randomUUID } from "../../lib/utils";
 import { agentSessionImport } from "../../state/agentSessions";
@@ -110,7 +112,10 @@ type WizardStep = "connection" | "agents" | "import";
 const NO_ENVIRONMENTS: readonly EnvironmentId[] = [];
 
 const AGENT_ONBOARDING_THREAD_ID = ThreadId.make("onboarding-agent-setup");
-const ONBOARDING_STAGES = ["Connect", "Agents", "Projects"] as const;
+function useWelcomeCopy() {
+  const language = useClientSettings((settings) => settings.uiLanguage);
+  return (zh: string, en: string) => (language === "zh" ? zh : en);
+}
 const SCAN_LIMIT_MESSAGE = "Scan limit reached. Some projects or conversations may be missing.";
 
 export function WelcomeWizard({
@@ -123,6 +128,7 @@ export function WelcomeWizard({
   readonly onDone: (projectRef?: ScopedProjectRef) => void | Promise<void>;
 }) {
   const [step, setStep] = useState<WizardStep>(resumeEnvironmentId ? "agents" : "connection");
+  const t = useWelcomeCopy();
   const { environments } = useEnvironments();
   const [selection, setSelection] = useState<ReadonlySet<EnvironmentId> | null>(null);
   // Share the registry for the wizard's lifetime so unchecked computers are not auto-selected again.
@@ -238,7 +244,7 @@ export function WelcomeWizard({
         initialFocus={() => document.getElementById("onboarding-pairing-url") ?? true}
       >
         <WizardHeader
-          title="Set up AgentShare"
+          title={t("设置 AgentShare", "Set up AgentShare")}
           identity={
             <div className="flex items-baseline gap-1.5" role="img" aria-label="AgentShare">
               <AgentShareMark className="h-5 w-auto shrink-0" aria-hidden />
@@ -249,7 +255,7 @@ export function WelcomeWizard({
           }
         >
           <WizardSteps
-            steps={ONBOARDING_STAGES}
+            steps={[t("连接电脑", "Connect"), t("选择模型", "Models"), t("添加项目", "Projects")]}
             currentStep={stageIndex}
             isStepDisabled={(index) => isImporting || index >= stageIndex}
             onStepChange={(index) => {
@@ -317,6 +323,7 @@ function ConnectionStep({
   readonly onContinue: () => void;
   readonly onPaired: (environmentId: EnvironmentId) => void;
 }) {
+  const t = useWelcomeCopy();
   const { environments } = useEnvironments();
   const telemetryOff = managedTelemetryOffMessage(usePrimaryManagedPolicy());
   const cloudEnabled = hasCloudPublicConfig();
@@ -343,14 +350,17 @@ function ConnectionStep({
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-        Connect your computers
+        {t("连接执行电脑", "Connect your computers")}
       </h1>
       <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
-        Choose one or more computers. We’ll set up agents and projects on each.
+        {t(
+          "选择一台或多台电脑，再为它们设置模型和项目。",
+          "Choose one or more computers. We’ll set up agents and projects on each.",
+        )}
       </p>
       {directEnvironments.length > 0 ? (
         <fieldset className="mt-5 space-y-2">
-          <legend className="sr-only">Computers to set up</legend>
+          <legend className="sr-only">{t("要设置的电脑", "Computers to set up")}</legend>
           {directEnvironments.map((environment) => (
             <label
               key={environment.environmentId}
@@ -414,7 +424,7 @@ function ConnectionStep({
               }
             >
               <LinkIcon className="size-4 text-muted-foreground" />
-              <span className="flex-1 text-left">Add a computer</span>
+              <span className="flex-1 text-left">{t("添加电脑", "Add a computer")}</span>
               <ChevronRightIcon
                 className={cn("size-4 text-muted-foreground", pairingOpen && "rotate-90")}
               />
@@ -444,7 +454,10 @@ function ConnectionStep({
       <div className="mt-6 flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <p className="min-w-0 text-xs leading-relaxed text-muted-foreground">
           {telemetryOff ??
-            "Usage analytics is off by default. Configure an export receiver in Settings to share diagnostics."}
+            t(
+              "使用统计默认关闭。可在设置中配置接收端以分享诊断信息。",
+              "Usage analytics is off by default. Configure an export receiver in Settings to share diagnostics.",
+            )}
         </p>
         <Button
           className="shrink-0 self-end"
@@ -453,7 +466,7 @@ function ConnectionStep({
           disabled={!ready || isPairing}
           onClick={onContinue}
         >
-          Continue
+          {t("继续", "Continue")}
           <ArrowRightIcon className="size-3.5" />
         </Button>
       </div>
@@ -672,11 +685,15 @@ function AgentsStep({
   readonly environmentIds: readonly EnvironmentId[];
   readonly onContinue: () => void;
 }) {
+  const t = useWelcomeCopy();
   const { environments } = useEnvironments();
   return (
     <StepShell
-      title="Connect your agents"
-      description="Choose an agent to start coding. You can add more later."
+      title={t("选择会话模型", "Choose your conversation models")}
+      description={t(
+        "选择模型及来源。添加连接不会发送模型请求，之后也可以在设置中调整。",
+        "Choose a model and source. Adding a connection sends no model request. You can change it later in settings.",
+      )}
     >
       <ScrollArea scrollFade className="mt-5 h-auto max-h-[min(32rem,55dvh)]">
         <div className="space-y-5 pr-3">
@@ -694,7 +711,7 @@ function AgentsStep({
       </ScrollArea>
       <div className="mt-6 flex justify-end">
         <Button autoFocus onClick={onContinue}>
-          Continue
+          {t("继续", "Continue")}
           <ArrowRightIcon className="size-3.5" />
         </Button>
       </div>
@@ -728,7 +745,6 @@ function ConnectedAgentsStep({
     void refreshProviders({ environmentId, input: {} });
   }, [environmentId, refreshProviders]);
 
-  const byDriver = selectOnboardingProvidersByDriver(providers);
   const managedPolicy = serverConfig?.managedPolicy;
   // A policy that owns Codex's launch settings also rules out ChatGPT's own runtime.
   const chatGptAllowed =
@@ -739,11 +755,22 @@ function ConnectedAgentsStep({
   const primaryAgents = PRIMARY_AGENT_DRIVERS.filter((driver) =>
     isManagedDriverAllowed(managedPolicy, ProviderDriverKind.make(driver)),
   ).flatMap((driver) => {
-    const instances =
-      driver === "codex" ? providers?.filter((provider) => provider.driver === driver) : undefined;
-    return instances?.length
-      ? instances.map((provider) => ({ driver, provider, instanceId: provider.instanceId }))
-      : [{ driver, provider: byDriver.get(driver), instanceId: byDriver.get(driver)?.instanceId }];
+    const instances = providers?.filter(
+      (provider) =>
+        provider.driver === driver &&
+        !isAgentShareModelConnection(
+          serverConfig?.settings.providerInstances[provider.instanceId]?.config,
+        ),
+    );
+    return (instances ?? []).map(
+      (
+        provider,
+      ): {
+        driver: OnboardingAgentDriver;
+        provider: ServerProvider | undefined;
+        instanceId: ProviderInstanceId | undefined;
+      } => ({ driver, provider, instanceId: provider.instanceId }),
+    );
   });
   if (createdAccount) {
     const index = primaryAgents.findIndex(
@@ -761,7 +788,8 @@ function ConnectedAgentsStep({
   return (
     <section>
       <h2 className="mb-2 text-sm font-medium">{machineLabel}</h2>
-      {!canOperateTerminal ? (
+      <AgentShareWelcomeModels environmentId={environmentId} />
+      {!canOperateTerminal && primaryAgents.length > 0 ? (
         <p className="mb-2 text-sm text-muted-foreground">
           This connection cannot control terminals.
         </p>
@@ -843,7 +871,11 @@ function ConnectedAgentsStep({
       {chatGptAllowed &&
       providers?.some(
         (provider) =>
-          provider.driver === "codex" && getOnboardingProviderState(provider) === "ready",
+          provider.driver === "codex" &&
+          getOnboardingProviderState(provider) === "ready" &&
+          !isAgentShareModelConnection(
+            serverConfig?.settings.providerInstances[provider.instanceId]?.config,
+          ),
       ) ? (
         <div className="mt-3">
           <Button size="xs" variant="ghost-muted" onClick={() => setAddingAccount(true)}>
@@ -1208,6 +1240,7 @@ function ImportStep({
     importedThreadCount?: number,
   ) => Promise<boolean>;
 }) {
+  const t = useWelcomeCopy();
   const { environments } = useEnvironments();
   const writableEnvironments = useEnvironmentsWithScope(scans, AuthOrchestrationOperateScope);
   const createProject = useAtomCommand(projectEnvironment.create, { reportFailure: false });
@@ -1431,16 +1464,21 @@ function ImportStep({
   if (scans.every((scan) => scan.data === null) && scans.some((scan) => scan.isPending)) {
     return (
       <div className="flex h-full min-h-40 flex-col">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Your projects</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          {t("你的项目", "Your projects")}
+        </h1>
         <div className="flex flex-1 flex-col items-center justify-center gap-3 py-6">
           <Spinner size="lg" tone="muted" />
           <p className="text-center text-sm text-muted-foreground">
-            Looking for projects from Claude Code and Codex…
+            {t(
+              "正在查找 Claude Code 和 Codex 项目…",
+              "Looking for projects from Claude Code and Codex…",
+            )}
           </p>
         </div>
         <div className="flex justify-end">
           <Button variant="ghost-muted" onClick={() => void onDone()}>
-            Do not import projects
+            {t("不导入项目", "Do not import projects")}
           </Button>
         </div>
       </div>
@@ -1452,13 +1490,19 @@ function ImportStep({
 
   return (
     <StepShell
-      title="Import your projects"
-      description="Import projects and conversations from Claude Code and Codex on your selected computers."
+      title={t("导入项目", "Import your projects")}
+      description={t(
+        "从所选电脑上的 Claude Code 和 Codex 导入项目与会话。",
+        "Import projects and conversations from Claude Code and Codex on your selected computers.",
+      )}
     >
       {candidates.length > 0 ? (
         <div className="mt-5 flex items-center justify-between gap-3 text-xs text-muted-foreground">
           <span role="status">
-            {selected.length} of {candidates.length} selected
+            {t(
+              `已选 ${selected.length} / ${candidates.length} 项`,
+              `${selected.length} of ${candidates.length} selected`,
+            )}
           </span>
           <div className="flex items-center gap-1">
             <Button
@@ -1467,7 +1511,7 @@ function ImportStep({
               disabled={isImporting || selected.length === candidates.length}
               onClick={() => setSelectedKeys(new Set(candidates.map((item) => item.key)))}
             >
-              Select all
+              {t("全选", "Select all")}
             </Button>
             <Button
               variant="ghost"
@@ -1475,7 +1519,7 @@ function ImportStep({
               disabled={isImporting || selected.length === 0}
               onClick={() => setSelectedKeys(new Set())}
             >
-              Select none
+              {t("取消全选", "Select none")}
             </Button>
           </div>
         </div>
@@ -1515,7 +1559,10 @@ function ImportStep({
                   </div>
                 ) : scanCandidates.length === 0 ? (
                   <p className="py-2 text-sm text-muted-foreground">
-                    No existing Claude Code or Codex projects found.
+                    {t(
+                      "没有找到已有的 Claude Code 或 Codex 项目。",
+                      "No existing Claude Code or Codex projects found.",
+                    )}
                   </p>
                 ) : null}
                 {scan.data?.truncated ? (
@@ -1539,12 +1586,12 @@ function ImportStep({
       <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
         {noProjectsToImport ? (
           <Button autoFocus onClick={finishAfterImport}>
-            Finish setup
+            {t("完成设置", "Finish setup")}
           </Button>
         ) : (
           <>
             <Button variant="ghost-muted" disabled={isImporting} onClick={finishAfterImport}>
-              Do not import projects
+              {t("不导入项目", "Do not import projects")}
             </Button>
             <Button
               autoFocus
@@ -1552,8 +1599,11 @@ function ImportStep({
               onClick={() => void runImport(selected)}
             >
               {isImporting
-                ? "Importing…"
-                : `Import ${selected.length} ${selected.length === 1 ? "project" : "projects"}`}
+                ? t("正在导入…", "Importing…")
+                : t(
+                    `导入 ${selected.length} 个项目`,
+                    `Import ${selected.length} ${selected.length === 1 ? "project" : "projects"}`,
+                  )}
             </Button>
           </>
         )}
