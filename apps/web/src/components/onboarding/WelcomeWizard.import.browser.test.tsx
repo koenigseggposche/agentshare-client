@@ -257,8 +257,10 @@ async function mountImport(remote = false) {
     ),
   );
   await click("Continue");
-  expect(pageText()).not.toContain("Checking CLI");
-  expect(pageText()).not.toContain("Checking…");
+  expect(pageText()).not.toContain("Checking your Codex CLI");
+  expect(pageText()).not.toContain(
+    "Waiting for the server to report installation and authentication details.",
+  );
   await click("Continue");
   expect(pageText()).toContain("Import your projects");
   stack.move();
