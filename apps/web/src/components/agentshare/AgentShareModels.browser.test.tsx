@@ -74,3 +74,21 @@ it("filters by source and adds the selected community connection", async () => {
   await page.getByRole("button", { name: "全部来源", exact: true }).click();
   await expect.element(page.getByText(local.name, { exact: true })).toBeVisible();
 });
+
+it("combines model search with source filters and lets users recover from no matches", async () => {
+  await using _screen = await render(
+    <AgentShareModels
+      environmentId={EnvironmentId.make("generated-host")}
+      owner="generated-owner"
+      language="en"
+    />,
+  );
+  const search = page.getByRole("searchbox", { name: "Search models or devices" });
+  await search.fill("COMMUNITY");
+  await expect.element(page.getByText(local.name, { exact: true })).not.toBeInTheDocument();
+  await expect.element(page.getByText(community.name, { exact: true })).toBeVisible();
+  await search.fill("missing-model");
+  await expect.element(page.getByText("No matching models.")).toBeVisible();
+  await search.fill("");
+  await expect.element(page.getByText(local.name, { exact: true })).toBeVisible();
+});

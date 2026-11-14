@@ -1,3 +1,4 @@
+import { filterAgentShareModels } from "@t3tools/shared/agentShareModelCatalog";
 import { AgentShareManagedTerminal } from "./AgentShareManagedTerminal";
 import { AgentShareTools } from "./AgentShareTools";
 import { useNavigation } from "@react-navigation/native";
@@ -22,7 +23,7 @@ import {
   type AgentShareModel,
   type EnvironmentId,
 } from "@t3tools/contracts";
-import { AppText as Text } from "../../components/ui/AppText";
+import { AppText as Text, AppTextInput } from "../../components/ui/AppText";
 import { ScreenScrollView } from "../../components/ui/ScreenScrollView";
 import { ListActionRow } from "../../components/ui/ListActionRow";
 import { Chip } from "../../components/ui/Chip";
@@ -390,6 +391,7 @@ export function HostModels({
   const configure = useAtomCommand(agentShareEnvironment.configureModel, { reportFailure: false });
   const allowed = useAtomValue(agentShareEnvironment.configureModel.permissionAtom(environmentId));
   const [source, setSource] = useState<ModelSourceFilter>("all");
+  const [search, setSearch] = useState("");
   const sourceLabels = modelSourceLabels[language];
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -411,10 +413,19 @@ export function HostModels({
     setPending(false);
   };
   const models = agentShareWorkbenchModels(query.data?.models ?? []);
-  const visibleModels =
-    source === "all" ? models : models.filter((entry) => entry.model.source === source);
+  const visibleModels = filterAgentShareModels(models, source, search);
   return (
     <SettingsSection title={t("会话模型", "Conversation models")}>
+      <View className="px-4 py-2">
+        <AppTextInput
+          accessibilityLabel={t("搜索模型或设备", "Search models or devices")}
+          placeholder={t("搜索模型或设备", "Search models or devices")}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
       <View className="flex-row flex-wrap gap-2 px-4 py-2">
         {modelSourceOptions.map((option) => (
           <Chip
@@ -435,9 +446,11 @@ export function HostModels({
       ) : null}
       {!query.isPending && !query.error && visibleModels.length === 0 ? (
         <Text>
-          {source === "all"
-            ? t("暂无会话模型。", "No conversation models are listed.")
-            : t("这个来源暂时没有会话模型。", "No conversation models from this source.")}
+          {search.trim() && models.length > 0
+            ? t("没有匹配的模型。", "No matching models.")
+            : source === "all"
+              ? t("暂无会话模型。", "No conversation models are listed.")
+              : t("这个来源暂时没有会话模型。", "No conversation models from this source.")}
         </Text>
       ) : null}
       {visibleModels.map((entry) => (
@@ -458,7 +471,7 @@ export function HostModels({
               : entry.model.runtime === "claude"
                 ? "Claude Code"
                 : "Codex",
-            t("添加到工作台", "Add to workbench"),
+            entry.available ? t("添加到工作台", "Add to workbench") : t("暂不可用", "Unavailable"),
           ]
             .filter(Boolean)
             .join(" · ")}

@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./agentShareModelCatalog": {
+      "types": "./src/agentShareModelCatalog.ts",
+      "import": "./src/agentShareModelCatalog.ts"
+    },
     "./agentShareTaskId": {
       "types": "./src/agentShareTaskId.ts",
       "import": "./src/agentShareTaskId.ts"

@@ -1,3 +1,5 @@
+import { filterAgentShareModels } from "@t3tools/shared/agentShareModelCatalog";
+import { Input } from "../ui/input";
 import { useState } from "react";
 import {
   modelSourceLabels,
@@ -36,6 +38,7 @@ export function AgentShareModels({
     agentShareEnvironment.configureModel.permissionAtom(environmentId),
   );
   const [source, setSource] = useState<ModelSourceFilter>("all");
+  const [search, setSearch] = useState("");
   const sourceLabels = modelSourceLabels[language];
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -69,8 +72,7 @@ export function AgentShareModels({
     setPending(false);
   };
   const models = agentShareWorkbenchModels(query.data?.models ?? []);
-  const visibleModels =
-    source === "all" ? models : models.filter((entry) => entry.model.source === source);
+  const visibleModels = filterAgentShareModels(models, source, search);
   return (
     <SettingsSection title={t("会话模型", "Conversation models")}>
       <div className="space-y-3 px-3 py-3 sm:px-4">
@@ -80,6 +82,13 @@ export function AgentShareModels({
             "Choose a model and source for the workbench. Local text models run on the execution host; online tasks use the selected source’s platform rates.",
           )}
         </p>
+        <Input
+          type="search"
+          aria-label={t("搜索模型或设备", "Search models or devices")}
+          placeholder={t("搜索模型或设备", "Search models or devices")}
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
         <ToggleGroup
           aria-label={t("模型来源", "Model source")}
           className="max-w-full flex-wrap"
@@ -115,7 +124,11 @@ export function AgentShareModels({
           </p>
         ) : null}
         {!query.isPending && !query.error && models.length > 0 && visibleModels.length === 0 ? (
-          <p>{t("这个来源暂时没有会话模型。", "No conversation models from this source.")}</p>
+          <p>
+            {search.trim()
+              ? t("没有匹配的模型。", "No matching models.")
+              : t("这个来源暂时没有会话模型。", "No conversation models from this source.")}
+          </p>
         ) : null}
       </div>
       {visibleModels.map((entry) => (
