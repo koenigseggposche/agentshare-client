@@ -23,6 +23,7 @@ function claimFocusInOpenDialog(input: HTMLInputElement | null) {
 
 type CommandPaletteContentProps = Omit<ComponentProps<typeof Command>, "children"> & {
   readonly children: ReactNode;
+  readonly language?: "en" | "zh";
   readonly escapeLabel?: ReactNode;
   readonly footerActionLabel?: ReactNode;
   readonly footerTrailing?: ReactNode;
@@ -35,7 +36,8 @@ type CommandPaletteContentProps = Omit<ComponentProps<typeof Command>, "children
 
 export function CommandPaletteContent({
   children,
-  escapeLabel = "Close",
+  escapeLabel,
+  language = "en",
   footerActionLabel,
   footerTrailing,
   inputAccessory,
@@ -72,7 +74,7 @@ export function CommandPaletteContent({
               <Kbd>
                 <ArrowDownIcon />
               </Kbd>
-              <span>Navigate</span>
+              <span>{language === "zh" ? "移动" : "Navigate"}</span>
             </KbdGroup>
             {footerActionLabel !== undefined ? (
               <KbdGroup>
@@ -83,12 +85,12 @@ export function CommandPaletteContent({
             {showBackHint ? (
               <KbdGroup>
                 <Kbd>Backspace</Kbd>
-                <span>Back</span>
+                <span>{language === "zh" ? "返回" : "Back"}</span>
               </KbdGroup>
             ) : null}
             <KbdGroup>
               <Kbd>Esc</Kbd>
-              <span>{escapeLabel}</span>
+              <span>{escapeLabel ?? (language === "zh" ? "关闭" : "Close")}</span>
             </KbdGroup>
           </div>
           {footerTrailing}

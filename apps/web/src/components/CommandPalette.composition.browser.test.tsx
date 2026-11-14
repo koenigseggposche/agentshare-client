@@ -7,6 +7,8 @@ import { CommandPalette } from "./CommandPalette";
 import { openCommandPalette } from "../commandPaletteBus";
 import { primaryServerKeybindingsAtom } from "../state/server";
 
+const locale = vi.hoisted(() => ({ language: "en" as "en" | "zh" }));
+
 vi.mock("@effect/atom-react", async (original) => ({
   ...(await original<typeof import("@effect/atom-react")>()),
   useAtomValue: (atom: unknown) =>
@@ -20,7 +22,7 @@ vi.mock("../hooks/useCustomThemes", () => ({ useCustomThemes: () => [] }));
 vi.mock("../hooks/useEnvironmentTheme", () => ({ useEnvironmentThemeDefinitions: () => [] }));
 vi.mock("../hooks/useSettings", async (original) => ({
   ...(await original<typeof import("../hooks/useSettings")>()),
-  useClientSettings: () => DEFAULT_CLIENT_SETTINGS,
+  useClientSettings: () => ({ ...DEFAULT_CLIENT_SETTINGS, uiLanguage: locale.language }),
   useUpdateEnvironmentSettings: () => () => undefined,
 }));
 vi.mock("../hooks/useScratchProject", () => ({
@@ -102,12 +104,25 @@ vi.mock("./settings/useAvailableSettingsSearchItems", () => ({
 // The real palette and Base UI input must agree that confirming composition is typing.
 describe.each(["repository", "folder", "destination"] as const)("add-project %s", (step) => {
   it.each([
-    { isComposing: true, keyCode: 13 },
-    { isComposing: false, keyCode: 229 },
+    { isComposing: true, keyCode: 13, language: "en" as const },
+    { isComposing: true, keyCode: 13, language: "zh" as const },
+    { isComposing: false, keyCode: 229, language: "zh" as const },
   ])("keeps Enter in the input during composition: %j", async (composition) => {
+    locale.language = composition.language;
     await using _screen = await render(<CommandPalette>{null}</CommandPalette>);
     await act(() => openCommandPalette({ open: "add-project" }));
-    await page.getByText(step === "folder" ? "Local folder" : "Git URL", { exact: true }).click();
+    await page
+      .getByText(
+        step === "folder"
+          ? locale.language === "zh"
+            ? "本地文件夹"
+            : "Local folder"
+          : locale.language === "zh"
+            ? "Git 地址"
+            : "Git URL",
+        { exact: true },
+      )
+      .click();
     const input = () => page.getByRole("combobox");
     if (step === "destination") {
       await input().fill("https://example.com/team/project.git");

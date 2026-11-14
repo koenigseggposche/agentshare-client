@@ -690,6 +690,7 @@ export function buildNestedSearchItems(
 }
 
 export function buildBrowseGroups(input: {
+  language?: "en" | "zh";
   browseEntries: ReadonlyArray<FilesystemBrowseEntry>;
   browseQuery: string;
   canBrowseUp: boolean;
@@ -728,7 +729,9 @@ export function buildBrowseGroups(input: {
     });
   }
 
-  return [{ value: "directories", label: "Directories", items }];
+  return [
+    { value: "directories", label: input.language === "zh" ? "文件夹" : "Directories", items },
+  ];
 }
 
 export function filterPinnedBrowseEntries(input: {
@@ -778,16 +781,25 @@ export function buildRootGroups(input: {
   return groups;
 }
 
-export function getCommandPaletteInputPlaceholder(mode: CommandPaletteMode): string {
+export function getCommandPaletteInputPlaceholder(
+  mode: CommandPaletteMode,
+  language: "en" | "zh" = "en",
+): string {
   switch (mode) {
     case "root":
-      return "Search commands, projects, and threads...";
+      return language === "zh"
+        ? "搜索命令、项目和会话…"
+        : "Search commands, projects, and threads...";
     case "root-browse":
-      return "Enter project path (e.g. ~/projects/my-app)";
+      return language === "zh"
+        ? "输入执行电脑上的项目路径（如 ~/projects/my-app）"
+        : "Enter project path (e.g. ~/projects/my-app)";
     case "submenu":
-      return "Search...";
+      return language === "zh" ? "搜索…" : "Search...";
     case "submenu-browse":
-      return "Enter path (e.g. ~/projects/my-app)";
+      return language === "zh"
+        ? "输入执行电脑上的路径（如 ~/projects/my-app）"
+        : "Enter path (e.g. ~/projects/my-app)";
   }
 }
 
@@ -828,12 +840,17 @@ export type AddProjectCloneFlow =
       readonly remoteUrl: string;
     };
 
-export function remoteProjectInputPlaceholder(flow: AddProjectCloneFlow | null): string | null {
+export function remoteProjectInputPlaceholder(
+  flow: AddProjectCloneFlow | null,
+  language: "en" | "zh" = "en",
+): string | null {
   if (!flow) return null;
   if (flow.step === "confirm") return null;
   if (flow.source === "url") {
-    return "Enter Git clone URL";
+    return language === "zh" ? "输入 Git 克隆地址" : "Enter Git clone URL";
   }
+  if (language === "zh")
+    return `输入 ${addProjectRemoteSourceLabel(flow.source)} 仓库（${addProjectRemoteSourcePathHint(flow.source)}）`;
   return `Enter ${addProjectRemoteSourceLabel(flow.source)} repository (${addProjectRemoteSourcePathHint(flow.source)})`;
 }
 
