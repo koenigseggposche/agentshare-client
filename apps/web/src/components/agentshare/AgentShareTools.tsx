@@ -137,8 +137,8 @@ export function AgentShareTools({
       <div className="space-y-4 p-4">
         <p className="text-sm text-muted-foreground">
           {t(
-            "这里选择所选执行电脑上的 Codex 和 Claude。更改用于后续新任务，正在执行的任务继续使用原进程。",
-            "Choose Codex and Claude on the selected host. New tasks use the selection; running tasks keep their current process.",
+            "这里选择所选执行电脑上的 Codex 和 Claude。新会话使用新选择，已有会话在原进程释放前继续使用原版本。",
+            "Choose Codex and Claude on the selected host. New conversations use the selection; existing conversations keep their version until their process is released.",
           )}
         </p>
         {open && !supported ? (

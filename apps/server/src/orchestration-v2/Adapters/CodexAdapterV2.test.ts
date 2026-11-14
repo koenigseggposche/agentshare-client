@@ -954,6 +954,7 @@ describe("CodexAdapterV2 session initialize", () => {
     transcript: CodexReplay.CodexAppServerReplayTranscript,
     beforeEmitInbound?: CodexReplay.CodexAppServerReplayDriver["beforeEmitInbound"],
     compatibility?: CodexAdapterV2.CodexAdapterV2Options["compatibility"],
+    settings = DEFAULT_CODEX_SETTINGS,
   ) =>
     Effect.gen(function* () {
       const driver = yield* CodexReplay.makeReplayDriver(
@@ -963,7 +964,7 @@ describe("CodexAdapterV2 session initialize", () => {
       let initializeRequests = 0;
       const adapter = yield* CodexAdapterV2.makeCodexAdapterV2({
         instanceId: CodexAdapterV2.CODEX_DEFAULT_INSTANCE_ID,
-        settings: DEFAULT_CODEX_SETTINGS,
+        settings,
         environment: {},
         ...(compatibility === undefined ? {} : { compatibility }),
         clientFactory: {
@@ -1006,6 +1007,8 @@ describe("CodexAdapterV2 session initialize", () => {
         runtimePolicy: CODEX_TEST_RUNTIME_POLICY,
       });
       return {
+        capabilities: yield* adapter.getCapabilities(),
+        providerSession: runtime.providerSession,
         ensureThread: (threadId: string) =>
           runtime.ensureThread({
             threadId: ThreadId.make(threadId),
@@ -1018,6 +1021,48 @@ describe("CodexAdapterV2 session initialize", () => {
 
   const replayPreamble = (nativeThreadId: string) =>
     codexReplayPreamble({ nativeThreadId, nativeTurnId: "unused", prompt: "unused" });
+
+  it.effect("keeps managed leases per conversation while standalone Codex shares a process", () =>
+    Effect.gen(function* () {
+      for (const managed of [false, true]) {
+        const session = yield* openReplaySession(
+          makeCodexReplayTranscript({ scenario: `lease-scope-${managed}`, entries: [] }),
+          undefined,
+          undefined,
+          managed
+            ? {
+                ...DEFAULT_CODEX_SETTINGS,
+                agentShareOwner: "generated-owner",
+                agentShareModel: {
+                  id: "generated",
+                  source: "local",
+                  service: "local",
+                  runtime: "codex",
+                },
+              }
+            : DEFAULT_CODEX_SETTINGS,
+        );
+        assert.equal(
+          session.capabilities.sessions.supportsMultipleProviderThreadsPerSession,
+          !managed,
+        );
+        assert.equal(
+          session.providerSession.capabilities.sessions.supportsMultipleProviderThreadsPerSession,
+          !managed,
+        );
+      }
+    }).pipe(
+      Effect.scoped,
+      Effect.provide(
+        Layer.mergeAll(
+          IdAllocator.layer,
+          McpProviderSessions.layer,
+          NodeServices.layer,
+          NodeCrypto.layer,
+        ),
+      ),
+    ),
+  );
 
   it.effect("sends one initialize when two threads start on a fresh session at once", () =>
     Effect.gen(function* () {

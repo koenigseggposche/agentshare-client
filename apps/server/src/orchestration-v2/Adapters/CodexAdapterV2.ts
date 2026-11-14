@@ -840,6 +840,7 @@ function providerSession(input: {
   readonly cwd: string | null;
   readonly model: string;
   readonly now: DateTime.Utc;
+  readonly capabilities: OrchestrationV2ProviderSession["capabilities"];
 }): OrchestrationV2ProviderSession {
   return {
     id: input.providerSessionId,
@@ -848,7 +849,7 @@ function providerSession(input: {
     status: "ready",
     cwd: input.cwd ?? process.cwd(),
     model: input.model,
-    capabilities: CodexProviderCapabilitiesV2,
+    capabilities: input.capabilities,
     createdAt: input.now,
     updatedAt: input.now,
     lastError: null,
@@ -1753,12 +1754,24 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
     threadId === null ? Effect.succeed(undefined) : mcpSessions.read(threadId);
   const { clientFactory, digest, fileSystem, idAllocator, serverConfig } = adapterOptions;
   const continuationRequests = adapterOptions.continuationRequests;
+  // A managed lease fixes the executable and credentials for its conversation.
+  // New conversations must acquire a fresh lease after a tool selection changes.
+  const capabilities =
+    adapterOptions.settings.agentShareModel === undefined
+      ? CodexProviderCapabilitiesV2
+      : {
+          ...CodexProviderCapabilitiesV2,
+          sessions: {
+            ...CodexProviderCapabilitiesV2.sessions,
+            supportsMultipleProviderThreadsPerSession: false,
+          },
+        };
 
   return ProviderAdapter.ProviderAdapterV2.of({
     instanceId: adapterOptions.instanceId,
     driver: CODEX_PROVIDER,
     getCapabilities: Effect.fn("CodexAdapterV2.getCapabilities")(function () {
-      return Effect.succeed(CodexProviderCapabilitiesV2);
+      return Effect.succeed(capabilities);
     }),
     planSelectionTransition: Effect.fn("CodexAdapterV2.planSelectionTransition")(function () {
       return Effect.succeed(turnScopedSelectionTransition());
@@ -1878,6 +1891,7 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
         if (adapterOptions.compatibility !== undefined) yield* ensureInitialized;
         const now = yield* DateTime.now;
         const session = providerSession({
+          capabilities,
           providerSessionId: input.providerSessionId,
           providerInstanceId: adapterOptions.instanceId,
           cwd: input.runtimePolicy.cwd,

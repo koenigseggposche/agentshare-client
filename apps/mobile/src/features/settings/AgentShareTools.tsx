@@ -125,8 +125,8 @@ export function AgentShareTools({
     <SettingsSection title={t("执行电脑的编程工具", "Coding tools on the host")}>
       <Text className="px-5 py-3" textRole="footnote">
         {t(
-          "工具在所选执行电脑上运行。新任务使用新选择，正在执行的任务继续使用原进程。",
-          "Tools run on the selected host. New tasks use the selection; running tasks keep their current process.",
+          "工具在所选执行电脑上运行。新会话使用新选择，已有会话在原进程释放前继续使用原版本。",
+          "Tools run on the selected host. New conversations use the selection; existing conversations keep their version until their process is released.",
         )}
       </Text>
       <ListActionRow
