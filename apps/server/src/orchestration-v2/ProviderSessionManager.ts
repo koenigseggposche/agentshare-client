@@ -1948,6 +1948,65 @@ export const layerWithOptions = (
             if (event.type === "command_output.delta") {
               return commandOutput.append(event);
             }
+            if (event.type === "turn_item.updated" && event.recoverOutput === true) {
+              return Effect.gen(function* () {
+                const recovered = event.turnItem;
+                if (recovered.type !== "command_execution" || recovered.output === undefined)
+                  return;
+                const target = { threadId: recovered.threadId, itemId: recovered.id };
+                // The run consumer drains independently. Wait for its terminal item before
+                // enriching it, so an earlier queued update cannot overwrite the recovery.
+                const sequence = yield* eventSink.latestSequence({ threadId: recovered.threadId });
+                let stored = yield* projectionStore.getTurnItem(target);
+                if (stored === null || isOrchestrationV2WorkActive(stored.status)) {
+                  const settled = yield* eventSink
+                    .stream({
+                      threadId: recovered.threadId,
+                      afterSequence: sequence,
+                      eventType: "turn-item.updated",
+                    })
+                    .pipe(
+                      Stream.filter(
+                        (entry) =>
+                          entry.event.type === "turn-item.updated" &&
+                          entry.event.payload.id === recovered.id &&
+                          !isOrchestrationV2WorkActive(entry.event.payload.status),
+                      ),
+                      Stream.runHead,
+                      Effect.timeoutOption("5 seconds"),
+                    );
+                  if (Option.isNone(settled) || Option.isNone(settled.value)) return;
+                  stored = yield* projectionStore.getTurnItem(target);
+                }
+                if (
+                  stored?.type !== "command_execution" ||
+                  isOrchestrationV2WorkActive(stored.status)
+                )
+                  return;
+                yield* providerEventIngestor.ingestNormalized({
+                  providerSessionId: entry.runtime.providerSessionId,
+                  providerInstanceId: entry.runtime.instanceId,
+                  threadId: recovered.threadId,
+                  event: {
+                    ...event,
+                    turnItem: {
+                      ...stored,
+                      output: recovered.output,
+                      updatedAt: recovered.updatedAt,
+                    },
+                  },
+                });
+              }).pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new ProviderAdapter.ProviderAdapterEventStreamError({
+                      driver: entry.runtime.driver,
+                      providerSessionId: entry.runtime.providerSessionId,
+                      cause,
+                    }),
+                ),
+              );
+            }
             const releaseLiveOutput =
               event.type === "turn_item.updated" &&
               event.turnItem.type === "command_execution" &&

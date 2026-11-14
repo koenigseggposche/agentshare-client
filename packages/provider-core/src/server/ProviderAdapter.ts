@@ -125,6 +125,8 @@ export const ProviderAdapterV2Event = Schema.Union([
     type: Schema.Literal("turn_item.updated"),
     driver: ProviderDriverKind,
     turnItem: OrchestrationV2TurnItem,
+    /** A late command snapshot enriches a stopped item after its run consumer has closed. */
+    recoverOutput: Schema.optionalKey(Schema.Boolean),
   }),
   // Start before the root terminal; clear only after the final covered projection.
   // Consumer lifetime cannot depend on a producer probe that runs ahead of its queue.

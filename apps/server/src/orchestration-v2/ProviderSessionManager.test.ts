@@ -17,6 +17,7 @@ import {
   ProviderInstanceId,
   type ProviderSessionId,
   ThreadId,
+  TurnItemId,
 } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import * as DateTime from "effect/DateTime";
@@ -3996,4 +3997,94 @@ it.effect("ProviderSessionManagerV2 gives a delegated child its project's device
     });
     assert.isTrue(child?.capabilities?.has("device"));
   }),
+);
+
+it.effect.each([false, true])(
+  "ProviderSessionManagerV2 recovers stopped command output (settlement pending: %s)",
+  (settlementPending) =>
+    Effect.gen(function* () {
+      const state = yield* Ref.make(emptyState);
+      yield* Effect.gen(function* () {
+        const eventSink = yield* EventSink.EventSinkV2;
+        const idAllocator = yield* IdAllocator.IdAllocatorV2;
+        const manager = yield* ProviderSessionManager.ProviderSessionManagerV2;
+        const projections = yield* ProjectionStore.ProjectionStoreV2;
+        const now = yield* DateTime.now;
+        const threadId = ThreadId.make("thread-recover-command");
+        const providerSessionId = yield* idAllocator.allocate.providerSession({
+          providerInstanceId: modelSelection.instanceId,
+          threadId,
+        });
+        const item = {
+          id: TurnItemId.make("command-recover"),
+          threadId,
+          runId: null,
+          nodeId: null,
+          providerThreadId: null,
+          providerTurnId: null,
+          nativeItemRef: null,
+          parentItemId: null,
+          ordinal: 1,
+          title: null,
+          startedAt: now,
+          completedAt: now,
+          updatedAt: now,
+          type: "command_execution" as const,
+          status: "interrupted" as const,
+          input: "printf '1\\n2\\n'",
+        };
+        yield* eventSink.write({
+          events: [
+            yield* makeThreadCreatedEvent({ idAllocator, threadId, now }),
+            {
+              id: yield* idAllocator.allocate.event({ threadId }),
+              type: "turn-item.updated",
+              threadId,
+              occurredAt: now,
+              payload: settlementPending ? { ...item, status: "running", completedAt: null } : item,
+            },
+          ],
+        });
+        const runtime = yield* manager.open({
+          threadId,
+          providerSessionId,
+          modelSelection,
+          runtimePolicy,
+        });
+        const subscription = yield* runtime.subscribeEvents!;
+        const queue = (yield* Ref.get(state)).eventQueues.get(String(providerSessionId))!;
+        yield* Queue.offer(queue, {
+          type: "turn_item.updated",
+          driver: CODEX_DRIVER,
+          recoverOutput: true,
+          turnItem: { ...item, output: "1\n2\n" },
+        });
+        if (settlementPending) {
+          for (let attempt = 0; attempt < 20; attempt++) yield* Effect.yieldNow;
+          yield* eventSink.write({
+            events: [
+              {
+                id: yield* idAllocator.allocate.event({ threadId }),
+                type: "turn-item.updated",
+                threadId,
+                occurredAt: now,
+                payload: item,
+              },
+            ],
+          });
+        }
+        yield* Queue.offer(queue, {
+          type: "provider_session.updated",
+          driver: CODEX_DRIVER,
+          providerSession: runtime.providerSession,
+        });
+        yield* subscription.events.pipe(
+          Stream.filter((event) => event.type === "provider_session.updated"),
+          Stream.runHead,
+        );
+        const stored = yield* projections.getTurnItem({ threadId, itemId: item.id });
+        assert.equal(stored?.status, "interrupted");
+        assert.equal(stored?.type === "command_execution" ? stored.output : undefined, "1\n2\n");
+      }).pipe(Effect.provide(layerTest({ state, idleTimeoutMs: 60_000 })));
+    }),
 );

@@ -338,7 +338,7 @@ layer("CommandOutputHub", (it) => {
     ),
   );
 
-  it.effect("an interrupted command ends the stream with the output it printed", () =>
+  it.effect("an interrupted command shows its tail then recovers a late complete output", () =>
     Effect.scoped(
       Effect.gen(function* () {
         const hub = yield* CommandOutputHub.CommandOutputHub;
@@ -355,6 +355,17 @@ layer("CommandOutputHub", (it) => {
         assert.deepEqual(final, {
           kind: "replace",
           text: "waiting for server\n",
+          truncated: false,
+          running: false,
+        });
+        yield* TestClock.adjust("1 second");
+        yield* writeCommandItem(threadId, {
+          status: "interrupted",
+          output: "started\nwaiting for server\n",
+        });
+        assert.deepEqual(yield* takeFrame(frames), {
+          kind: "replace",
+          text: "started\nwaiting for server\n",
           truncated: false,
           running: false,
         });

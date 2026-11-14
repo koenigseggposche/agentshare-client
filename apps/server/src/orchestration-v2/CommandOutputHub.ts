@@ -294,7 +294,9 @@ export const make = Effect.gen(function* () {
         });
         return Stream.fromEffectRepeat(nextFrame).pipe(
           Stream.filter((frame) => frame.kind !== "append" || frame.text.length > 0),
-          Stream.takeUntil((frame) => !frame.running),
+          // A cancelled command may deliver its full output after the turn settles.
+          // Keep an expanded row subscribed until that snapshot arrives or the viewer leaves.
+          Stream.takeUntil((frame) => !frame.running && settled?.output !== undefined),
         );
       }).pipe(
         Effect.mapError((cause) =>

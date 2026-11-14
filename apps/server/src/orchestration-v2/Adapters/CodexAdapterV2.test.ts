@@ -4360,7 +4360,9 @@ describe("CodexAdapterV2 post-settle continuation", () => {
             continuations: harness.continuationRequests.length,
           },
           {
-            items: ["running", "interrupted"],
+            items: retainContext
+              ? ["running", "interrupted", "interrupted"]
+              : ["running", "interrupted"],
             nodes: ["running", "interrupted"],
             roots: ["completed"],
             continuations: 0,
@@ -5052,8 +5054,8 @@ describe("CodexAdapterV2 post-settle continuation", () => {
         );
         assert.lengthOf(
           postTerminalCommandUpdates,
-          0,
-          "late item/completed after interrupt must not project",
+          1,
+          "late item/completed may recover output without restarting the command",
         );
 
         const commandUpdates = harness.events.filter(
@@ -5065,6 +5067,11 @@ describe("CodexAdapterV2 post-settle continuation", () => {
           > => event.type === "turn_item.updated" && event.turnItem.type === "command_execution",
         );
         assert.isAtLeast(commandUpdates.length, 2, "start + interrupt terminalization");
+        const recovered = commandUpdates.at(-1)?.turnItem;
+        assert.equal(
+          recovered?.type === "command_execution" ? recovered.output : undefined,
+          "SHOULD_NOT_FINISH_CMD_INTERRUPT_FIXTURE\n",
+        );
         assert.equal(commandUpdates[commandUpdates.length - 1]?.turnItem.status, "interrupted");
       }).pipe(
         Effect.provide(

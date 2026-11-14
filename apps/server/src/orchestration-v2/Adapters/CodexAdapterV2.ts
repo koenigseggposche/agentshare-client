@@ -1993,6 +1993,12 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
         };
         /** Retain settled contexts while background commands run so late item events still project. */
         const settledTurns = yield* Ref.make(new Map<string, ActiveCodexTurnContext>());
+        // Interrupted commands can publish their complete output after turn/completed.
+        // Keep only bounded terminal items, not live contexts or background work.
+        const terminalCommandItems = new Map<
+          string,
+          Extract<OrchestrationV2TurnItem, { type: "command_execution" }>
+        >();
         const runningCommandItemsByTurn = yield* Ref.make(
           new Map<string, Map<string, TrackedRunningCommandItem>>(),
         );
@@ -2461,6 +2467,11 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
                 ? {}
                 : { output: tracked.aggregatedOutput }),
             };
+            const terminalKey = `${nativeTurnId}\0${tracked.id}`;
+            terminalCommandItems.set(terminalKey, turnItem);
+            if (terminalCommandItems.size > 64) {
+              terminalCommandItems.delete(terminalCommandItems.keys().next().value!);
+            }
             yield* emitProviderEvent({
               type: "node.updated",
               driver: CODEX_PROVIDER,
@@ -5045,6 +5056,26 @@ export const makeCodexAdapterV2 = Effect.fn("makeCodexAdapterV2")(function* (
             if (payload.item.type === "collabAgentToolCall" && payload.item.tool !== "spawnAgent") {
               yield* updateSubagentStates({ item: payload.item });
               return;
+            }
+            if (payload.item.type === "commandExecution") {
+              const terminalKey = `${payload.turnId}\0${payload.item.id}`;
+              const terminalItem = terminalCommandItems.get(terminalKey);
+              if (terminalItem !== undefined) {
+                terminalCommandItems.delete(terminalKey);
+                if (payload.item.aggregatedOutput != null) {
+                  yield* emitProviderEvent({
+                    type: "turn_item.updated",
+                    driver: CODEX_PROVIDER,
+                    recoverOutput: true,
+                    turnItem: {
+                      ...terminalItem,
+                      output: payload.item.aggregatedOutput,
+                      updatedAt: yield* DateTime.now,
+                    },
+                  });
+                }
+                return;
+              }
             }
             const resolved = yield* resolveItemEventContext(payload.turnId);
             if (resolved === undefined) {
