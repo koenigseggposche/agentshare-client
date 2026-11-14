@@ -396,3 +396,25 @@ describe("resolveInitialServerAuthGateState", () => {
     expect(testApi.calls.browserSession).toEqual([{ credential: "rejected-token" }]);
   });
 });
+
+it("does not invent an HTTP status for connection failures", async () => {
+  const { PrimaryEnvironmentRequestError } = await import("./environments/primary/auth");
+  const error = PrimaryEnvironmentRequestError.fromCause({
+    operation: "fetch-session-state",
+    cause: new TypeError("Failed to fetch"),
+  });
+  expect(error.status).toBe(0);
+  expect(error.message).toBe(
+    "Cannot connect to the workbench. Check that it is running and reachable, then retry.",
+  );
+  const denied = PrimaryEnvironmentRequestError.fromCause({
+    operation: "fetch-session-state",
+    cause: new EnvironmentAuthInvalidError({
+      code: "auth_invalid",
+      reason: "invalid_credential",
+      traceId: "generated-trace",
+    }),
+  });
+  expect(denied.status).toBe(401);
+  expect(denied.message).toContain("HTTP 401");
+});

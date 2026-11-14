@@ -51,7 +51,7 @@ export class PrimaryEnvironmentRequestError extends Schema.TaggedError<PrimaryEn
     readonly pairingLinkId?: string;
     readonly sessionId?: string;
   }): PrimaryEnvironmentRequestError {
-    const status = readHttpApiStatus(input.cause) ?? 500;
+    const status = readHttpApiStatus(input.cause) ?? 0;
     return new PrimaryEnvironmentRequestError({
       operation: input.operation,
       status,
@@ -62,7 +62,9 @@ export class PrimaryEnvironmentRequestError extends Schema.TaggedError<PrimaryEn
   }
 
   override get message(): string {
-    return `Primary environment request failed during ${this.operation} (HTTP ${this.status}).`;
+    return this.status === 0
+      ? "Cannot connect to the workbench. Check that it is running and reachable, then retry."
+      : `Primary environment request failed during ${this.operation} (HTTP ${this.status}).`;
   }
 }
 
@@ -262,7 +264,7 @@ async function waitForAuthenticatedSessionAfterBootstrap(): Promise<AuthSessionS
   }
 }
 
-const TRANSIENT_BOOTSTRAP_STATUS_CODES = new Set([502, 503, 504]);
+const TRANSIENT_BOOTSTRAP_STATUS_CODES = new Set([0, 502, 503, 504]);
 const BOOTSTRAP_RETRY_TIMEOUT_MS = 15_000;
 const BOOTSTRAP_RETRY_STEP_MS = 500;
 
