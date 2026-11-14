@@ -272,6 +272,12 @@ describe("EnvironmentProviderSettings routing", () => {
       },
     };
     await using _screen = await render(panel());
+    await expect
+      .element(page.getByRole("switch", { name: "Enable Codex", exact: true }))
+      .not.toBeInTheDocument();
+    await expect
+      .element(page.getByRole("switch", { name: "Enable Claude", exact: true }))
+      .not.toBeInTheDocument();
     await userEvent.click(page.getByRole("switch", { name: "Enable Work" }).first());
 
     expect(state.mutateProviderInstance).toHaveBeenCalledWith(

@@ -751,7 +751,10 @@ export function EnvironmentProviderSettings({
     const defaultInstanceId = defaultInstanceIdForDriver(driver);
     const explicitInstance = settings.providerInstances?.[defaultInstanceId];
     const isDirty = explicitInstance !== undefined;
-    const hasDefaultSlot = providerSettings.hasDefaultInstance || explicitInstance !== undefined;
+    const hasDefaultSlot =
+      explicitInstance !== undefined ||
+      (providerSettings.hasDefaultInstance &&
+        serverProviders.some((provider) => provider.instanceId === defaultInstanceId));
     if (
       hasDefaultSlot &&
       (driver === "codex" ||
