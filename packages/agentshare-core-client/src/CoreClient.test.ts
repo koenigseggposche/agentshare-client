@@ -61,6 +61,28 @@ const fixture = Effect.fn("CoreClient.test.fixture")(function* (
 });
 
 describe("AgentShare Core client", () => {
+  it.live("classifies Gateway connection failures without retaining response details", () =>
+    Effect.gen(function* () {
+      for (const code of ["console_connection_unavailable", "unknown-private-error"]) {
+        const url = yield* listen((_request, response) => {
+          response.writeHead(502, { "Content-Type": "application/json" });
+          response.end(JSON.stringify({ error: code, diagnostic: "private-diagnostic" }));
+        });
+        const client = yield* fixture(url);
+        const error = yield* client
+          .command("resumeDownload", {}, "generated-model")
+          .pipe(Effect.flip);
+        assert.equal(
+          error.category,
+          code === "console_connection_unavailable" ? "network-unavailable" : "rejected",
+        );
+        assert.equal(error.status, 502);
+        assert.equal(error.cause, undefined);
+        assert.isFalse(JSON.stringify(error).includes("private-diagnostic"));
+      }
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
   it.live("resumes a model download through the idempotent install endpoint", () =>
     Effect.gen(function* () {
       const requests: Array<{ method: string | undefined; url: string | undefined; body: string }> =

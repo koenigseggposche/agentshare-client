@@ -1602,11 +1602,11 @@ export const layerAppServerClientFactory: Layer.Layer<
                 })
                 .pipe(
                   Effect.mapError(
-                    () =>
+                    (cause) =>
                       new ProviderAdapter.ProviderAdapterOpenSessionError({
                         driver: CODEX_PROVIDER,
                         providerSessionId: input.providerSessionId,
-                        cause: new Error("The selected model connection could not be opened"),
+                        cause: AgentShareNative.publicSessionError(cause),
                       }),
                   ),
                 );

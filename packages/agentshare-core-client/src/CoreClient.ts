@@ -198,13 +198,25 @@ const make = Effect.gen(function* () {
       .pipe(
         Effect.flatMap((response) => {
           if (response.status < 200 || response.status >= 300) {
-            return Effect.fail(
-              new AgentShareCoreError({
-                operation,
-                category:
-                  response.status === 401 || response.status === 403 ? "denied" : "rejected",
-                status: response.status,
-              }),
+            return response.json.pipe(
+              Effect.orElseSucceed(() => undefined),
+              Effect.flatMap((body) =>
+                Effect.fail(
+                  new AgentShareCoreError({
+                    operation,
+                    category:
+                      response.status === 401 || response.status === 403
+                        ? "denied"
+                        : typeof body === "object" &&
+                            body !== null &&
+                            "error" in body &&
+                            body.error === "console_connection_unavailable"
+                          ? "network-unavailable"
+                          : "rejected",
+                    status: response.status,
+                  }),
+                ),
+              ),
             );
           }
           return response.json.pipe(

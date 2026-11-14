@@ -231,11 +231,11 @@ export const makeAgentShareClaudeAdapter = Effect.fn("AgentShare.makeClaudeAdapt
       (effect, session) =>
         effect.pipe(
           Effect.mapError(
-            () =>
+            (cause) =>
               new ProviderAdapter.ProviderAdapterOpenSessionError({
                 driver: DRIVER,
                 providerSessionId: session.providerSessionId,
-                cause: new Error("The selected model connection could not be opened."),
+                cause: NativeSessions.publicSessionError(cause),
               }),
           ),
         ),

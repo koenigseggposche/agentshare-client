@@ -98,6 +98,14 @@ function curatedCauseMessages(cause: unknown): {
       if (typeof cause !== "object") break;
       const tag = (cause as Record<string, unknown>)._tag;
       switch (tag) {
+        case "AgentShareCoreError":
+          return {
+            known:
+              (cause as Record<string, unknown>).category === "network-unavailable"
+                ? "Cannot reach Gateway. Check the execution computer's network connection and local network access, then retry."
+                : "The selected model connection could not be opened. Check the execution computer and model availability, then retry.",
+            category: categoryMessage(),
+          };
         case "ContextHandoffBudgetError":
           return { known: new ContextHandoffBudgetError().message, category: categoryMessage() };
         case "ContextHandoffBackgroundWorkError":

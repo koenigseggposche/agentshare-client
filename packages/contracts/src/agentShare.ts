@@ -281,6 +281,7 @@ export class AgentShareCoreError extends Schema.TaggedError<AgentShareCoreError>
     operation: Schema.String,
     category: Schema.Literals([
       "unavailable",
+      "network-unavailable",
       "invalid-runtime",
       "invalid-response",
       "invalid-operation",

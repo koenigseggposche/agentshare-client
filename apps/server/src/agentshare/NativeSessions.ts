@@ -4,6 +4,7 @@ import { agentShareTaskId } from "@t3tools/shared/agentShareTaskId";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Schema from "effect/Schema";
 import type * as Scope from "effect/Scope";
 import { layerLocalCore } from "./LocalCore.ts";
 
@@ -54,3 +55,14 @@ export const layer = Layer.effect(
   }),
 );
 export const layerLocal = layer.pipe(Layer.provide(layerLocalCore));
+
+// Transport causes may contain credentials; retain only the public error classification.
+const isCoreError = Schema.is(AgentShareCoreError);
+export const publicSessionError = (cause: unknown) =>
+  isCoreError(cause)
+    ? new AgentShareCoreError({
+        operation: cause.operation,
+        category: cause.category,
+        ...(cause.status === undefined ? {} : { status: cause.status }),
+      })
+    : new Error("The selected model connection could not be opened.");

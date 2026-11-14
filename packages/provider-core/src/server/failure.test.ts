@@ -297,3 +297,18 @@ it.effect("keys terminal failure items by provider turn across retries and fallb
     assert.equal(firstAttempt.ordinal, 101);
   }).pipe(Effect.provide(IdAllocator.layer)),
 );
+
+it("shows curated Gateway recovery guidance through provider wrappers", () => {
+  const cause = new Error("internal session identifier", {
+    cause: {
+      _tag: "AgentShareCoreError",
+      category: "network-unavailable",
+      message: "private transport detail",
+      cause: new Error("private credential"),
+    },
+  });
+  assert.equal(
+    makeProviderFailure({ cause }).message,
+    "Cannot reach Gateway. Check the execution computer's network connection and local network access, then retry.",
+  );
+});
