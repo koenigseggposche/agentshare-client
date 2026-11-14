@@ -193,12 +193,28 @@ const SUBAGENT_STATUS_LABELS: Record<OrchestrationV2ExecutionNode["status"], str
   rolled_back: "Cancelled",
 };
 
+const SUBAGENT_STATUS_LABELS_ZH: Record<OrchestrationV2ExecutionNode["status"], string> = {
+  idle: "空闲",
+  pending: "处理中",
+  running: "处理中",
+  waiting: "等待中",
+  completed: "已完成",
+  interrupted: "已中断",
+  failed: "失败",
+  cancelled: "已取消",
+  rolled_back: "已取消",
+};
+
 export function formatProviderSubagentStatus(
   status: ProviderSubagentStatus | null,
   nowMs: number,
+  language: "en" | "zh" = "en",
 ): string {
-  if (status === null) return "Starting";
-  const label = SUBAGENT_STATUS_LABELS[status.status];
+  if (status === null) return language === "zh" ? "正在启动" : "Starting";
+  const label =
+    language === "zh"
+      ? SUBAGENT_STATUS_LABELS_ZH[status.status]
+      : SUBAGENT_STATUS_LABELS[status.status];
   const live = isOrchestrationV2WorkActive(status.status);
   if (!live && status.status !== "completed") return label;
   const start = status.startedAt === null ? Number.NaN : Date.parse(status.startedAt);
@@ -209,7 +225,7 @@ export function formatProviderSubagentStatus(
       : Date.parse(status.completedAt);
   if (!Number.isFinite(start) || !Number.isFinite(end)) return label;
   const elapsed = formatDuration(Math.max(1_000, Math.floor((end - start) / 1_000) * 1_000));
-  return live ? `${label} ${elapsed}` : `${label} in ${elapsed}`;
+  return live || language === "zh" ? `${label} ${elapsed}` : `${label} in ${elapsed}`;
 }
 
 /** The run a manual continuation resumes; the server holds the queue until it does. */

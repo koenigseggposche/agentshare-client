@@ -1101,7 +1101,15 @@ const ConversationTimeline = memo(function ConversationTimeline({
       <div className="messages-timeline-row-frame">
         <div className="chat-content-lane pt-1 sm:pt-2">
           <TimelineSystemDivider
-            label={parentThreadLink.sideChat ? "Context from" : "Subagent of"}
+            label={
+              uiLanguage === "zh"
+                ? parentThreadLink.sideChat
+                  ? "上下文来源"
+                  : "父会话"
+                : parentThreadLink.sideChat
+                  ? "Context from"
+                  : "Subagent of"
+            }
             detail={
               parentThreadLink.environmentLabel === undefined
                 ? parentThreadLink.title
@@ -1110,7 +1118,10 @@ const ConversationTimeline = memo(function ConversationTimeline({
             icon={parentThreadLink.sideChat ? MessagesSquareIcon : BotIcon}
             {...(parentThreadLink.open === undefined
               ? {}
-              : { actionLabel: "Open parent thread", onAction: parentThreadLink.open })}
+              : {
+                  actionLabel: uiLanguage === "zh" ? "打开父会话" : "Open parent thread",
+                  onAction: parentThreadLink.open,
+                })}
           />
         </div>
       </div>

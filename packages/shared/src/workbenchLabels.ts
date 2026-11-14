@@ -1,5 +1,10 @@
 export const workbenchLabels = {
   en: {
+    subagent: "Subagent",
+    runsIndependently: "Runs on its own",
+    openParent: "Open parent",
+    subagentReadOnly: "It runs on its own and cannot take messages.",
+    work: "Work",
     unsentDraft: "Unsent draft",
     discardDraft: "Discard draft",
     copy: "Copy",
@@ -52,6 +57,11 @@ export const workbenchLabels = {
     noThreadsInProject: (name: string) => `No threads in ${name} yet`,
   },
   zh: {
+    subagent: "子代理",
+    runsIndependently: "独立运行",
+    openParent: "打开父会话",
+    subagentReadOnly: "子代理独立运行，不能直接接收消息。",
+    work: "任务",
     unsentDraft: "未发送的草稿",
     discardDraft: "丢弃草稿",
     copy: "复制",
