@@ -269,3 +269,23 @@ export function modelBudgetFailureMessage(
       );
   }
 }
+
+export function modelSubmissionMessage(
+  result: Parameters<typeof modelOperationSubmissionState>[0],
+  language: Language,
+): string {
+  const budget = modelBudgetFailureMessage(result, language);
+  if (budget) return budget;
+  const t = (zh: string, en: string) => (language === "zh" ? zh : en);
+  if (result?._tag === "Success")
+    return t("操作已接受，请查看下方状态。", "Operation accepted. Check the status below.");
+  if (modelOperationSubmissionState(result) === "rejected")
+    return t(
+      "请求未被接受，请检查路径、账号和执行电脑状态后重试。",
+      "The request was not accepted. Check the path, account and host status before retrying.",
+    );
+  return t(
+    "未能确认操作结果。请刷新状态后再决定是否重试。",
+    "The outcome could not be confirmed. Refresh the status before retrying.",
+  );
+}

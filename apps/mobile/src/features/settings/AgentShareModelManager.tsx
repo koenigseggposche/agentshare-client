@@ -10,7 +10,7 @@ import type {
 import {
   formatModelBytes,
   modelManagerEntries,
-  modelBudgetFailureMessage,
+  modelSubmissionMessage,
   modelOperationPresentation,
   modelOperationSubmissionState,
   parseModelBudget,
@@ -45,7 +45,7 @@ export function AgentShareModelManager({
     null,
   );
   const [submissionUnknown, setSubmissionUnknown] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ zh: string; en: string } | null>(null);
   const [importId, setImportId] = useState("");
   const [importPath, setImportPath] = useState("");
   const [libraryPath, setLibraryPath] = useState("");
@@ -61,20 +61,10 @@ export function AgentShareModelManager({
     query.refresh();
     const outcome = modelOperationSubmissionState(result);
     if (longOperation) setSubmissionUnknown(outcome === "unknown");
-    setMessage(
-      modelBudgetFailureMessage(result, language) ??
-        (result?._tag === "Success"
-          ? t("操作已接受，请查看下方状态。", "Operation accepted. Check the status below.")
-          : outcome === "rejected"
-            ? t(
-                "请求未被接受，请检查路径、账号和执行电脑状态后重试。",
-                "The request was not accepted. Check the path, account and host status before retrying.",
-              )
-            : t(
-                "未能确认操作结果。请刷新状态后再决定是否重试。",
-                "The outcome could not be confirmed. Refresh the status before retrying.",
-              )),
-    );
+    setMessage({
+      zh: modelSubmissionMessage(result, "zh"),
+      en: modelSubmissionMessage(result, "en"),
+    });
     setPending(false);
   };
   const data = query.error ? null : query.data;
@@ -127,7 +117,7 @@ export function AgentShareModelManager({
         ) : null}
         {message ? (
           <Text accessibilityLiveRegion="polite" className="px-5 py-3">
-            {message}
+            {message[language]}
           </Text>
         ) : null}
         {operations === undefined && data ? (
