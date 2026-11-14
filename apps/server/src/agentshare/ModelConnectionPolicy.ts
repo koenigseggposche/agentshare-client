@@ -1,10 +1,7 @@
-import { AgentShareModel } from "@t3tools/contracts";
-import * as Schema from "effect/Schema";
-
-const isModelConnection = Schema.is(Schema.Struct({ agentShareModel: AgentShareModel }));
+import { isAgentShareModelConnection, type AgentShareModel } from "@t3tools/contracts";
 
 export function modelConnectionSource(config: unknown): AgentShareModel["source"] | undefined {
-  return isModelConnection(config) ? config.agentShareModel.source : undefined;
+  return isAgentShareModelConnection(config) ? config.agentShareModel.source : undefined;
 }
 
 export function isPaidModelConnection(config: unknown): boolean {

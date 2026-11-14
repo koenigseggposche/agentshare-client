@@ -3,6 +3,7 @@ import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import {
   acceptsSecretReference,
+  isAgentShareModelConnection,
   isSecretReference,
   isSecretSetting,
   type EnvironmentId,
@@ -96,6 +97,7 @@ export function deriveProviderSettingsFields(
   const isLocalAcp =
     definition.driverKind === "acpRegistry" &&
     readProviderConfigString(value, "source") === "local";
+  const managedConnection = isAgentShareModelConnection(value);
   const schemaAnnotation = readProviderSettingsFormSchemaAnnotation(definition);
   const orderedKeys = new Map(
     (schemaAnnotation.order ?? []).map((key, index) => [key, index] as const),
@@ -114,6 +116,11 @@ export function deriveProviderSettingsFields(
       const fieldSchema = definition.settingsSchema.fields[key]!;
       const formAnnotation = readProviderSettingsFormAnnotation(fieldSchema);
       if (formAnnotation.hidden) return [];
+      if (
+        managedConnection &&
+        ["binaryPath", "homePath", "shadowHomePath", "launchArgs"].includes(key)
+      )
+        return [];
       if (isLocalAcp && key !== "source" && key !== "commandPath") return [];
 
       const annotatedTitle = readFieldAnnotationString(fieldSchema, "title");

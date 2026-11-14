@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+import { useClientSettings } from "../../hooks/useSettings";
 import { Spinner } from "~/components/ui/spinner";
 
 import {
@@ -18,6 +20,7 @@ import * as Result from "effect/Result";
 import { Fragment, useState, type ReactElement, type ReactNode } from "react";
 import {
   isProviderDriverKind,
+  isAgentShareModelConnection,
   resolveProviderInstanceEnabled,
   type ProviderInstanceConfig,
   type ProviderInstanceEnvironmentVariable,
@@ -725,6 +728,8 @@ export function ProviderInstanceCard({
   secretSources = NO_SECRET_SOURCES,
   projectOverride,
 }: ProviderInstanceCardProps) {
+  const managedConnection = isAgentShareModelConnection(instance.config);
+  const language = useClientSettings((settings) => settings.uiLanguage);
   const enabled = projectOverride?.effectiveEnabled ?? resolveProviderInstanceEnabled(instance);
   const effectiveProvider = liveProvider && { ...liveProvider, enabled };
   const compatibility = enabled ? liveProvider?.compatibilityAdvisory : undefined;
@@ -805,7 +810,7 @@ export function ProviderInstanceCard({
       ? (instance.config as Record<string, unknown>).customModels
       : undefined;
   const customModels =
-    instance.driver === "antigravity"
+    instance.driver === "antigravity" || managedConnection
       ? NO_CUSTOM_MODELS
       : readCustomModelEntries(storedCustomModels);
   const modelsForDisplay = deriveProviderModelsForDisplay({
@@ -1313,7 +1318,35 @@ export function ProviderInstanceCard({
         </SettingsSection>
       ) : null}
 
-      {instance.driver === "codex" && readCodexSetupMode(instance.config) === "managed" ? (
+      {managedConnection ? (
+        <SettingsSection title={language === "zh" ? "编程工具" : "Coding tools"}>
+          <SettingsRow
+            title={language === "zh" ? "由执行电脑管理" : "Managed on the host"}
+            description={
+              language === "zh"
+                ? "工具版本、登录和连接环境由 AgentShare 管理。新会话使用当前选择的工具。"
+                : "AgentShare manages the tool version, sign-in and connection environment. New conversations use the selected tool."
+            }
+            control={
+              environmentId === undefined ? undefined : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  render={
+                    <Link
+                      to="/settings/agentshare"
+                      search={{ machine: environmentId, section: "tools" }}
+                    />
+                  }
+                >
+                  {language === "zh" ? "管理编程工具" : "Manage coding tools"}
+                </Button>
+              )
+            }
+          />
+          {runtimeFields}
+        </SettingsSection>
+      ) : instance.driver === "codex" && readCodexSetupMode(instance.config) === "managed" ? (
         <div
           inert={readOnly}
           aria-disabled={readOnly || undefined}
@@ -1339,29 +1372,31 @@ export function ProviderInstanceCard({
         </SettingsSection>
       ) : null}
 
-      <SettingsSection
-        title="Environment"
-        inert={readOnly || instanceLocks?.wholeEnvironment}
-        aria-disabled={readOnly || instanceLocks?.wholeEnvironment || undefined}
-        className={readOnly ? "opacity-50 select-none" : undefined}
-      >
-        {instanceLocks?.wholeEnvironment ? (
-          <ManagedNotice>{instanceLocks.reason}</ManagedNotice>
-        ) : null}
-        <div className={instanceLocks?.wholeEnvironment ? "opacity-50" : undefined}>
-          <ProviderEnvironmentSection
-            environment={genericEnvironment}
-            onChange={updateGenericEnvironment}
-            secretSources={secretSources}
-            managed={
-              instanceLocks && {
-                names: instanceLocks.environmentNames,
-                reason: instanceLocks.reason,
+      {!managedConnection ? (
+        <SettingsSection
+          title="Environment"
+          inert={readOnly || instanceLocks?.wholeEnvironment}
+          aria-disabled={readOnly || instanceLocks?.wholeEnvironment || undefined}
+          className={readOnly ? "opacity-50 select-none" : undefined}
+        >
+          {instanceLocks?.wholeEnvironment ? (
+            <ManagedNotice>{instanceLocks.reason}</ManagedNotice>
+          ) : null}
+          <div className={instanceLocks?.wholeEnvironment ? "opacity-50" : undefined}>
+            <ProviderEnvironmentSection
+              environment={genericEnvironment}
+              onChange={updateGenericEnvironment}
+              secretSources={secretSources}
+              managed={
+                instanceLocks && {
+                  names: instanceLocks.environmentNames,
+                  reason: instanceLocks.reason,
+                }
               }
-            }
-          />
-        </div>
-      </SettingsSection>
+            />
+          </div>
+        </SettingsSection>
+      ) : null}
       {environmentId !== undefined && liveProvider?.driver === "acpRegistry" ? (
         <AcpSessionManagementSection
           environmentId={environmentId}
@@ -1376,11 +1411,12 @@ export function ProviderInstanceCard({
         <SettingsSection title="Models">
           <div className="px-3 py-3 sm:px-4">
             <p className="mb-3 text-xs text-muted-foreground">
-              Model preferences and custom models are saved on the selected environment and shared
-              across connected devices.
+              {managedConnection
+                ? "Model preferences are saved on the selected environment and shared across connected devices."
+                : "Model preferences and custom models are saved on the selected environment and shared across connected devices."}
             </p>
             <ProviderModelsSection
-              canManageCustomModels={!readOnly}
+              canManageCustomModels={!readOnly && !managedConnection}
               canWritePreferences={canWriteSettings}
               instanceId={instanceId}
               driverKind={driverKind}

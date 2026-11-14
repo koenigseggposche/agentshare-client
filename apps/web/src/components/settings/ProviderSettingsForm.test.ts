@@ -34,6 +34,27 @@ describe("ProviderSettingsForm helpers", () => {
     ]);
   });
 
+  it("keeps conversation controls but hides launch fields owned by the model connection", () => {
+    for (const driver of ["codex", "claudeAgent"] as const) {
+      const definition = providerClients.get(ProviderDriverKind.make(driver))!;
+      const config = {
+        agentShareModel: {
+          id: "generated",
+          service: "local",
+          source: "local",
+          runtime: driver === "codex" ? "codex" : "claude",
+        },
+      };
+      const standalone = deriveProviderSettingsFields(definition).map((field) => field.key);
+      const managed = deriveProviderSettingsFields(definition, config).map((field) => field.key);
+      expect(standalone).toContain("binaryPath");
+      expect(managed).not.toContain("binaryPath");
+      expect(managed).not.toContain("homePath");
+      expect(managed).not.toContain("launchArgs");
+      if (driver === "claudeAgent") expect(managed).toContain("idleCompaction");
+    }
+  });
+
   it("preserves unknown config keys while omitting empty configurable fields", () => {
     const opencode = providerClients.get(ProviderDriverKind.make("opencode"));
     expect(opencode).toBeDefined();
