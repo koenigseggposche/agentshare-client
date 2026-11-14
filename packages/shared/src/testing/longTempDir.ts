@@ -3,11 +3,12 @@ import * as NodeFS from "node:fs";
 import * as NodeOS from "node:os";
 import * as HostProcess from "../HostProcess.ts";
 
-// Windows runner temp paths use 8.3 names; canonicalize to long names before equality checks.
-if (HostProcess.Platform.defaultValue() === "win32") {
+// Git and realPath canonicalize Windows 8.3 names and macOS /var symlinks.
+if (["win32", "darwin"].includes(HostProcess.Platform.defaultValue())) {
   try {
     const longForm = NodeFS.realpathSync.native(NodeOS.tmpdir());
     process.env.TEMP = longForm;
     process.env.TMP = longForm;
+    process.env.TMPDIR = longForm;
   } catch {}
 }
