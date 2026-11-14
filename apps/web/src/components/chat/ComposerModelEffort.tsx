@@ -1,4 +1,4 @@
-import { runtimePermissionLabels } from "@t3tools/shared/workbenchLabels";
+import { runtimePermissionLabels, workbenchLabels } from "@t3tools/shared/workbenchLabels";
 import { useClientSettings } from "../../hooks/useSettings";
 import {
   buildTraitsTriggerDisplay,
@@ -483,13 +483,18 @@ function OptionSwitchRow(props: {
 }
 
 function NoEffortRow() {
+  const labels = workbenchLabels[useClientSettings((settings) => settings.uiLanguage)];
   return (
-    <div className="flex h-8 items-center px-2 text-muted-foreground text-sm">No effort levels</div>
+    <div className="flex h-8 items-center px-2 text-muted-foreground text-sm">
+      {labels.noEffortLevels}
+    </div>
   );
 }
 
 /** The model picker's effort column: the selected model's levels and its other options. */
 export function ComposerEffortColumn(props: { traits: TraitsSelectionInput | null }) {
+  const language = useClientSettings((settings) => settings.uiLanguage);
+  const labels = workbenchLabels[language];
   const picker = use(DockedPickerContext);
   const visibility = props.traits ? getTraitsSectionVisibility(props.traits) : null;
   const controls =
@@ -506,7 +511,13 @@ export function ComposerEffortColumn(props: { traits: TraitsSelectionInput | nul
       <div className="shrink-0 px-3 pt-2.5">
         <div className="flex h-8.25 -translate-y-px items-center gap-2 border-b border-border/70 pb-1.5 text-sm">
           <span className="text-muted-foreground">
-            {controls?.effort?.descriptor.label ?? (controls?.others.length ? "Options" : "Effort")}
+            {controls?.effort
+              ? language === "zh"
+                ? labels.modelEffort
+                : controls.effort.descriptor.label
+              : controls?.others.length
+                ? labels.modelOptions
+                : labels.modelEffort}
           </span>
           <span className="ms-auto min-w-0 truncate text-muted-foreground text-xs">
             {picker.modelLabel}
