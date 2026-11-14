@@ -38,6 +38,20 @@ const chineseLabels: Readonly<Record<string, string>> = {
   "Settings sections": "设置分类",
   "Settings breadcrumb": "设置导航",
   Theme: "主题",
+  "Filter chats": "筛选会话",
+  "Applying settings for": "设置适用于",
+  "Environment scope": "执行电脑范围",
+  "Unavailable environment": "执行电脑不可用",
+  "No environments": "暂无执行电脑",
+  "All environments": "所有执行电脑",
+  "Search environments": "搜索执行电脑",
+  "Project scope": "项目范围",
+  "Unavailable project": "项目不可用",
+  "All projects": "所有项目",
+  "Search projects": "搜索项目",
+  "No matches found.": "未找到匹配项。",
+  Offline: "离线",
+  Archived: "已归档",
 };
 
 export function settingsLabel(label: string, language: "zh" | "en"): string {

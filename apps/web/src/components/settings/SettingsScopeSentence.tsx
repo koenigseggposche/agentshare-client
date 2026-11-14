@@ -27,6 +27,7 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from "../ui/menu";
+import { settingsLabel } from "./settingsLabels";
 import { useOptionalSettingsScope } from "./SettingsScopeContext";
 import { resolveSettingsScope, type SettingsScopeSearch } from "./settingsScope";
 import {
@@ -88,12 +89,20 @@ export function SettingsScopeSentence() {
   return (
     <p className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 px-3 text-sm text-muted-foreground sm:px-4">
       <span className="flex min-w-0 items-center gap-1.5">
-        <span className="shrink-0">Applying settings for</span>
+        <span className="shrink-0">
+          {pathname === "/settings/archived"
+            ? settingsLabel("Filter chats", language)
+            : settingsLabel("Applying settings for", language)}
+        </span>
         <ProjectScopeMenu {...props} />
       </span>
       <span className="flex min-w-0 items-center gap-1.5">
         <span className="shrink-0">
-          {scope.search.machine || scope.scope.kind === "checkout" ? "on" : "across"}
+          {language === "zh"
+            ? "执行电脑"
+            : scope.search.machine || scope.scope.kind === "checkout"
+              ? "on"
+              : "across"}
         </span>
         <EnvironmentScopeMenu {...props} />
       </span>
@@ -110,6 +119,7 @@ interface ScopeOption {
 }
 
 function ScopeOptionLabel({ option }: { option: ScopeOption }) {
+  const language = useClientSettings((settings) => settings.uiLanguage);
   return (
     <>
       {option.icon}
@@ -120,7 +130,9 @@ function ScopeOptionLabel({ option }: { option: ScopeOption }) {
         ) : null}
       </span>
       {option.offline ? (
-        <span className="shrink-0 text-xs text-muted-foreground">Offline</span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {settingsLabel("Offline", language)}
+        </span>
       ) : null}
     </>
   );
@@ -145,6 +157,7 @@ function ScopeMenu({
   searchLabel: string;
   onChange: (next: string) => void;
 }) {
+  const language = useClientSettings((settings) => settings.uiLanguage);
   const [query, setQuery] = useState("");
   const Trigger = options.length > 6 ? ComboboxTrigger : MenuTrigger;
   const trigger = (
@@ -192,7 +205,7 @@ function ScopeMenu({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <ComboboxEmpty>No matches found.</ComboboxEmpty>
+          <ComboboxEmpty>{settingsLabel("No matches found.", language)}</ComboboxEmpty>
           <ComboboxList>
             {(option: ScopeOption) => (
               <ComboboxItem key={option.value} value={option}>
@@ -244,6 +257,7 @@ function EnvironmentScopeMenu({
   singleEnvironment,
   ariaLabel = "Environment scope",
 }: SettingsScopeMenuProps & { readonly ariaLabel?: string }) {
+  const language = useClientSettings((settings) => settings.uiLanguage);
   const resolved = resolveSettingsScope(value, groups, environments);
   const environmentValue = environmentAxisValue(
     value,
@@ -261,7 +275,7 @@ function EnvironmentScopeMenu({
     : environments;
   return (
     <ScopeMenu
-      ariaLabel={ariaLabel}
+      ariaLabel={settingsLabel(ariaLabel, language)}
       icon={
         selected ? (
           <EnvironmentMachineIcon
@@ -275,20 +289,20 @@ function EnvironmentScopeMenu({
         selected
           ? settingsScopeEnvironmentLabel(selected, environments)
           : environmentValue !== ALL_ENVIRONMENTS_VALUE
-            ? "Unavailable environment"
+            ? settingsLabel("Unavailable environment", language)
             : singleEnvironment
-              ? "No environments"
-              : "All environments"
+              ? settingsLabel("No environments", language)
+              : settingsLabel("All environments", language)
       }
       value={environmentValue}
       onChange={(next) => onChange(selectEnvironmentAxis(value, next))}
-      searchLabel="Search environments"
+      searchLabel={settingsLabel("Search environments", language)}
       allOption={
         singleEnvironment
           ? null
           : {
               value: ALL_ENVIRONMENTS_VALUE,
-              label: "All environments",
+              label: settingsLabel("All environments", language),
               icon: <LayersIcon aria-hidden className="size-3.5 shrink-0" />,
             }
       }
@@ -316,6 +330,7 @@ function EnvironmentScopeMenu({
 }
 
 function ProjectScopeMenu({ value, groups, environments, onChange }: SettingsScopeMenuProps) {
+  const language = useClientSettings((settings) => settings.uiLanguage);
   const selected = groups.find((group) => group.projectKey === value.project);
   const projects = projectScopeMenuGroups(groups, value).map((group) => ({
     group,
@@ -323,13 +338,18 @@ function ProjectScopeMenu({ value, groups, environments, onChange }: SettingsSco
   }));
   return (
     <ScopeMenu
-      ariaLabel="Project scope"
+      ariaLabel={settingsLabel("Project scope", language)}
       icon={selected ? <ProjectFavicon project={selected} className="size-3.5 shrink-0" /> : null}
-      label={selected?.displayName ?? (value.project ? "Unavailable project" : "All projects")}
+      label={
+        selected?.displayName ??
+        (value.project
+          ? settingsLabel("Unavailable project", language)
+          : settingsLabel("All projects", language))
+      }
       value={projectAxisValue(value)}
       onChange={(next) => onChange(selectProjectAxis(value, next))}
-      searchLabel="Search projects"
-      allOption={{ value: ALL_PROJECTS_VALUE, label: "All projects" }}
+      searchLabel={settingsLabel("Search projects", language)}
+      allOption={{ value: ALL_PROJECTS_VALUE, label: settingsLabel("All projects", language) }}
       options={projects.map(({ group, machines }) => {
         const sameName = projects.filter(
           (other) =>
@@ -347,7 +367,9 @@ function ProjectScopeMenu({ value, groups, environments, onChange }: SettingsSco
         return {
           value: group.projectKey,
           label: group.displayName,
-          secondary: group.archived ? ["Archived", location].filter(Boolean).join(" · ") : location,
+          secondary: group.archived
+            ? [settingsLabel("Archived", language), location].filter(Boolean).join(" · ")
+            : location,
           icon: <ProjectFavicon project={group} className="size-3.5 shrink-0" />,
         };
       })}
