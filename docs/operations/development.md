@@ -346,3 +346,5 @@ passed as `--wsl-runtime`; see the
 Add `--signed` after configuring the platform credentials in the
 [release runbook](./release.md). macOS passkeys need a signed, provisioned app; follow the
 [Connect setup](./connect-setup.md#desktop-passkeys) for local signing and renderer HMR.
+
+For SSH connections to a Mac with AgentShare Client installed, the launcher reuses the installed client when it provides the SSH helper commands. This also works for local Beta builds whose standalone runtime archive has not been published. Without a suitable installed client, the launcher downloads the pinned release archive.

@@ -6,6 +6,7 @@ import * as Deferred from "effect/Deferred";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
+import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as PlatformError from "effect/PlatformError";
 import * as Result from "effect/Result";
@@ -83,6 +84,68 @@ function commandArgs(command: ChildProcess.Command): ReadonlyArray<string> {
 const ARCHIVE = { archiveVersion: "1.2.3-preview.20260911.4" } as const;
 
 describe("ssh tunnel scripts", () => {
+  it.live.each([
+    { appId: "app.agentshare.client", helper: true, expected: 0 },
+    { appId: "other.application", helper: true, expected: 42 },
+    { appId: "app.agentshare.client", helper: false, expected: 42 },
+  ])(
+    "uses only an installed client with SSH helpers ($appId, $helper)",
+    ({ appId, helper, expected }) =>
+      Effect.gen(function* () {
+        const fs = yield* FileSystem.FileSystem;
+        const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+        const directory = yield* fs.makeTempDirectoryScoped({ prefix: "ssh-runner-" });
+        const app = `${directory}/Applications/AgentShare Client (Beta).app/Contents`;
+        yield* fs.makeDirectory(`${app}/MacOS`, { recursive: true });
+        const executable = `${app}/MacOS/Fixture Client`;
+        yield* fs.writeFileString(
+          executable,
+          `#!/bin/sh
+if [ "$2" = "__ssh-helper" ]; then exit ${helper ? 0 : 1}; fi
+[ "$ELECTRON_RUN_AS_NODE" = "1" ] || exit 3
+[ "$2" = "argument with spaces" ] || exit 4
+[ "$3" = '$(not-a-command)' ] || exit 5
+exit 0
+`,
+        );
+        yield* fs.chmod(executable, 0o700);
+        const plist = `${directory}/plist`;
+        yield* fs.writeFileString(
+          plist,
+          `#!/bin/sh
+case "$2" in
+  *CFBundleIdentifier*) printf '%s' '${appId}' ;;
+  *CFBundleExecutable*) printf '%s' 'Fixture Client' ;;
+esac
+`,
+        );
+        yield* fs.chmod(plist, 0o700);
+        const script =
+          SshTunnel.buildRemoteT3RunnerScript(ARCHIVE)
+            .replaceAll("/Applications/", `${directory}/Applications/`)
+            .replaceAll("/usr/libexec/PlistBuddy", plist)
+            .replace('"$(uname -s)"', '"Darwin"')
+            .split("T3_ARCHIVE_VERSION=")[0] + "exit 42\n";
+        const result = yield* spawner.spawn(
+          ChildProcess.make("sh", [
+            "-c",
+            script,
+            "fixture",
+            "argument with spaces",
+            "$(not-a-command)",
+          ]),
+        );
+        assert.equal(yield* result.exitCode, expected);
+      }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+
+  it("keeps downloaded runtimes in the current client home", () => {
+    assert.include(
+      SshTunnel.buildRemoteT3RunnerScript(ARCHIVE),
+      "$HOME/.agentshare-client/runtime/versions/",
+    );
+  });
+
   it("rejects archive versions that are not a single exact version segment", () => {
     for (const archiveVersion of [
       "../other",
