@@ -10,109 +10,136 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
+import * as Schema from "effect/Schema";
 import * as ServerConfig from "../config.ts";
+import { recoverAccountWorkspace, WorkspaceRecoveryError } from "./WorkspaceRecovery.ts";
 import { layerLocalCore } from "./LocalCore.ts";
 
-export const layerFromCore = Layer.effect(
-  ServerConfig.ServerConfig,
-  Effect.gen(function* () {
-    const config = yield* ServerConfig.ServerConfig;
-    const core = yield* CoreClient.CoreClient;
-    const digest = yield* Digest.Digest;
-    const path = yield* Path.Path;
-    const fs = yield* FileSystem.FileSystem;
-    const identity = yield* core.identity();
-    if (
-      identity.account_generation === undefined ||
-      identity.account_generation < 0 ||
-      identity.stopping
-    )
-      return yield* new AgentShareCoreError({
-        operation: "workspace",
-        category: "invalid-runtime",
-      });
-    const key = Hex.encode(
-      yield* digest.digest(Digest.sha256, new TextEncoder().encode(identity.owner)),
-    );
-    const paths = yield* ServerConfig.deriveServerPaths(
-      path.join(config.baseDir, "accounts", key),
-      config.devUrl,
-      { baseDirIsExplicit: path.basename(config.stateDir) !== "dev" },
-    );
-    yield* ServerConfig.ensureServerDirectories(paths);
-    const persisted = parsePersistedServerObservabilitySettings(
-      (yield* fs.exists(paths.settingsPath)) ? yield* fs.readFileString(paths.settingsPath) : "",
-    );
-    const {
-      otlpTracesSource,
-      otlpMetricsSource,
-      otlpLogsSource,
-      otlpTracesVariable: _tracesVariable,
-      otlpMetricsVariable: _metricsVariable,
-      otlpLogsVariable: _logsVariable,
-      ...base
-    } = config;
-    const traces = OtelEnvironment.resolveSignalEndpoint(
-      config.otelEnvironment,
-      "traces",
-      {
-        url: otlpTracesSource === "environment" ? config.otlpTracesUrl : undefined,
-        export: config.otlpTracesExport,
-      },
-      {
-        bootstrapUrl: otlpTracesSource === "bootstrap" ? config.otlpTracesUrl : undefined,
-        settingsUrl: persisted.otlpTracesUrl,
-      },
-    );
-    const metrics = OtelEnvironment.resolveSignalEndpoint(
-      config.otelEnvironment,
-      "metrics",
-      {
-        url: otlpMetricsSource === "environment" ? config.otlpMetricsUrl : undefined,
-        export: config.otlpMetricsExport,
-      },
-      {
-        bootstrapUrl: otlpMetricsSource === "bootstrap" ? config.otlpMetricsUrl : undefined,
-        settingsUrl: persisted.otlpMetricsUrl,
-      },
-    );
-    const logs = OtelEnvironment.resolveSignalEndpoint(
-      config.otelEnvironment,
-      "logs",
-      {
-        url: otlpLogsSource === "environment" ? config.otlpLogsUrl : undefined,
-        export: config.otlpLogsExport,
-      },
-      {
-        bootstrapUrl: otlpLogsSource === "bootstrap" ? config.otlpLogsUrl : undefined,
-        settingsUrl: persisted.otlpLogsUrl,
-      },
-    );
-    return ServerConfig.make({
-      ...base,
-      ...paths,
-      otlpTracesUrl: traces?.url,
-      otlpMetricsUrl: metrics?.url,
-      otlpLogsUrl: logs?.url,
-      ...(traces ? { otlpTracesSource: traces.source } : {}),
-      ...(traces?.variable ? { otlpTracesVariable: traces.variable } : {}),
-      ...(metrics ? { otlpMetricsSource: metrics.source } : {}),
-      ...(metrics?.variable ? { otlpMetricsVariable: metrics.variable } : {}),
-      ...(logs ? { otlpLogsSource: logs.source } : {}),
-      ...(logs?.variable ? { otlpLogsVariable: logs.variable } : {}),
-      // The host lock and service discovery stay at the configured host root.
-      serverRuntimeStatePath: config.serverRuntimeStatePath,
-      agentShareOwner: identity.owner,
-      agentShareAccountGeneration: identity.account_generation,
-    });
-  }),
-);
+const isWorkspaceRecoveryError = Schema.is(WorkspaceRecoveryError);
 
-export const layer = layerFromCore.pipe(
-  Layer.provideMerge(layerLocalCore),
-  Layer.provide(NodeHttpClient.layerNodeHttp),
-  Layer.provide(NodeCrypto.layer),
-);
+const layerFromCoreWithRecovery = (explicit = false, skipRecovery = false) =>
+  Layer.effect(
+    ServerConfig.ServerConfig,
+    Effect.gen(function* () {
+      const config = yield* ServerConfig.ServerConfig;
+      const core = yield* CoreClient.CoreClient;
+      const digest = yield* Digest.Digest;
+      const path = yield* Path.Path;
+      const fs = yield* FileSystem.FileSystem;
+      const identity = yield* core.identity();
+      if (
+        identity.account_generation === undefined ||
+        identity.account_generation < 0 ||
+        identity.stopping
+      )
+        return yield* new AgentShareCoreError({
+          operation: "workspace",
+          category: "invalid-runtime",
+        });
+      const key = Hex.encode(
+        yield* digest.digest(Digest.sha256, new TextEncoder().encode(identity.owner)),
+      );
+      if (!skipRecovery)
+        yield* Effect.tryPromise({
+          try: () =>
+            recoverAccountWorkspace({
+              baseDir: config.baseDir,
+              stateDir: config.stateDir,
+              accountDir: path.join(config.baseDir, "accounts", key),
+              owner: identity.owner,
+              explicit,
+            }),
+          catch: (cause) =>
+            isWorkspaceRecoveryError(cause)
+              ? cause
+              : new WorkspaceRecoveryError({
+                  detail: "Workspace history recovery failed: " + String(cause),
+                }),
+        });
+      const paths = yield* ServerConfig.deriveServerPaths(
+        path.join(config.baseDir, "accounts", key),
+        config.devUrl,
+        { baseDirIsExplicit: path.basename(config.stateDir) !== "dev" },
+      );
+      yield* ServerConfig.ensureServerDirectories(paths);
+      const persisted = parsePersistedServerObservabilitySettings(
+        (yield* fs.exists(paths.settingsPath)) ? yield* fs.readFileString(paths.settingsPath) : "",
+      );
+      const {
+        otlpTracesSource,
+        otlpMetricsSource,
+        otlpLogsSource,
+        otlpTracesVariable: _tracesVariable,
+        otlpMetricsVariable: _metricsVariable,
+        otlpLogsVariable: _logsVariable,
+        ...base
+      } = config;
+      const traces = OtelEnvironment.resolveSignalEndpoint(
+        config.otelEnvironment,
+        "traces",
+        {
+          url: otlpTracesSource === "environment" ? config.otlpTracesUrl : undefined,
+          export: config.otlpTracesExport,
+        },
+        {
+          bootstrapUrl: otlpTracesSource === "bootstrap" ? config.otlpTracesUrl : undefined,
+          settingsUrl: persisted.otlpTracesUrl,
+        },
+      );
+      const metrics = OtelEnvironment.resolveSignalEndpoint(
+        config.otelEnvironment,
+        "metrics",
+        {
+          url: otlpMetricsSource === "environment" ? config.otlpMetricsUrl : undefined,
+          export: config.otlpMetricsExport,
+        },
+        {
+          bootstrapUrl: otlpMetricsSource === "bootstrap" ? config.otlpMetricsUrl : undefined,
+          settingsUrl: persisted.otlpMetricsUrl,
+        },
+      );
+      const logs = OtelEnvironment.resolveSignalEndpoint(
+        config.otelEnvironment,
+        "logs",
+        {
+          url: otlpLogsSource === "environment" ? config.otlpLogsUrl : undefined,
+          export: config.otlpLogsExport,
+        },
+        {
+          bootstrapUrl: otlpLogsSource === "bootstrap" ? config.otlpLogsUrl : undefined,
+          settingsUrl: persisted.otlpLogsUrl,
+        },
+      );
+      return ServerConfig.make({
+        ...base,
+        ...paths,
+        otlpTracesUrl: traces?.url,
+        otlpMetricsUrl: metrics?.url,
+        otlpLogsUrl: logs?.url,
+        ...(traces ? { otlpTracesSource: traces.source } : {}),
+        ...(traces?.variable ? { otlpTracesVariable: traces.variable } : {}),
+        ...(metrics ? { otlpMetricsSource: metrics.source } : {}),
+        ...(metrics?.variable ? { otlpMetricsVariable: metrics.variable } : {}),
+        ...(logs ? { otlpLogsSource: logs.source } : {}),
+        ...(logs?.variable ? { otlpLogsVariable: logs.variable } : {}),
+        // The host lock and service discovery stay at the configured host root.
+        serverRuntimeStatePath: config.serverRuntimeStatePath,
+        agentShareOwner: identity.owner,
+        agentShareAccountGeneration: identity.account_generation,
+      });
+    }),
+  );
+
+export const layerFromCore = layerFromCoreWithRecovery();
+
+export const layerWithRecovery = (explicit = false, skipRecovery = false) =>
+  layerFromCoreWithRecovery(explicit, skipRecovery).pipe(
+    Layer.provideMerge(layerLocalCore),
+    Layer.provide(NodeHttpClient.layerNodeHttp),
+    Layer.provide(NodeCrypto.layer),
+  );
+
+export const layer = layerWithRecovery();
 
 export const awaitAccountChange = Effect.gen(function* () {
   const config = yield* ServerConfig.ServerConfig;

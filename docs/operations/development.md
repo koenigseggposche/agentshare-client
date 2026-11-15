@@ -348,3 +348,7 @@ Add `--signed` after configuring the platform credentials in the
 [Connect setup](./connect-setup.md#desktop-passkeys) for local signing and renderer HMR.
 
 For SSH connections to a Mac with AgentShare Client installed, the launcher reuses the installed client when it provides the SSH helper commands. This also works for local Beta builds whose standalone runtime archive has not been published. Without a suitable installed client, the launcher downloads the pinned release archive.
+
+Desktop-local bootstrap credentials live only in the renderer process. Loading or unlocking the encrypted remote connection catalog must not delay the local workbench, and these short-lived credentials are never written into that catalog.
+
+On the first upgrade from unscoped workbench storage, history is snapshotted into the account directory only when the saved model settings identify exactly the current owner. The environment ID, attachments and settings are retained, and the source stays intact. If ownership is missing or mixed, startup explains the recovery action instead of silently showing an empty account. Stop that workbench, sign in to the intended account, then run `agentshare-client doctor --recover-workspace --base-dir /path/to/workbench`. Existing account history is never overwritten or merged. An interrupted copy can be retried; a leftover recovery lock must be investigated before removal. `doctor --dry-run` does not recover history.

@@ -23,6 +23,7 @@ import {
   ConnectionTransientError,
   ConnectionBlockedError,
   CredentialStore,
+  type ConnectionCredential,
   ProfileStore,
   PullRequestRoutingPermissions,
   StoredPullRequestRoutingPermission,
@@ -40,6 +41,8 @@ import * as Schema from "effect/Schema";
 import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
 import { projectFaviconCache } from "../assets/projectFaviconCache";
+
+import { isDesktopLocalConnectionId } from "./desktopLocal";
 
 const DATABASE_NAME = "t3code:connection-runtime";
 const DATABASE_VERSION = 4;
@@ -595,6 +598,49 @@ const yieldToBrowserTask = Effect.callback<void>((resume) => {
   return Effect.sync(() => port1.close());
 });
 
+export function makeConnectionCredentialStore(catalog: CatalogStore) {
+  // Desktop bootstrap credentials expire with this process and must not wait for Keychain access.
+  const local = new Map<string, ConnectionCredential>();
+  return CredentialStore.make({
+    get: (connectionId) =>
+      isDesktopLocalConnectionId(connectionId)
+        ? Effect.sync(() => Option.fromUndefinedOr(local.get(connectionId)))
+        : catalog.read.pipe(
+            Effect.map((document) =>
+              Option.fromUndefinedOr(
+                document.credentials.find((entry) => entry.connectionId === connectionId)
+                  ?.credential,
+              ),
+            ),
+          ),
+    put: (connectionId, credential) =>
+      isDesktopLocalConnectionId(connectionId)
+        ? Effect.sync(() => {
+            local.set(connectionId, credential);
+          })
+        : catalog.update((document) => ({
+            ...document,
+            credentials: replaceCatalogValue(document.credentials, (value) => value.connectionId, {
+              connectionId,
+              credential,
+            }),
+          })),
+    remove: (connectionId) =>
+      isDesktopLocalConnectionId(connectionId)
+        ? Effect.sync(() => {
+            local.delete(connectionId);
+          })
+        : catalog.update((document) => ({
+            ...document,
+            credentials: removeCatalogValue(
+              document.credentials,
+              (value) => value.connectionId,
+              connectionId,
+            ),
+          })),
+  });
+}
+
 export const layer = Layer.effectContext(
   Effect.gen(function* () {
     const { handle: database } = yield* Effect.acquireRelease(
@@ -670,33 +716,7 @@ export const layer = Layer.effectContext(
           ),
         })),
     });
-    const credentialStore = CredentialStore.make({
-      get: (connectionId) =>
-        catalog.read.pipe(
-          Effect.map((document) =>
-            Option.fromUndefinedOr(
-              document.credentials.find((entry) => entry.connectionId === connectionId)?.credential,
-            ),
-          ),
-        ),
-      put: (connectionId, credential) =>
-        catalog.update((document) => ({
-          ...document,
-          credentials: replaceCatalogValue(document.credentials, (value) => value.connectionId, {
-            connectionId,
-            credential,
-          }),
-        })),
-      remove: (connectionId) =>
-        catalog.update((document) => ({
-          ...document,
-          credentials: removeCatalogValue(
-            document.credentials,
-            (value) => value.connectionId,
-            connectionId,
-          ),
-        })),
-    });
+    const credentialStore = makeConnectionCredentialStore(catalog);
     const remoteTokenStore = TokenStore.make({
       get: (environmentId) =>
         catalog.read.pipe(

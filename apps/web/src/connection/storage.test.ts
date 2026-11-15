@@ -1,5 +1,6 @@
 import {
   ConnectionTransientError,
+  BearerConnectionCredential,
   PrimaryConnectionTarget,
 } from "@t3tools/client-runtime/connection";
 import { EnvironmentId, ThreadId } from "@t3tools/contracts";
@@ -63,6 +64,25 @@ describe("ConnectionStorage.makeCatalogStore", () => {
     }),
   );
 });
+
+it.effect("uses local bootstrap credentials while the saved catalog is locked", () =>
+  Effect.gen(function* () {
+    const catalog = yield* ConnectionStorage.makeCatalogStore({
+      read: Effect.never,
+      write: () => Effect.die("Local bootstrap credentials must not be persisted"),
+    });
+    const store = ConnectionStorage.makeConnectionCredentialStore(catalog);
+    const credential = new BearerConnectionCredential({ token: "generated-bootstrap" });
+    expect(yield* store.get("local:primary")).toEqual(Option.none());
+    yield* store.put("local:primary", credential);
+    expect(yield* store.get("local:primary")).toEqual(Option.some(credential));
+    expect(
+      yield* ConnectionStorage.makeConnectionCredentialStore(catalog).get("local:primary"),
+    ).toEqual(Option.none());
+    yield* store.remove("local:primary");
+    expect(yield* store.get("local:primary")).toEqual(Option.none());
+  }),
+);
 
 const fixedHandle = (database: IDBDatabase) => ({
   get: Effect.succeed(database),

@@ -102,6 +102,12 @@ export const runDoctor = Effect.fn("runDoctor")(function* (
 
 export const doctorCommand = Command.make("doctor", {
   ...projectLocationFlags,
+  recoverWorkspace: Flag.Boolean("recover-workspace").pipe(
+    Flag.withDescription(
+      "Recover unassigned workbench history into the current account without overwriting existing history.",
+    ),
+    Flag.withDefault(false),
+  ),
   fix: Flag.Boolean("fix").pipe(
     Flag.withDescription("Apply the recommended repairs without prompting."),
     Flag.withDefault(false),
@@ -117,7 +123,22 @@ export const doctorCommand = Command.make("doctor", {
   Command.withHandler((flags) =>
     Effect.gen(function* () {
       const logLevel = yield* GlobalFlag.LogLevel;
-      const config = yield* resolveCliAuthConfig(flags, logLevel);
+      if (flags.recoverWorkspace && flags.dryRun) {
+        yield* Console.log(
+          "Workspace recovery was not run: remove --dry-run to assign history to the current account.",
+        );
+        return;
+      }
+      const config = yield* resolveCliAuthConfig(flags, logLevel, {
+        recoverWorkspace: flags.recoverWorkspace,
+        skipWorkspaceRecovery: flags.dryRun,
+      });
+      if (flags.recoverWorkspace) {
+        yield* Console.log(
+          "Account workspace is ready. Original history and any replaced empty profile are retained.",
+        );
+        return;
+      }
       yield* runDoctor(config.dbPath, { fix: flags.fix, dryRun: flags.dryRun }).pipe(
         Effect.provide(Layer.merge(DatabaseMaintenance.layer, CliService.layer(config))),
       );

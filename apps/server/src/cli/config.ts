@@ -567,12 +567,21 @@ export const resolveCliHostConfig = (
 export const resolveCliAuthConfig = (
   flags: CliAuthLocationFlags,
   cliLogLevel: Option.Option<LogLevel.LogLevel>,
-  options?: { readonly quietLogs?: boolean },
+  options?: {
+    readonly quietLogs?: boolean;
+    readonly recoverWorkspace?: boolean;
+    readonly skipWorkspaceRecovery?: boolean;
+  },
 ) => {
   const resolved = resolveCliHostConfig(flags, cliLogLevel).pipe(
     Effect.flatMap((config) =>
       ServerConfig.ServerConfig.pipe(
-        Effect.provide(WorkspaceAccount.layer.pipe(Layer.provide(ServerConfig.layer(config)))),
+        Effect.provide(
+          WorkspaceAccount.layerWithRecovery(
+            options?.recoverWorkspace,
+            options?.skipWorkspaceRecovery,
+          ).pipe(Layer.provide(ServerConfig.layer(config))),
+        ),
       ),
     ),
   );
