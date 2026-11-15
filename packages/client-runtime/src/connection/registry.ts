@@ -330,28 +330,34 @@ export const make = Effect.gen(function* () {
       Effect.uninterruptible(
         Effect.gen(function* () {
           const environmentId = entry.target.environmentId;
+          const platformOwned = (yield* Ref.get(platformEnvironmentIds)).has(environmentId);
           const scope = yield* Scope.fork(registryScope);
           const supervisor = yield* EnvironmentSupervisor.make(entry, {
             // Seed the intent to avoid publishing a false switched-off state
             // before an enabled, compatible environment starts connecting.
             initiallyDesired: entry.enabled && entry.unsupportedReason === undefined,
-            initiallyHideCachedData: yield* cacheAccess.isHidden(environmentId).pipe(
-              Effect.catch((error) =>
-                Effect.logWarning("Could not read cached workbench access.", {
-                  environmentId,
-                  error,
-                }).pipe(Effect.as(true)),
-              ),
-            ),
-            persistCacheVisibility: (hidden) =>
-              cacheAccess.setHidden(environmentId, hidden).pipe(
-                Effect.catch((error) =>
-                  Effect.logWarning("Could not save cached workbench access.", {
-                    environmentId,
-                    error,
-                  }),
+            // Host bootstraps authenticate afresh; saved remote permissions must not block them.
+            initiallyHideCachedData: platformOwned
+              ? true
+              : yield* cacheAccess.isHidden(environmentId).pipe(
+                  Effect.catch((error) =>
+                    Effect.logWarning("Could not read cached workbench access.", {
+                      environmentId,
+                      error,
+                    }).pipe(Effect.as(true)),
+                  ),
                 ),
-              ),
+            persistCacheVisibility: (hidden) =>
+              platformOwned
+                ? Effect.void
+                : cacheAccess.setHidden(environmentId, hidden).pipe(
+                    Effect.catch((error) =>
+                      Effect.logWarning("Could not save cached workbench access.", {
+                        environmentId,
+                        error,
+                      }),
+                    ),
+                  ),
             learnRoutes: (input) => learnRoutes({ environmentId, ...input }),
           }).pipe(
             Effect.provideService(Connectivity.Connectivity, connectivity),

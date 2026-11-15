@@ -150,6 +150,7 @@ const makeHarness = Effect.fn("TestEnvironmentRegistry.makeHarness")(function* (
   initialProfiles: ReadonlyArray<ConnectionProfile> = [],
   initialCredentials: ReadonlyArray<readonly [string, ConnectionCredential]> = [],
   options?: {
+    readonly blockCacheAccess?: boolean;
     readonly beforeCatalogRead?: Effect.Effect<void, Persistence.ConnectionPersistenceError>;
     readonly prepareError?: ConnectionBlockedError;
     readonly beforeSessionConnect?: (environmentId: EnvironmentId) => Effect.Effect<void>;
@@ -470,6 +471,10 @@ const makeHarness = Effect.fn("TestEnvironmentRegistry.makeHarness")(function* (
           ConnectionWakeups.ConnectionWakeups.of({ changes: Stream.never }),
         ),
         Layer.succeed(ConnectionDriver.ConnectionDriver, driver),
+        Layer.succeed(Persistence.EnvironmentCacheAccess, {
+          isHidden: () => (options?.blockCacheAccess ? Effect.never : Effect.succeed(false)),
+          setHidden: () => (options?.blockCacheAccess ? Effect.never : Effect.void),
+        }),
         layerCache,
         Layer.succeed(Persistence.EnvironmentOwnedDataCleanup, ownedDataCleanup),
       ),
@@ -1686,6 +1691,28 @@ describe("EnvironmentRegistry", () => {
         expect(yield* Ref.get(attempts)).toBeGreaterThanOrEqual(2);
       }).pipe(Effect.provide(harness.layer), Effect.scoped);
     }),
+  );
+
+  it.effect(
+    "connects a host bootstrap while the encrypted catalog and cache permissions wait",
+    () =>
+      Effect.gen(function* () {
+        const harness = yield* makeHarness([], [], [], {
+          beforeCatalogRead: Effect.never,
+          blockCacheAccess: true,
+        });
+        yield* Effect.gen(function* () {
+          const registry = yield* EnvironmentRegistry.EnvironmentRegistry;
+          yield* registry.reconcilePlatform([
+            new PrimaryConnectionRegistration({ target: TARGET }),
+          ]);
+          yield* awaitConnectionState(
+            registry,
+            TARGET.environmentId,
+            (state) => state.phase === "connected",
+          );
+        }).pipe(Effect.provide(harness.layer));
+      }),
   );
 
   it.effect("starts platform environments without persisting or removing them", () =>
