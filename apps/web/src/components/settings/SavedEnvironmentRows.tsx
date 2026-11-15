@@ -1,3 +1,4 @@
+import { useConnectionCatalogNotice } from "../../hooks/useConnectionCatalogNotice";
 import { SessionPermissions } from "./SessionPermissions";
 import {
   ChevronRightIcon,
@@ -761,17 +762,20 @@ export function CloudLinkRow({
 }
 
 function EmptyRemoteEnvironments({ cloudEnabled = true }: { readonly cloudEnabled?: boolean }) {
+  const connectionNotice = useConnectionCatalogNotice();
   return (
     <Empty className="min-h-52">
       <EmptyMedia variant="icon">
         <ChevronsLeftRightEllipsisIcon />
       </EmptyMedia>
       <EmptyHeader>
-        <EmptyTitle>No saved remote environments</EmptyTitle>
+        <EmptyTitle>{connectionNotice?.title ?? "No saved remote environments"}</EmptyTitle>
         <EmptyDescription>
-          {cloudEnabled
-            ? "Click “Add environment” to pair another environment, or connect one from T3 Connect."
-            : "Click “Add environment” to pair another environment."}
+          {connectionNotice !== null
+            ? connectionNotice.description
+            : cloudEnabled
+              ? "Click “Add environment” to pair another environment, or connect one from T3 Connect."
+              : "Click “Add environment” to pair another environment."}
         </EmptyDescription>
       </EmptyHeader>
     </Empty>

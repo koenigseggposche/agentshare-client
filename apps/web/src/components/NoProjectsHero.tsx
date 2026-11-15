@@ -4,6 +4,7 @@ import { workbenchLabels } from "@t3tools/shared/workbenchLabels";
 
 import { openCommandPalette } from "../commandPaletteBus";
 import { isElectron } from "../env";
+import { useConnectionCatalogNotice } from "../hooks/useConnectionCatalogNotice";
 import { useScratchProject } from "../hooks/useScratchProject";
 import { useClientSettings } from "../hooks/useSettings";
 import { usePrimaryEnvironmentId } from "../state/environments";
@@ -32,6 +33,7 @@ const homeLabels = {
 } as const;
 
 export function NoProjectsHero() {
+  const connectionNotice = useConnectionCatalogNotice();
   const language = useClientSettings((settings) => settings.uiLanguage);
   const labels = homeLabels[language];
   const contentArea = workspaceAreaProps("home", 1, labels.home);
@@ -51,13 +53,15 @@ export function NoProjectsHero() {
         <Empty size="hero" className="flex-1">
           <div className="w-full max-w-lg px-8 py-12">
             <EmptyHeader className="max-w-none">
-              <EmptyTitle>{labels.heading}</EmptyTitle>
+              <EmptyTitle>{connectionNotice?.title ?? labels.heading}</EmptyTitle>
               <EmptyDescription>
-                {!canCreateProject
-                  ? labels.needsTaskAccess
-                  : scratchTargetEnvironmentId === null
-                    ? labels.addFirstProject
-                    : labels.chooseHowToStart}
+                {connectionNotice !== null
+                  ? connectionNotice.description
+                  : !canCreateProject
+                    ? labels.needsTaskAccess
+                    : scratchTargetEnvironmentId === null
+                      ? labels.addFirstProject
+                      : labels.chooseHowToStart}
               </EmptyDescription>
               <div className="mt-6 flex justify-center gap-2">
                 {canCreateProject ? (

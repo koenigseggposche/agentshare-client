@@ -1,3 +1,4 @@
+import { useConnectionCatalogNotice } from "../hooks/useConnectionCatalogNotice";
 import { liveShellEnvironmentIdsAtom } from "../state/shell";
 import { attachSidebarTree } from "../lib/sidebarTree";
 import { type EnvironmentId, type ScopedProjectRef } from "@t3tools/contracts";
@@ -927,6 +928,7 @@ function readRouteThreadKey(router: AnyRouter): string | null {
 
 export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReveal }) {
   const labels = workbenchLabels[useClientSettings((settings) => settings.uiLanguage)];
+  const connectionNotice = useConnectionCatalogNotice();
   const {
     projects,
     serverConfigs,
@@ -3642,7 +3644,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
             <div className="flex flex-col items-center gap-2 px-2 py-6 text-center text-xs text-muted-foreground/60">
               {projects.length === 0 ? (
                 <>
-                  <span>{labels.noProjects}</span>
+                  <span role="status">{connectionNotice?.title ?? labels.noProjects}</span>
                   {canAddProject ? (
                     <button
                       type="button"
