@@ -2828,6 +2828,14 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   wslRuntimeBundled = false,
   arch?: typeof BuildArch.Type,
 ) {
+  const testSigning = Boolean(
+    process.env.AGENTSHARE_TEST_SIGNING_IDENTITY || process.env.AGENTSHARE_TEST_SIGNING_KEYCHAIN,
+  );
+  if (testSigning && (signed || platform !== "mac" || !version.includes("-"))) {
+    return yield* Effect.die(
+      new Error("Local test signing requires an unsigned macOS prerelease build."),
+    );
+  }
   const productName = resolveDesktopProductName(version);
   const buildConfig: Record<string, unknown> = {
     afterPack: (yield* Path.Path).join(yield* RepoRoot, "scripts/prepare-server-compile-cache.cjs"),
@@ -2920,7 +2928,12 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       ],
       ...(signed
         ? { sign: path.join(repoRoot, "scripts/sign-macos.ts") }
-        : { identity: "-", hardenedRuntime: false, notarize: false }),
+        : {
+            identity: "-",
+            hardenedRuntime: false,
+            notarize: false,
+            ...(testSigning ? { sign: path.join(repoRoot, "scripts/sign-macos-test.ts") } : {}),
+          }),
       ...(macPasskeySigning
         ? {
             entitlements: macPasskeySigning.entitlementsPath,
