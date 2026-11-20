@@ -40,6 +40,7 @@ export function createAgentShareEnvironmentAtoms<R, E>(
   const models = createEnvironmentQueryAtomFamily(runtime, {
     label: "agentshare:models",
     staleTimeMs: 5_000,
+    refreshIntervalMs: 30_000,
     execute: (_input: { readonly owner: string }) =>
       requestGuarded(WS_METHODS.agentShareRead, { resource: "models" }).pipe(
         withRpcPermissionGuard(runtime),

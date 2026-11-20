@@ -1,3 +1,4 @@
+import "~/index.css";
 import {
   ProviderDriverKind,
   ProviderInstanceId,
@@ -10,7 +11,11 @@ import { expect, it } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 
 import { render } from "../../../test/render";
-import { ComposerEffortColumn, describeComposerEffort } from "./ComposerModelEffort";
+import {
+  ComposerEffortColumn,
+  ComposerModelSettings,
+  describeComposerEffort,
+} from "./ComposerModelEffort";
 import type { TraitsSelectionInput } from "./TraitsPicker";
 
 // Shaped like Devin over ACP: its session mode comes first, and its reasoning id is its own.
@@ -122,4 +127,35 @@ it("draws an agent's reasoning as bars and keeps its mode out of the levels", as
     .element(screen.getByRole("button", { name: "Session Mode: Plan" }))
     .toBeInTheDocument();
   await expect.element(page.getByRole("menuitemradio")).not.toBeInTheDocument();
+});
+
+it("adjusts effort separately, closes after a pick and keeps the model", async () => {
+  function Settings() {
+    const [options, setOptions] = useState<ReadonlyArray<ProviderOptionSelection>>([]);
+    const traits = traitsInput(options, (next) => setOptions(next ?? []));
+    const effort = describeComposerEffort(traits, "label", "sm");
+    return (
+      <ComposerModelSettings
+        traits={traits}
+        suffix={effort.suffix}
+        detail={effort.detail}
+        size="sm"
+        disabled={false}
+        ownsModeShortcut
+        runtimeMode="full-access"
+        runtimeModeOptions={[]}
+        onRuntimeModeChange={() => {}}
+      />
+    );
+  }
+  await using screen = await render(<Settings />);
+  await screen.getByRole("button", { name: /Model settings|模型设置/ }).click();
+  await expect.element(page.getByRole("radio", { name: "Medium" })).toHaveFocus();
+  await page.getByRole("radio", { name: "High" }).click();
+  await expect.element(page.getByRole("radio", { name: "High" })).not.toBeInTheDocument();
+  await screen.getByRole("button", { name: /Model settings|模型设置/ }).click();
+  await expect.element(page.getByRole("radio", { name: "High" })).toBeChecked();
+  await expect.element(page.getByText(models[0]!.name, { exact: true })).toBeVisible();
+  await userEvent.keyboard("{Escape}");
+  await expect.element(page.getByRole("radio", { name: "High" })).not.toBeInTheDocument();
 });

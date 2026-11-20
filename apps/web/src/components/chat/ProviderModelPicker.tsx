@@ -1,3 +1,6 @@
+import { workbenchLabels } from "@t3tools/shared/workbenchLabels";
+import { useClientSettings } from "~/hooks/useSettings";
+import { ChevronDownIcon } from "lucide-react";
 import {
   ANTIGRAVITY_DEFAULT_MODEL,
   type ProviderInstanceId,
@@ -5,18 +8,19 @@ import {
   type ProviderDriverKind,
   type ResolvedKeybindingsConfig,
 } from "@t3tools/contracts";
-import { createContext, memo, type ReactNode, useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { Badge } from "../ui/badge";
 import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "~/lib/utils";
 import { ModelPickerContent, resolveModelPickerSelectedModel } from "./ModelPickerContent";
+import { AgentShareModelPickerRouter } from "./AgentShareModelPicker";
 import { ChatGptSharingControl } from "./ChatGptSharingControl";
 import { ProviderInstanceIcon } from "./ProviderInstanceIcon";
 import { ModelEsque, getDisplayModelName, getTriggerDisplayModelName } from "./providerIconUtils";
 import { shouldShowInstanceBadge, type ProviderInstanceEntry } from "../../providerInstances";
 import { ComposerControl, type ComposerControlSize } from "./ComposerControl";
-import { takeOpenTarget, useComposerMenuProps } from "./composerEventScope";
+import { useComposerMenuProps } from "./composerEventScope";
 import { shortcutLabelForCommand } from "../../keybindings";
 
 /** Holds the page still behind the open picker; its lifetime is the popup element's. */
@@ -70,9 +74,6 @@ function lockBackgroundScroll(popup: HTMLElement | null) {
   };
 }
 
-/** What a docked effort column needs from its picker: the model it serves. */
-export const DockedPickerContext = createContext<{ modelLabel: string }>({ modelLabel: "" });
-
 export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   environmentId: EnvironmentId | null;
   activeInstanceId: ProviderInstanceId;
@@ -100,27 +101,14 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   onOpenProviderSetup?: (instanceId: ProviderInstanceId) => void;
   getModelDisabledReason?: (instanceId: ProviderInstanceId, model: string) => string | null;
   onInstanceModelChange: (instanceId: ProviderInstanceId, model: string) => void;
-  /** Shown after the model name inside the same trigger, such as the effort level. */
-  triggerSuffix?: ReactNode;
-  /** Names the suffix for the tooltip and screen readers. */
-  triggerDetail?: string | null;
-  /** Composer shortcuts this trigger answers besides the picker's own. */
-  triggerShortcuts?: string;
-  /**
-   * Docks an effort column beside the list and a footer under both. The popup then stays open
-   * until Escape or an outside press, and picking a model moves focus to its levels.
-   */
-  effortColumn?: ReactNode;
-  footer?: ReactNode;
 }) {
+  const labels = workbenchLabels[useClientSettings((settings) => settings.uiLanguage)];
   const composerFloatingLayerProps = useComposerMenuProps();
   const [uncontrolledIsMenuOpen, setUncontrolledIsMenuOpen] = useState(false);
   const isMenuOpen = props.open ?? uncontrolledIsMenuOpen;
   const searchInputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const popupRef = useRef<HTMLDivElement | null>(null);
   const size = props.size ?? "sm";
-  const docked = props.effortColumn !== undefined;
 
   const activeEntry =
     props.instanceEntries.find((entry) => entry.instanceId === props.activeInstanceId) ?? null;
@@ -139,10 +127,10 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   const triggerTitle = selectedModel
     ? getTriggerDisplayModelName(selectedModel, activeEntry?.driverKind)
     : props.model === ANTIGRAVITY_DEFAULT_MODEL
-      ? "Choose model"
-      : props.model || "Choose model";
+      ? labels.chooseModel
+      : props.model || labels.chooseModel;
   const triggerLabel = selectedModel
-    ? `${getDisplayModelName(selectedModel)}${selectedModel.isUnavailable ? " (Unavailable)" : ""}`
+    ? `${getDisplayModelName(selectedModel)}${selectedModel.isUnavailable ? ` (${labels.unavailableModel})` : ""}`
     : triggerTitle;
   const showInstanceBadge =
     activeEntry !== null && shouldShowInstanceBadge(activeEntry, props.instanceEntries);
@@ -154,45 +142,10 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
     }
   };
 
-  /**
-   * Focuses the selected reasoning level, else the first level. With `rows: "any"` it falls back
-   * to the column's first enabled option. False when nothing took focus.
-   */
-  const focusEffort = (rows: "levels" | "any") => {
-    const column = popupRef.current?.querySelector("[data-model-picker-effort]");
-    const level =
-      column?.querySelector<HTMLElement>(
-        '[data-effort-level][aria-checked="true"]:not(:disabled)',
-      ) ?? column?.querySelector<HTMLElement>("[data-effort-level]:not(:disabled)");
-    // No aria-checked here: an On switch is checked but is not where focus belongs.
-    const row =
-      level ??
-      (rows === "any"
-        ? column?.querySelector<HTMLElement>("[data-effort-row]:not(:disabled)")
-        : null);
-    row?.focus({ preventScroll: true });
-    row?.scrollIntoView({ block: "nearest" });
-    return row != null;
-  };
-  const openTarget = (target: "effort" | "permissions") => {
-    if (target === "effort") {
-      focusEffort("any");
-      return;
-    }
-    popupRef.current
-      ?.querySelector<HTMLButtonElement>("[data-composer-permissions-trigger]")
-      ?.click();
-  };
-
   const handleInstanceModelChange = (instanceId: ProviderInstanceId, model: string) => {
     if (props.disabled) return;
     props.onInstanceModelChange(instanceId, model);
-    if (!docked) {
-      setIsMenuOpen(false);
-      return;
-    }
-    // The column renders the new model's levels on commit.
-    window.requestAnimationFrame(() => focusEffort("levels"));
+    setIsMenuOpen(false);
   };
 
   const shortcutLabel = props.keybindings
@@ -207,7 +160,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
       model: selection.model,
       options: props.modelOptionsByInstance.get(selection.instanceId) ?? [],
     });
-    const unavailable = model?.isUnavailable ? " (Unavailable)" : "";
+    const unavailable = model?.isUnavailable ? ` (${labels.unavailableModel})` : "";
     return {
       ...selection,
       entry,
@@ -219,20 +172,16 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   });
   const multipleLabel = selectedEntries
     ? selectedEntries.length === 0
-      ? "Choose models"
+      ? labels.chooseModel
       : `${selectedEntries
           .slice(0, 2)
           .map((selection) => selection.label)
           .join(", ")}${selectedEntries.length > 2 ? `, ${selectedEntries.length - 2} more` : ""}`
     : undefined;
   const allModelNames = selectedEntries
-    ? selectedEntries.map((selection) => selection.fullLabel).join(", ") || "Choose models"
+    ? selectedEntries.map((selection) => selection.fullLabel).join(", ") || labels.chooseModel
     : undefined;
-  const triggerTooltipContent = [
-    props.triggerLabel ?? allModelNames ?? triggerLabel,
-    props.triggerDetail,
-    shortcutLabel,
-  ]
+  const triggerTooltipContent = [props.triggerLabel ?? allModelNames ?? triggerLabel, shortcutLabel]
     .filter(Boolean)
     .join(" · ");
 
@@ -246,44 +195,57 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
     "data-chat-provider-model-picker-label": "true",
   } as const;
 
+  const pickerProps = {
+    ...props,
+    searchInputRef,
+    terminalOpen: props.terminalOpen ?? false,
+    onRequestClose: () => setIsMenuOpen(false),
+    onInstanceModelChange: handleInstanceModelChange,
+    getModelDisabledReason: (instanceId: ProviderInstanceId, model: string) =>
+      props.disabled
+        ? labels.unavailableModel
+        : (props.getModelDisabledReason?.(instanceId, model) ?? null),
+    ...(props.onToggleModel
+      ? {
+          onToggleModel: (instanceId: ProviderInstanceId, model: string) => {
+            if (!props.disabled) props.onToggleModel?.(instanceId, model);
+          },
+        }
+      : {}),
+  };
   const picker = (
-    <ModelPickerContent
-      searchInputRef={searchInputRef}
-      environmentId={props.environmentId}
-      activeInstanceId={activeInstanceId}
-      model={props.model}
-      {...(props.selectedModels !== undefined ? { selectedModels: props.selectedModels } : {})}
-      {...(props.onToggleModel
-        ? {
-            onToggleModel: (instanceId: ProviderInstanceId, model: string) => {
-              if (!props.disabled) props.onToggleModel?.(instanceId, model);
-            },
+    <AgentShareModelPickerRouter
+      {...pickerProps}
+      fallback={
+        <ModelPickerContent
+          searchInputRef={searchInputRef}
+          environmentId={props.environmentId}
+          activeInstanceId={activeInstanceId}
+          model={props.model}
+          {...(props.selectedModels !== undefined ? { selectedModels: props.selectedModels } : {})}
+          {...(props.onToggleModel
+            ? {
+                onToggleModel: (instanceId: ProviderInstanceId, model: string) => {
+                  if (!props.disabled) props.onToggleModel?.(instanceId, model);
+                },
+              }
+            : {})}
+          lockedProvider={props.lockedProvider}
+          lockedContinuationGroupKey={props.lockedContinuationGroupKey ?? null}
+          instanceEntries={props.instanceEntries}
+          {...(props.keybindings ? { keybindings: props.keybindings } : {})}
+          modelOptionsByInstance={props.modelOptionsByInstance}
+          terminalOpen={props.terminalOpen ?? false}
+          onRequestClose={() => setIsMenuOpen(false)}
+          {...(props.onOpenProviderSetup ? { onOpenProviderSetup: props.onOpenProviderSetup } : {})}
+          getModelDisabledReason={(instanceId, model) =>
+            props.disabled
+              ? "Model picker is disabled"
+              : (props.getModelDisabledReason?.(instanceId, model) ?? null)
           }
-        : {})}
-      lockedProvider={props.lockedProvider}
-      lockedContinuationGroupKey={props.lockedContinuationGroupKey ?? null}
-      instanceEntries={props.instanceEntries}
-      {...(props.keybindings ? { keybindings: props.keybindings } : {})}
-      modelOptionsByInstance={props.modelOptionsByInstance}
-      terminalOpen={props.terminalOpen ?? false}
-      onRequestClose={() => setIsMenuOpen(false)}
-      {...(props.onOpenProviderSetup ? { onOpenProviderSetup: props.onOpenProviderSetup } : {})}
-      getModelDisabledReason={(instanceId, model) =>
-        props.disabled
-          ? "Model picker is disabled"
-          : (props.getModelDisabledReason?.(instanceId, model) ?? null)
+          onInstanceModelChange={handleInstanceModelChange}
+        />
       }
-      onInstanceModelChange={handleInstanceModelChange}
-      {...(docked
-        ? {
-            docked,
-            onFocusEffort: () => void focusEffort("any"),
-            // Inside the fixed height, so switching to or from a ChatGPT plan never resizes it.
-            ...(props.selectedModels === undefined
-              ? { listFooter: <ChatGptSharingControl provider={activeEntry?.snapshot ?? null} /> }
-              : {}),
-          }
-        : {})}
     />
   );
 
@@ -297,10 +259,6 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
         }
         setIsMenuOpen(open);
       }}
-      onOpenChangeComplete={(open) => {
-        const target = takeOpenTarget(triggerRef.current);
-        if (open && docked && target) openTarget(target);
-      }}
     >
       <PopoverTrigger
         render={
@@ -308,23 +266,11 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
             ref={triggerRef}
             aria-label={[
               props.triggerAriaLabel ?? props.triggerLabel ?? allModelNames ?? triggerLabel,
-              props.triggerDetail,
             ]
               .filter(Boolean)
               .join(", ")}
             size={size}
             data-chat-provider-model-picker="true"
-            data-composer-shortcut={props.triggerShortcuts}
-            onClick={(event) => {
-              if (!isMenuOpen || !docked) return;
-              const target = takeOpenTarget(triggerRef.current);
-              if (!target) return;
-              // A shortcut aimed at the open picker moves within it instead of closing it.
-              (
-                event as typeof event & { preventBaseUIHandler?: () => void }
-              ).preventBaseUIHandler?.();
-              openTarget(target);
-            }}
             className={cn(
               "min-w-0 shrink justify-between whitespace-nowrap",
               props.compact
@@ -395,63 +341,27 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
               <TooltipPopup side="top">{triggerTooltipContent}</TooltipPopup>
             </Tooltip>
           )}
-          {props.triggerSuffix}
+          <ChevronDownIcon aria-hidden="true" className="size-3 shrink-0 text-muted-foreground" />
           {selectedModel?.isUnavailable && !selectedEntries && props.triggerLabel === undefined ? (
             <Badge variant="outline" size="sm">
-              Unavailable
+              {labels.unavailableModel}
             </Badge>
           ) : null}
         </span>
       </PopoverTrigger>
       <PopoverPopup
         {...(props.isComposerOwned ? composerFloatingLayerProps : {})}
-        ref={(popup) => {
-          popupRef.current = popup;
-          const unlock = lockBackgroundScroll(popup);
-          return () => {
-            popupRef.current = null;
-            unlock?.();
-          };
-        }}
+        ref={lockBackgroundScroll}
         initialFocus={searchInputRef}
         align={props.popupAlign ?? "start"}
-        // Docked, the popup opens above the composer and slides over it when that space is short,
-        // so a short window gets its full height (Floating UI sizes to the viewport) instead of a sliver.
-        {...(docked
-          ? { side: "top" as const, collisionAvoidance: { side: "shift", align: "shift" } as const }
-          : {})}
+        side="top"
+        collisionAvoidance={{ side: "shift", align: "shift" }}
         className="before:hidden"
         padding="none"
         touchBackdrop
       >
-        {props.effortColumn ? (
-          <DockedPickerContext value={{ modelLabel: triggerTitle }}>
-            <div className="flex max-h-(--available-height) flex-col">
-              {/* One fixed height, so a model with more options never resizes the popup. Short
-                  windows shrink it and keep the footer. */}
-              <div className="flex h-86.5 min-h-0 max-sm:h-auto max-sm:flex-col">
-                {picker}
-                <div
-                  data-model-picker-effort
-                  className="flex min-h-0 w-48 flex-col sm:shrink-0 border-l border-border/70 bg-muted/40 max-sm:h-64 max-sm:w-full max-sm:border-t max-sm:border-l-0"
-                  onKeyDown={(event) => {
-                    if (event.key !== "ArrowLeft" || event.altKey || event.ctrlKey || event.metaKey)
-                      return;
-                    event.preventDefault();
-                    event.stopPropagation();
-                    searchInputRef.current?.focus();
-                  }}
-                >
-                  {props.effortColumn}
-                </div>
-              </div>
-              {props.footer}
-            </div>
-          </DockedPickerContext>
-        ) : (
-          picker
-        )}
-        {props.selectedModels === undefined && !docked ? (
+        {picker}
+        {props.selectedModels === undefined ? (
           <ChatGptSharingControl provider={activeEntry?.snapshot ?? null} />
         ) : null}
       </PopoverPopup>
