@@ -16,6 +16,15 @@ export default async function sign(options: SignOptions): Promise<void> {
   ) {
     throw new Error("Run local test signing through scripts/with-macos-test-signing.py.");
   }
+  // Resolve the search list in this process context before codesign builds the issuer chain.
+  const { stdout } = await NodeUtil.promisify(NodeChildProcess.execFile)("security", [
+    "list-keychains",
+    "-d",
+    "user",
+  ]);
+  if (!stdout.split("\n").some((line) => line.trim() === `"${keychain}"`)) {
+    throw new Error("The temporary signing keychain is not in the user search list.");
+  }
   await signApplication({
     ...options,
     identity,

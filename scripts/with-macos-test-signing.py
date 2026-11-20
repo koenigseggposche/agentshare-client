@@ -48,7 +48,7 @@ def security(*args):
 def signing_environment(config):
     original = shlex.split(security("list-keychains", "-d", "user"))
     with tempfile.TemporaryDirectory() as temporary:
-        keychain = str(Path(temporary) / "development.keychain-db")
+        keychain = str(Path(temporary).resolve() / "development.keychain-db")
         password = secrets.token_urlsafe(32)
         security("create-keychain", "-p", password, keychain)
         try:
