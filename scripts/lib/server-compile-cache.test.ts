@@ -33,6 +33,16 @@ it("prepares macOS x64 cache on an ARM64 build host", async () => {
   try {
     const resources = NodePath.join(root, "Fixture.app", "Contents", "Resources");
     const archive = NodePath.join(resources, "app.asar");
+    const executable = NodePath.join(root, "Fixture.app", "Contents", "MacOS", "Fixture");
+    const launcher = Buffer.alloc(56);
+    launcher.writeUInt32LE(0xfeedfacf, 0);
+    launcher.writeUInt32LE(0x01000007, 4);
+    launcher.writeUInt32LE(1, 16);
+    launcher.writeUInt32LE(24, 20);
+    launcher.writeUInt32LE(0x1b, 32);
+    launcher.writeUInt32LE(24, 36);
+    NodeFS.mkdirSync(NodePath.dirname(executable), { recursive: true });
+    NodeFS.writeFileSync(executable, launcher);
     const dist = NodePath.join(archive, "apps/server/dist");
     const helper = NodePath.join(archive, "apps/desktop/dist-electron/serverCompileCache.cjs");
     NodeFS.mkdirSync(dist, { recursive: true });
@@ -55,19 +65,25 @@ it("prepares macOS x64 cache on an ARM64 build host", async () => {
       const spawn = childProcess.spawnSync;
       childProcess.spawnSync = (executable, args, options) => {
         require("node:assert/strict").equal(executable, ${JSON.stringify(NodePath.join(root, "Fixture.app", "Contents", "MacOS", "Fixture"))});
-        return spawn(process.execPath, args, options);
+        const result = spawn(process.execPath, args, options);
+        // Node reads an expanded ASAR; identity assignment hashes the final archive bytes.
+        const fs = require("node:fs");
+        fs.renameSync(${JSON.stringify(archive)}, ${JSON.stringify(NodePath.join(root, "expanded"))});
+        fs.writeFileSync(${JSON.stringify(archive)}, "generated packaged application");
+        return result;
       };
       Object.defineProperty(process, "platform", { value: "darwin" });
       Object.defineProperty(process, "arch", { value: "arm64" });
       require(${JSON.stringify(hook)})({
         appOutDir: ${JSON.stringify(root)}, electronPlatformName: "darwin", arch: 1,
-        packager: { appInfo: { productFilename: "Fixture" } }
+        packager: { appInfo: { productFilename: "Fixture", id: "test.fixture", version: "1.0.0" } }
       }).catch(error => { console.error(error); process.exitCode = 1; });
     `,
       ],
       { encoding: "utf8" },
     );
     expect(result.status, result.stderr).toBe(0);
+    expect(NodeFS.readFileSync(executable).subarray(40, 56)).not.toEqual(launcher.subarray(40, 56));
     const manifest = JSON.parse(
       NodeFS.readFileSync(NodePath.join(resources, "server-compile-cache/manifest.json"), "utf8"),
     );

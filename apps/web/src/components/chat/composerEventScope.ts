@@ -72,7 +72,7 @@ export function focusCheckedPermission(trigger: HTMLElement | null): void {
 }
 
 /**
- * composer.effort marks the model picker trigger it opens; the picker then moves focus to the
+ * composer.effort marks the model settings trigger it opens; the picker then moves focus to the
  * selected effort level once its popup is open.
  */
 export function markOpenToEffort(trigger: HTMLElement): void {

@@ -49,7 +49,32 @@ export function agentShareWorkbenchModels(models: ReadonlyArray<AgentShareModelI
   );
 }
 
+export const AgentSharePickerVersion = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  service: Schema.Literals(["codex", "claude", "local"]),
+  runtimes: Schema.Array(Schema.Literals(["codex", "claude", "text"])),
+  local: Schema.Boolean,
+  community: Schema.Boolean,
+  enabled: Schema.Boolean,
+  recommended: Schema.Boolean,
+});
+export const AgentSharePickerGroup = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  icon: Schema.String,
+  enabled: Schema.Boolean,
+  models: Schema.Array(AgentSharePickerVersion),
+});
+export type AgentSharePickerGroup = typeof AgentSharePickerGroup.Type;
+export const AgentSharePickerCatalog = Schema.Struct({
+  revision: Schema.Int,
+  groups: Schema.Array(AgentSharePickerGroup),
+});
+export type AgentSharePickerCatalog = typeof AgentSharePickerCatalog.Type;
+
 export const AgentShareModelCatalog = Schema.Struct({
+  catalog: Schema.optionalKey(Schema.NullOr(AgentSharePickerCatalog)),
   models: Schema.Array(AgentShareModelInfo),
   diagnostics: Schema.Array(Schema.String),
 });

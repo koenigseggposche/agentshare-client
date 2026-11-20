@@ -78,7 +78,8 @@ it("keeps each registry image when adding a model from another ACP agent", async
     );
   await vi.waitFor(() => expect(imageWidths()).toEqual([11]));
   await screen.getByRole("button", { name: "First model", exact: true }).click();
-  await page.getByRole("button", { name: "Second agent", exact: true }).click();
+  // All connections are immediately reachable, without an icon-only provider tab.
+  await expect.element(page.getByRole("option", { name: /Second model/ })).toBeVisible();
   await userEvent.keyboard("{Shift>}");
   try {
     await page.getByRole("option", { name: /Second model/ }).click();
@@ -89,83 +90,69 @@ it("keeps each registry image when adding a model from another ACP agent", async
   await vi.waitFor(() => expect(imageWidths()).toEqual([11, 17]));
 });
 
-it("keeps a docked picker open after a pick and hands focus to that model's effort", async () => {
-  const instanceId = ProviderInstanceId.make("codex");
-  const entries = deriveProviderInstanceEntries([
-    {
-      instanceId,
+it("selects from all connections in one click and closes the picker", async () => {
+  const entries = deriveProviderInstanceEntries(
+    ["First", "Second"].map((name) => ({
+      instanceId: ProviderInstanceId.make(name.toLowerCase()),
       driver: ProviderDriverKind.make("codex"),
+      displayName: `${name} connection`,
       enabled: true,
       installed: true,
       version: null,
-      status: "ready",
-      auth: { status: "authenticated" },
+      status: "ready" as const,
+      auth: { status: "authenticated" as const },
       checkedAt: "2026-01-01T00:00:00.000Z",
-      models: [],
+      models: [
+        { slug: name.toLowerCase(), name: `${name} model`, isCustom: false, capabilities: {} },
+      ],
       slashCommands: [],
       skills: [],
-    },
-  ]);
-  const options = new Map([
-    [
-      instanceId,
-      [
-        { slug: "original", name: "Original model" },
-        { slug: "second", name: "Second model" },
-        { slug: "plain", name: "Plain model" },
-      ],
-    ],
-  ]);
-  // The last level is the selected one; "plain" has no effort to pick.
-  const levels: Record<string, ReadonlyArray<string>> = {
-    original: ["Low", "High"],
-    second: ["Medium"],
-    plain: [],
-  };
-
+    })),
+  );
   function Picker() {
-    const [model, setModel] = useState("original");
+    const [selection, setSelection] = useState({
+      instanceId: entries[0]!.instanceId,
+      model: "first",
+    });
     return (
       <ProviderModelPicker
         environmentId={null}
-        activeInstanceId={instanceId}
-        model={model}
+        activeInstanceId={selection.instanceId}
+        model={selection.model}
         lockedProvider={null}
         instanceEntries={entries}
-        modelOptionsByInstance={options}
-        triggerAriaLabel="Choose model"
-        onInstanceModelChange={(_, selected) => setModel(selected)}
-        effortColumn={(levels[model] ?? []).map((level, index, all) => (
-          <button
-            key={level}
-            type="button"
-            role="radio"
-            aria-checked={index === all.length - 1}
-            data-effort-row
-            data-effort-level
-          >
-            {level}
-          </button>
-        ))}
+        modelOptionsByInstance={new Map(entries.map((entry) => [entry.instanceId, entry.models]))}
+        onInstanceModelChange={(instanceId, model) => setSelection({ instanceId, model })}
       />
     );
   }
-
   await using screen = await render(<Picker />);
-  await screen.getByRole("button", { name: "Choose model" }).click();
-  const search = page.getByPlaceholder("Search models...");
-  await expect.element(search).toHaveFocus();
-  await userEvent.keyboard("{ArrowRight}");
-  await expect.element(page.getByRole("radio", { name: "High" })).toHaveFocus();
-  await userEvent.keyboard("{ArrowLeft}");
-  await expect.element(search).toHaveFocus();
-
-  await page.getByRole("option", { name: /Second model/ }).click();
-  await expect.element(page.getByRole("radio", { name: "Medium" })).toHaveFocus();
-
-  await page.getByRole("option", { name: /Plain model/ }).click();
-  await page.getByRole("option", { name: /Second model/ }).click();
-  await expect.element(page.getByRole("radio", { name: "Medium" })).toHaveFocus();
+  await screen.getByRole("button", { name: "First model", exact: true }).click();
+  await expect
+    .element(page.getByRole("option", { name: /First model.*First connection/ }))
+    .toBeVisible();
+  await page.getByRole("option", { name: /Second model.*Second connection/ }).click();
+  await expect
+    .element(page.getByRole("combobox", { name: /Search models|搜索模型/ }))
+    .not.toBeInTheDocument();
+  await expect
+    .element(screen.getByRole("button", { name: "Second model", exact: true }))
+    .toBeVisible();
+  await screen.getByRole("button", { name: "Second model", exact: true }).click();
+  await page.getByRole("option", { name: /Second model.*Second connection/ }).click();
+  await expect
+    .element(page.getByRole("combobox", { name: /Search models|搜索模型/ }))
+    .not.toBeInTheDocument();
+  await screen.getByRole("button", { name: "Second model", exact: true }).click();
+  const connection = page.getByRole("combobox", { name: /Connection|连接来源/ });
+  await connection.selectOptions("second");
+  await expect.element(page.getByRole("option", { name: /First model/ })).not.toBeInTheDocument();
+  const search = page.getByRole("combobox", { name: /Search models|搜索模型/ });
+  await search.fill("First connection");
+  await expect.element(page.getByRole("option", { name: /First model/ })).toBeVisible();
+  await search.fill("");
+  await expect.element(page.getByRole("option", { name: /Second model/ })).toBeVisible();
+  await page.getByRole("button", { name: /All models|全部模型/, exact: true }).click();
+  await expect.element(page.getByRole("option", { name: /First model/ })).toBeVisible();
   await userEvent.keyboard("{Escape}");
-  await expect.element(search).not.toBeInTheDocument();
 });

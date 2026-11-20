@@ -10,8 +10,8 @@ import {
 import type { ProviderOptionDescriptor, RuntimeMode } from "@t3tools/contracts";
 import type { EffortDisplay } from "@t3tools/contracts/settings";
 import { getProviderOptionCurrentLabel } from "@t3tools/shared/model";
-import { CheckIcon, ChevronRightIcon, ChevronUpIcon } from "lucide-react";
-import { type KeyboardEvent, type ReactNode, use, useRef, useState } from "react";
+import { CheckIcon, ChevronRightIcon, ChevronUpIcon, SlidersHorizontalIcon } from "lucide-react";
+import { type KeyboardEvent, type ReactNode, useRef, useState } from "react";
 
 import { cn } from "~/lib/utils";
 import {
@@ -24,11 +24,16 @@ import {
 } from "../ui/menu";
 import { Switch } from "../ui/switch";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
-import type { ComposerControlSize } from "./ComposerControl";
+import { ComposerControl, type ComposerControlSize } from "./ComposerControl";
+import { Popover, PopoverPopup, PopoverTrigger } from "../ui/popover";
 import { ComposerPermissionsSection, type RuntimeModeOption } from "./ComposerFooterControls";
-import { composerFloatingLayerProps, focusCheckedPermission } from "./composerEventScope";
+import {
+  composerFloatingLayerProps,
+  focusCheckedPermission,
+  takeOpenTarget,
+  useComposerMenuProps,
+} from "./composerEventScope";
 import { EffortGlyph, FastBolt, resolveEffortGlyph } from "./EffortGlyph";
-import { DockedPickerContext } from "./ProviderModelPicker";
 import {
   getTraitsSectionVisibility,
   type TraitsSelectionInput,
@@ -242,7 +247,10 @@ function moveBetweenRows(event: KeyboardEvent<HTMLElement>) {
   next.scrollIntoView({ block: "nearest" });
 }
 
-function EffortLevels(props: { traits: TraitsSelectionInput }) {
+function EffortLevels(props: {
+  traits: TraitsSelectionInput;
+  onSelect?: (() => void) | undefined;
+}) {
   const traits = useTraitsSelection(props.traits);
   const { effort, others } = columnControls(
     props.traits.provider,
@@ -270,7 +278,9 @@ function EffortLevels(props: { traits: TraitsSelectionInput }) {
     effort?.descriptor.id === traits.primarySelectDescriptor?.id && traits.ultrathinkInBodyText;
   return (
     <>
-      {effort ? <EffortRows control={effort} traits={traits} locked={locked} /> : null}
+      {effort ? (
+        <EffortRows control={effort} traits={traits} locked={locked} onSelect={props.onSelect} />
+      ) : null}
       {others.length > 0 ? (
         <div
           className={cn("flex flex-col gap-0.5", effort && "mt-1 border-t border-border/70 pt-1")}
@@ -300,7 +310,12 @@ function EffortLevels(props: { traits: TraitsSelectionInput }) {
 
 type TraitsSelection = ReturnType<typeof useTraitsSelection>;
 
-function EffortRows(props: { control: ColumnControl; traits: TraitsSelection; locked: boolean }) {
+function EffortRows(props: {
+  control: ColumnControl;
+  traits: TraitsSelection;
+  locked: boolean;
+  onSelect?: (() => void) | undefined;
+}) {
   const uiText = useUiText();
   const { control, traits } = props;
   const { descriptor } = control;
@@ -313,7 +328,10 @@ function EffortRows(props: { control: ColumnControl; traits: TraitsSelection; lo
             label={value ? uiText("On") : uiText("Off")}
             selected={(control.descriptor.currentValue === true) === value}
             tabStop={(control.descriptor.currentValue === true) === value}
-            onPick={() => traits.changeBoolean(descriptor.id, value)}
+            onPick={() => {
+              traits.changeBoolean(descriptor.id, value);
+              props.onSelect?.();
+            }}
           />
         ))}
       </div>
@@ -340,7 +358,10 @@ function EffortRows(props: { control: ColumnControl; traits: TraitsSelection; lo
           description={option.description}
           isDefault={option.isDefault}
           disabled={locked}
-          onPick={() => traits.changeSelect(control.descriptor, option.id)}
+          onPick={() => {
+            traits.changeSelect(control.descriptor, option.id);
+            props.onSelect?.();
+          }}
         />
       ))}
     </div>
@@ -496,10 +517,13 @@ function NoEffortRow() {
 }
 
 /** The model picker's effort column: the selected model's levels and its other options. */
-export function ComposerEffortColumn(props: { traits: TraitsSelectionInput | null }) {
+export function ComposerEffortColumn(props: {
+  traits: TraitsSelectionInput | null;
+  modelLabel?: string;
+  onSelect?: (() => void) | undefined;
+}) {
   const language = useClientSettings((settings) => settings.uiLanguage);
   const labels = workbenchLabels[language];
-  const picker = use(DockedPickerContext);
   const visibility = props.traits ? getTraitsSectionVisibility(props.traits) : null;
   const controls =
     props.traits && visibility
@@ -524,7 +548,7 @@ export function ComposerEffortColumn(props: { traits: TraitsSelectionInput | nul
                 : labels.modelEffort}
           </span>
           <span className="ms-auto min-w-0 truncate text-muted-foreground text-xs">
-            {picker.modelLabel}
+            {props.modelLabel}
           </span>
         </div>
       </div>
@@ -534,7 +558,11 @@ export function ComposerEffortColumn(props: { traits: TraitsSelectionInput | nul
         // Capture, so Up and Down on an option row move rows instead of opening its menu.
         onKeyDownCapture={moveBetweenRows}
       >
-        {props.traits ? <EffortLevels traits={props.traits} /> : <NoEffortRow />}
+        {props.traits ? (
+          <EffortLevels traits={props.traits} onSelect={props.onSelect} />
+        ) : (
+          <NoEffortRow />
+        )}
       </div>
     </>
   );
@@ -658,7 +686,7 @@ function PermissionsMenu(props: {
 }
 
 /** The model picker's footer: speed stays one click away, permissions sit one menu deeper. */
-export function ComposerPickerFooter(props: {
+function ComposerPickerFooter(props: {
   traits: TraitsSelectionInput | null;
   runtimeMode: RuntimeMode;
   runtimeModeOptions: ReadonlyArray<RuntimeModeOption>;
@@ -673,5 +701,103 @@ export function ComposerPickerFooter(props: {
         onChange={props.onRuntimeModeChange}
       />
     </div>
+  );
+}
+
+/** Options belong to the current model and can be adjusted without reopening model selection. */
+export function ComposerModelSettings(props: {
+  traits: TraitsSelectionInput | null;
+  suffix: ReactNode;
+  detail: string | null;
+  size: ComposerControlSize;
+  disabled: boolean;
+  ownsModeShortcut: boolean;
+  runtimeMode: RuntimeMode;
+  runtimeModeOptions: ReadonlyArray<RuntimeModeOption>;
+  onRuntimeModeChange: (mode: RuntimeMode) => void;
+}) {
+  const labels = workbenchLabels[useClientSettings((settings) => settings.uiLanguage)];
+  const layerProps = useComposerMenuProps();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const focusTarget = (target: "effort" | "permissions" | null) => {
+    if (target === "permissions") {
+      popupRef.current
+        ?.querySelector<HTMLButtonElement>("[data-composer-permissions-trigger]")
+        ?.click();
+    } else {
+      const popup = popupRef.current;
+      const level =
+        popup?.querySelector<HTMLElement>(
+          '[data-effort-level][aria-checked="true"]:not(:disabled)',
+        ) ?? popup?.querySelector<HTMLElement>("[data-effort-row]:not(:disabled)");
+      level?.focus({ preventScroll: true });
+    }
+  };
+  return (
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      onOpenChangeComplete={(shown) => {
+        if (shown) focusTarget(takeOpenTarget(triggerRef.current));
+      }}
+    >
+      <PopoverTrigger
+        render={
+          <ComposerControl
+            ref={triggerRef}
+            size={props.size}
+            disabled={props.disabled}
+            className="group/model-trigger shrink-0 text-muted-foreground data-popup-open:bg-accent"
+            data-composer-shortcut={
+              props.ownsModeShortcut ? "composer.effort composer.mode" : "composer.effort"
+            }
+            aria-label={[labels.modelSettings, props.detail].filter(Boolean).join(": ")}
+            title={labels.modelSettings}
+            onClick={(event) => {
+              if (!open) return;
+              const target = takeOpenTarget(triggerRef.current);
+              if (!target) return;
+              (
+                event as typeof event & { preventBaseUIHandler?: () => void }
+              ).preventBaseUIHandler?.();
+              focusTarget(target);
+            }}
+          />
+        }
+      >
+        <SlidersHorizontalIcon aria-hidden="true" className="size-3.5" />
+        <span data-composer-control-label>{labels.modelSettings}</span>
+        {props.suffix}
+      </PopoverTrigger>
+      <PopoverPopup
+        {...layerProps}
+        ref={popupRef}
+        side="top"
+        align="end"
+        padding="none"
+        touchBackdrop
+        className="flex w-72 max-w-[calc(100vw-1.5rem)] max-h-(--available-height) flex-col before:hidden"
+      >
+        <div data-model-picker-effort className="flex min-h-0 max-h-80 flex-col">
+          <ComposerEffortColumn
+            traits={props.traits}
+            onSelect={() => setOpen(false)}
+            modelLabel={
+              props.traits?.models.find((model) => model.slug === props.traits?.model)?.name ??
+              props.traits?.model ??
+              ""
+            }
+          />
+        </div>
+        <ComposerPickerFooter
+          traits={props.traits}
+          runtimeMode={props.runtimeMode}
+          runtimeModeOptions={props.runtimeModeOptions}
+          onRuntimeModeChange={props.onRuntimeModeChange}
+        />
+      </PopoverPopup>
+    </Popover>
   );
 }

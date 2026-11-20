@@ -101,10 +101,10 @@ vi.mock(import("~/state/use-atom-command"), async (original) => ({
 }));
 vi.mock(import("~/hooks/useSettings"), async (original) => ({
   ...(await original()),
-  useClientSettings: ((selector?: (settings: typeof DEFAULT_CLIENT_SETTINGS) => unknown) =>
-    selector
-      ? selector({ ...DEFAULT_CLIENT_SETTINGS, uiLanguage: "en" })
-      : { ...DEFAULT_CLIENT_SETTINGS, uiLanguage: "en" }) as never,
+  useClientSettings: ((selector?: (settings: typeof DEFAULT_CLIENT_SETTINGS) => unknown) => {
+    const settings = { ...DEFAULT_CLIENT_SETTINGS, uiLanguage: "en" as const };
+    return selector ? selector(settings) : settings;
+  }) as never,
 }));
 vi.mock(import("~/localApi"), async (original) => ({
   ...(await original()),

@@ -4,7 +4,11 @@ import {
   ProviderInstanceId,
   type AgentShareModelInfo,
 } from "@t3tools/contracts";
-import { filterAgentShareModels, hasAgentShareModelConnection } from "./agentShareModelCatalog.ts";
+import {
+  filterAgentShareModels,
+  hasAgentShareModelConnection,
+  agentSharePickerItems,
+} from "./agentShareModelCatalog.ts";
 
 const offline: AgentShareModelInfo = {
   model: { id: "model-a", source: "community", service: "codex", runtime: "codex" },
@@ -61,4 +65,81 @@ it("matches configured model connections by owner, source, runtime and enabled s
   expect(
     hasAgentShareModelConnection({ [id]: { ...instance, config: {} } }, "owner-a", online.model),
   ).toBe(false);
+});
+
+it("uses Ops order and names while retaining runtime availability and source identity", () => {
+  const configured = {
+    revision: 4,
+    groups: [
+      {
+        id: "custom",
+        name: "My models",
+        icon: "qwen",
+        enabled: true,
+        models: [
+          {
+            id: "second",
+            name: "First choice",
+            service: "codex" as const,
+            runtimes: ["codex" as const],
+            enabled: true,
+            local: true,
+            community: false,
+            recommended: true,
+          },
+          {
+            id: "first",
+            name: "Other choice",
+            service: "codex" as const,
+            runtimes: ["codex" as const],
+            enabled: true,
+            local: true,
+            community: true,
+            recommended: false,
+          },
+        ],
+      },
+    ],
+  };
+  const entry = (
+    id: string,
+    source: "local" | "owned" | "community",
+    available = true,
+  ): AgentShareModelInfo => ({
+    name: id,
+    model: {
+      id,
+      source,
+      service: "codex",
+      runtime: "codex",
+      ...(source === "owned" ? { device: "other-computer" } : {}),
+    },
+    runtimes: ["codex"],
+    available,
+    subagents: true,
+    search: true,
+  });
+  const models = [
+    entry("first", "local", false),
+    entry("second", "community"),
+    entry("second", "owned"),
+    entry("first", "community"),
+    entry("unlisted", "local"),
+  ];
+  const items = agentSharePickerItems(configured, models);
+  expect(items.map((item) => item.info.name)).toEqual([
+    "First choice",
+    "Other choice",
+    "Other choice",
+  ]);
+  expect(items.map((item) => item.tab)).toEqual(["local", "local", "community"]);
+  expect(items[0]?.info.model.device).toBe("other-computer");
+  expect(items[1]?.info.available).toBe(false);
+  expect(new Set(items.map((item) => item.key)).size).toBe(3);
+  expect(
+    agentSharePickerItems(
+      { ...configured, groups: [{ ...configured.groups[0]!, enabled: false }] },
+      models,
+    ),
+  ).toEqual([]);
 });

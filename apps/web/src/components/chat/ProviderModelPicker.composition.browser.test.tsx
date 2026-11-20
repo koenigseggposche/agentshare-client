@@ -1,3 +1,4 @@
+import "~/index.css";
 import {
   ProviderDriverKind,
   ProviderInstanceId,
@@ -61,7 +62,7 @@ function Picker({ keybindings = [] }: { keybindings?: ResolvedKeybindingsConfig 
 it("keeps composition keys out of model selection and dismissal", async () => {
   await using screen = await render(<Picker />);
   await page.getByRole("button", { name: "Choose model" }).click();
-  const search = page.getByPlaceholder("Search models...");
+  const search = page.getByRole("combobox", { name: /Search models|搜索模型/ });
   await search.fill("Target");
   await expect.element(page.getByRole("option", { name: /Target model/ })).toBeVisible();
 
@@ -99,7 +100,7 @@ it("keeps composing keys from triggering model jump shortcuts", async () => {
   ]);
   await using screen = await render(<Picker keybindings={keybindings} />);
   await page.getByRole("button", { name: "Choose model" }).click();
-  const search = page.getByPlaceholder("Search models...");
+  const search = page.getByRole("combobox", { name: /Search models|搜索模型/ });
   await search.fill("Target");
   await expect.element(page.getByRole("option", { name: /Target model/ })).toBeVisible();
 
