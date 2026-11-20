@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   ClientSettingsSchema,
   type ClientSettingsPatch,
@@ -453,6 +455,7 @@ export async function persistScopedSettingsPatch(
     readonly value?: ServerSettings;
   }>,
   persistClient: (patch: ClientSettingsPatch) => void,
+  uiText: UiTranslator = uiTranslators.en,
 ) {
   if (plan.hasClientWrite) persistClient(plan.clientPatch);
   const results = await Promise.allSettled(
@@ -475,7 +478,7 @@ export async function persistScopedSettingsPatch(
       return [
         {
           ...environment,
-          message: "This environment does not support this setting. Update T3 Code on it.",
+          message: uiText("This environment does not support this setting. Update T3 Code on it."),
         },
       ];
     }
@@ -491,7 +494,7 @@ export async function persistScopedSettingsPatch(
         message:
           error instanceof Error
             ? error.message
-            : "The save failed. Try reconnecting and saving again.",
+            : uiText("The save failed. Try reconnecting and saving again."),
       },
     ];
   });

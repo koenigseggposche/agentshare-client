@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type {
   AssetCreateUrlResult,
   AssetResource,
@@ -105,17 +107,20 @@ export async function openUrlInPreview<E>(input: {
   });
 }
 
-export async function openFileInPreview<AssetError, PreviewError>(input: {
-  readonly threadRef: ScopedThreadRef;
-  readonly filePath: string;
-  readonly workspaceRoot: string | undefined;
-  readonly httpBaseUrl: string;
-  readonly createAssetUrl: (input: {
-    readonly environmentId: EnvironmentId;
-    readonly input: { readonly resource: AssetResource };
-  }) => Promise<AtomCommandResult<AssetCreateUrlResult, AssetError>>;
-  readonly openPreview: OpenPreviewMutation<PreviewError>;
-}): Promise<
+export async function openFileInPreview<AssetError, PreviewError>(
+  input: {
+    readonly threadRef: ScopedThreadRef;
+    readonly filePath: string;
+    readonly workspaceRoot: string | undefined;
+    readonly httpBaseUrl: string;
+    readonly createAssetUrl: (input: {
+      readonly environmentId: EnvironmentId;
+      readonly input: { readonly resource: AssetResource };
+    }) => Promise<AtomCommandResult<AssetCreateUrlResult, AssetError>>;
+    readonly openPreview: OpenPreviewMutation<PreviewError>;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): Promise<
   AtomCommandResult<
     void,
     AssetError | PreviewError | BrowserPreviewUnavailableError | BrowserSettingsReadError
@@ -125,7 +130,7 @@ export async function openFileInPreview<AssetError, PreviewError>(input: {
     return AsyncResult.failure(
       Cause.fail(
         new BrowserPreviewUnavailableError({
-          message: "The integrated browser is unavailable in this runtime.",
+          message: uiText("The integrated browser is unavailable in this runtime."),
         }),
       ),
     );

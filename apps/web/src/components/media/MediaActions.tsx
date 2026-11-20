@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   formatFilePathForClipboard,
   type MediaActionId,
@@ -119,6 +120,7 @@ export function MediaActions({
   children: ReactElement;
   showTooltip?: boolean;
 }) {
+  const uiText = useUiText();
   const { save, copyImage, canReadMedia, assertCanReadMedia } = useMediaActions(source);
   const [tooltipOpen, setTooltipOpen] = useState(false);
   const menuOpen = useRef(false);
@@ -141,19 +143,23 @@ export function MediaActions({
         typeof ClipboardItem !== "undefined";
       const items: ContextMenuItem<MediaActionId>[] = [];
       if (reference?.kind === "file") {
-        items.push({ id: "copy-full-path", label: "Copy full path" });
+        items.push({ id: "copy-full-path", label: uiText("Copy full path") });
         if (reference.relativePath)
-          items.push({ id: "copy-relative-path", label: "Copy relative path" });
+          items.push({ id: "copy-relative-path", label: uiText("Copy relative path") });
       } else if (reference?.kind === "url") {
-        items.push({ id: "copy-url", label: "Copy URL" });
+        items.push({ id: "copy-url", label: uiText("Copy URL") });
       }
       if (source.onOpenFile)
-        items.push({ id: "open-file", label: "Open in file viewer", disabled: !canReadMedia });
-      items.push({ id: "save", label: `Save ${noun}`, disabled: unavailable });
+        items.push({
+          id: "open-file",
+          label: uiText("Open in file viewer"),
+          disabled: !canReadMedia,
+        });
+      items.push({ id: "save", label: uiText("Save {0}", [noun]), disabled: unavailable });
       if (source.kind === "image") {
         items.push({
           id: "copy-image",
-          label: "Copy image",
+          label: uiText("Copy image"),
           disabled: unavailable || !canCopyImage,
         });
       }
@@ -175,7 +181,7 @@ export function MediaActions({
         await writeTextToClipboard(clipboardText, reference?.kind === "file" ? "file path" : "URL");
         toastManager.add({
           type: "success",
-          title: action === "copy-url" ? "URL copied" : "Path copied",
+          title: action === "copy-url" ? uiText("URL copied") : uiText("Path copied"),
         });
       } else if (action === "open-file") {
         assertCanReadMedia();
@@ -183,12 +189,15 @@ export function MediaActions({
       } else if (action === "save" || action === "copy-image") {
         progressToast = toastManager.add({
           type: "loading",
-          title: action === "save" ? `Preparing ${noun} download…` : "Copying image…",
+          title:
+            action === "save"
+              ? uiText("Preparing {0} download…", [noun])
+              : uiText("Copying image…"),
         });
         await (action === "save" ? save() : copyImage());
         toastManager.update(progressToast, {
           type: "success",
-          title: action === "save" ? "Download started" : "Image copied",
+          title: action === "save" ? uiText("Download started") : uiText("Image copied"),
         });
       }
     });
@@ -197,7 +206,7 @@ export function MediaActions({
       const toast = stackedThreadToast({
         type: "error",
         title: failureTitle,
-        description: error instanceof Error ? error.message : "The media action failed.",
+        description: error instanceof Error ? error.message : uiText("The media action failed."),
       });
       if (progressToast) toastManager.update(progressToast, toast);
       else toastManager.add(toast);

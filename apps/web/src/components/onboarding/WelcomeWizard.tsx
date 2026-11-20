@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useAuth } from "@clerk/react";
 import { useAtomValue } from "@effect/atom-react";
 import type {
@@ -127,6 +128,7 @@ export function WelcomeWizard({
   readonly resumeEnvironmentId?: EnvironmentId | undefined;
   readonly onDone: (projectRef?: ScopedProjectRef) => void | Promise<void>;
 }) {
+  const uiText = useUiText();
   const [step, setStep] = useState<WizardStep>(resumeEnvironmentId ? "agents" : "connection");
   const t = useWelcomeCopy();
   const { environments } = useEnvironments();
@@ -195,14 +197,17 @@ export function WelcomeWizard({
         if (importWarning) {
           toastManager.add({
             type: "warning",
-            title: "Some history was not imported",
+            title: uiText("Some history was not imported"),
             description: importWarning,
             timeout: 0,
           });
         } else if (importedThreadCount > 0) {
           toastManager.add({
             type: "success",
-            title: `Imported ${importedThreadCount} ${importedThreadCount === 1 ? "thread" : "threads"}`,
+            title: uiText("Imported {0} {1}", [
+              importedThreadCount,
+              importedThreadCount === 1 ? "thread" : "threads",
+            ]),
           });
         }
         return true;
@@ -210,8 +215,8 @@ export function WelcomeWizard({
       .catch(() => {
         const errorToast = {
           type: "error",
-          title: "Could not finish setup",
-          description: "Your settings could not be saved. Try again.",
+          title: uiText("Could not finish setup"),
+          description: uiText("Your settings could not be saved. Try again."),
         } as const;
         if (completionErrorToastIdRef.current === null) {
           completionErrorToastIdRef.current = toastManager.add(errorToast);
@@ -246,10 +251,14 @@ export function WelcomeWizard({
         <WizardHeader
           title={t("设置 AgentShare", "Set up AgentShare")}
           identity={
-            <div className="flex items-baseline gap-1.5" role="img" aria-label="AgentShare">
+            <div
+              className="flex items-baseline gap-1.5"
+              role="img"
+              aria-label={uiText("AgentShare")}
+            >
               <AgentShareMark className="h-5 w-auto shrink-0" aria-hidden />
               <span className="text-2xl font-medium tracking-tight text-muted-foreground">
-                AgentShare
+                {uiText("AgentShare")}
               </span>
             </div>
           }
@@ -323,6 +332,7 @@ function ConnectionStep({
   readonly onContinue: () => void;
   readonly onPaired: (environmentId: EnvironmentId) => void;
 }) {
+  const uiText = useUiText();
   const t = useWelcomeCopy();
   const { environments } = useEnvironments();
   const telemetryOff = managedTelemetryOffMessage(usePrimaryManagedPolicy());
@@ -383,7 +393,7 @@ function ConnectionStep({
                   </span>
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {!environment.entry.enabled && environment.connection.phase !== "unsupported"
-                      ? "Off"
+                      ? uiText("Off")
                       : presentSavedCloudEnvironmentConnection(environment.connection).buttonLabel}
                   </span>
                 </span>
@@ -447,8 +457,10 @@ function ConnectionStep({
       </div>
       {skippedLabels.length > 0 ? (
         <p className="mt-4 text-xs text-muted-foreground">
-          Not connected, so setup skips {skippedLabels.join(", ")}. You can set{" "}
-          {skippedLabels.length === 1 ? "it" : "them"} up later from Settings.
+          {uiText("Not connected, so setup skips ")}
+          {skippedLabels.join(", ")}
+          {uiText(". You can set")} {skippedLabels.length === 1 ? uiText("it") : uiText("them")}
+          {uiText(" up later from Settings.")}
         </p>
       ) : null}
       <div className="mt-6 flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
@@ -485,6 +497,7 @@ function ConnectAccountOption({
   readonly selectedIds: ReadonlySet<EnvironmentId>;
   readonly onToggleEnvironment: (environmentId: EnvironmentId, checked: boolean) => void;
 }) {
+  const uiText = useUiText();
   const { environments } = useEnvironments();
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const { openAuthPrompt } = useT3ConnectAuthPrompt();
@@ -509,14 +522,14 @@ function ConnectAccountOption({
           }
         >
           <CloudIcon className="size-4 text-muted-foreground" />
-          <span className="flex-1 text-left">T3 Connect</span>
+          <span className="flex-1 text-left">{uiText("T3 Connect")}</span>
           <span className="text-xs text-muted-foreground">
             {!isLoaded
-              ? "Loading sign-in…"
+              ? uiText("Loading sign-in…")
               : !isSignedIn
-                ? "Sign in"
+                ? uiText("Sign in")
                 : !discoveryReady
-                  ? "Loading computers…"
+                  ? uiText("Loading computers…")
                   : null}
           </span>
           <ChevronRightIcon
@@ -535,17 +548,19 @@ function ConnectAccountOption({
                   selection={{ selectedIds, onChange: onToggleEnvironment, autoSelectedComputers }}
                   refreshWhileEmpty
                   empty={
-                    <p className="py-3 text-sm text-muted-foreground">No computers linked yet.</p>
+                    <p className="py-3 text-sm text-muted-foreground">
+                      {uiText("No computers linked yet.")}
+                    </p>
                   }
                 />
               ) : null}
             </div>
             <p className="text-sm text-muted-foreground">
-              Run this on each computer you want to connect.
+              {uiText("Run this on each computer you want to connect.")}
             </p>
             <CommandBlock command="npx agentshare-client connect" className="mt-3" />
             <p className="mt-3 text-xs text-muted-foreground">
-              Keep T3 Code running. Select the computers you want to set up above.
+              {uiText("Keep T3 Code running. Select the computers you want to set up above.")}
             </p>
           </div>
         </CollapsiblePanel>
@@ -563,7 +578,10 @@ function PairingForm({
   readonly setIsPairing: (value: boolean) => void;
   readonly onPaired: (environmentId: EnvironmentId) => void;
 }) {
-  const connectPairingEnvironment = useAtomCommand(connectPairing, { reportFailure: false });
+  const uiText = useUiText();
+  const connectPairingEnvironment = useAtomCommand(connectPairing, {
+    reportFailure: false,
+  });
   const [pairingUrl, setPairingUrl] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const mountedRef = useRef(true);
@@ -603,7 +621,7 @@ function PairingForm({
       >
         <div>
           <label className="block text-sm text-muted-foreground" htmlFor="onboarding-pairing-url">
-            Pairing link
+            {uiText("Pairing link")}
           </label>
           <Input
             id="onboarding-pairing-url"
@@ -643,21 +661,23 @@ function PairingForm({
               className="group flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
             >
               <ChevronRightIcon className="size-3.5 group-data-panel-open:rotate-90" />
-              Need a pairing link?
+              {uiText("Need a pairing link?")}
             </CollapsibleTrigger>
             <Button type="submit" disabled={isPairing || pairingUrl.trim().length === 0}>
-              {isPairing ? "Pairing..." : "Pair"}
+              {isPairing ? uiText("Pairing...") : uiText("Pair")}
             </Button>
           </div>
           <CollapsiblePanel>
             <p className="pt-3 text-sm text-muted-foreground">
-              On the computer with your code, start T3 Code or run{" "}
-              <code className="font-mono">npx agentshare-client serve</code>, then run:
+              {uiText("On the computer with your code, start T3 Code or run")}{" "}
+              <code className="font-mono">npx agentshare-client serve</code>
+              {uiText(", then run:")}
             </p>
             <CommandBlock command="npx agentshare-client pair" className="mt-2" />
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              On a tailnet, run{" "}
-              <code className="font-mono">npx agentshare-client pair --tailscale</code> instead.
+              {uiText("On a tailnet, run")}{" "}
+              <code className="font-mono">npx agentshare-client pair --tailscale</code>
+              {uiText(" instead.")}
             </p>
           </CollapsiblePanel>
         </Collapsible>
@@ -703,7 +723,7 @@ function AgentsStep({
               environmentId={environmentId}
               machineLabel={
                 environments.find((environment) => environment.environmentId === environmentId)
-                  ?.label ?? "Computer"
+                  ?.label ?? t("电脑", "Computer")
               }
             />
           ))}
@@ -726,6 +746,7 @@ function ConnectedAgentsStep({
   readonly environmentId: EnvironmentId;
   readonly machineLabel: string;
 }) {
+  const uiText = useUiText();
   const providers = useAtomValue(serverEnvironment.providersValueAtom(environmentId));
   const refreshProviders = useAtomCommand(serverEnvironment.refreshProviders, {
     reportFailure: false,
@@ -791,7 +812,7 @@ function ConnectedAgentsStep({
       <AgentShareWelcomeModels environmentId={environmentId} />
       {!canOperateTerminal && primaryAgents.length > 0 ? (
         <p className="mb-2 text-sm text-muted-foreground">
-          This connection cannot control terminals.
+          {uiText("This connection cannot control terminals.")}
         </p>
       ) : null}
       <div className="space-y-1.5">
@@ -879,7 +900,7 @@ function ConnectedAgentsStep({
       ) ? (
         <div className="mt-3">
           <Button size="xs" variant="ghost-muted" onClick={() => setAddingAccount(true)}>
-            Connect another ChatGPT account
+            {uiText("Connect another ChatGPT account")}
           </Button>
         </div>
       ) : null}
@@ -1004,6 +1025,7 @@ function AgentCard({
   readonly terminalAvailable: boolean;
   readonly onOpenTerminal: () => void;
 }) {
+  const uiText = useUiText();
   const meta = providerClients.get(ProviderDriverKind.make(driver));
   const displayName =
     provider?.displayName || (driver === "claudeAgent" ? "Claude Code" : (meta?.label ?? driver));
@@ -1020,7 +1042,7 @@ function AgentCard({
       <div className="min-w-0 flex-1">
         <span className="block text-sm font-medium text-foreground">{displayName}</span>
         <p className="mt-0.5 text-xs leading-relaxed break-words whitespace-pre-wrap text-muted-foreground">
-          {providerState === "ready" ? "Ready to code." : summary.headline}
+          {providerState === "ready" ? uiText("Ready to code.") : summary.headline}
           {providerState !== "ready" && summary.detail ? ` · ${summary.detail}` : ""}
         </p>
       </div>
@@ -1028,12 +1050,12 @@ function AgentCard({
         {providerState === "ready" ? (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success-foreground">
             <CheckIcon className="size-3.5" />
-            Ready
+            {uiText("Ready")}
           </span>
         ) : providerState === "checking" ? (
-          <span className="text-xs text-muted-foreground">Checking...</span>
+          <span className="text-xs text-muted-foreground">{uiText("Checking...")}</span>
         ) : providerState === "disabled" ? (
-          <span className="text-xs text-muted-foreground">Disabled</span>
+          <span className="text-xs text-muted-foreground">{uiText("Disabled")}</span>
         ) : providerState === "attention" ? (
           <span className="text-xs text-muted-foreground">{summary.headline}</span>
         ) : (
@@ -1044,7 +1066,7 @@ function AgentCard({
             disabled={terminalOpen || !terminalAvailable}
           >
             <TerminalIcon className="size-3.5" />
-            {providerState === "signIn" ? "Sign in" : "Install"}
+            {providerState === "signIn" ? uiText("Sign in") : uiText("Install")}
           </Button>
         )}
       </div>
@@ -1059,6 +1081,7 @@ function AgentInstallTerminal({
   readonly session: AgentTerminalSession;
   readonly onClose: () => void;
 }) {
+  const uiText = useUiText();
   const { command, cwd, driver, environmentId, keybindings, providerInstanceId } = session;
   const canOperateTerminal = useEnvironmentScope(environmentId, AuthTerminalOperateScope);
   const [advancedTypography] = useLocalStorage(
@@ -1158,18 +1181,19 @@ function AgentInstallTerminal({
       <div className="flex items-center justify-between border-b border-border/60 bg-background/60 px-3 py-1.5">
         <span className="text-2xs font-medium text-muted-foreground">
           {!canOperateTerminal ? (
-            "This connection cannot control terminals."
+            uiText("This connection cannot control terminals.")
           ) : setupState === "writeFailed" ? (
             <>
-              Run <code className="rounded bg-muted px-1 font-mono">{command}</code> in this
-              terminal.
+              {uiText("Run ")}
+              <code className="rounded bg-muted px-1 font-mono">{command}</code>
+              {uiText(" in this terminal.")}
             </>
           ) : setupState === "ready" ? (
-            "Review the command, then press Enter to run it."
+            uiText("Review the command, then press Enter to run it.")
           ) : setupState === "openFailed" ? (
-            "Could not open the setup terminal."
+            uiText("Could not open the setup terminal.")
           ) : (
-            "Preparing command..."
+            uiText("Preparing command...")
           )}
         </span>
         <div className="flex items-center gap-1">
@@ -1184,11 +1208,11 @@ function AgentInstallTerminal({
                 }
               }}
             >
-              Retry
+              {uiText("Retry")}
             </Button>
           ) : null}
           <Button size="xs" variant="ghost-muted" onClick={onClose}>
-            Close
+            {uiText("Close")}
           </Button>
         </div>
       </div>
@@ -1244,7 +1268,9 @@ function ImportStep({
   const { environments } = useEnvironments();
   const writableEnvironments = useEnvironmentsWithScope(scans, AuthOrchestrationOperateScope);
   const createProject = useAtomCommand(projectEnvironment.create, { reportFailure: false });
-  const importThreads = useAtomCommand(agentSessionImport, { reportFailure: false });
+  const importThreads = useAtomCommand(agentSessionImport, {
+    reportFailure: false,
+  });
   const importWarningRef = useRef("");
   const importedThreadCountRef = useRef(0);
   const importedProjectsRef = useRef(new Map<string, ScopedProjectRef>());
@@ -1532,7 +1558,7 @@ function ImportStep({
             );
             const label =
               environments.find((environment) => environment.environmentId === scan.environmentId)
-                ?.label ?? "Computer";
+                ?.label ?? t("电脑", "Computer");
             return (
               <fieldset
                 key={scan.environmentId}
@@ -1545,16 +1571,18 @@ function ImportStep({
                 {scan.isPending && scan.data === null ? (
                   <div className="flex items-center gap-2 py-3 text-sm text-muted-foreground">
                     <Spinner size="md" />
-                    Looking for projects…
+                    {t("正在查找项目…", "Looking for projects…")}
                   </div>
                 ) : scan.error !== null ? (
                   <div
                     role="alert"
                     className="flex items-center justify-between gap-3 text-sm text-muted-foreground"
                   >
-                    <span>Could not check projects. {scan.error}</span>
+                    <span>
+                      {t("无法检查项目。", "Could not check projects.")} {scan.error}
+                    </span>
                     <Button variant="ghost" size="sm" onClick={scan.refresh}>
-                      Retry
+                      {t("重试", "Retry")}
                     </Button>
                   </div>
                 ) : scanCandidates.length === 0 ? (
@@ -1626,6 +1654,7 @@ function ImportCandidateList({
   readonly selectedKeys: ReadonlySet<string>;
   readonly onSelectionChange: (next: ReadonlySet<string>) => void;
 }) {
+  const uiText = useUiText();
   const { repositories, other } = groupOnboardingProjects(candidates);
   const setKeys = (keys: ReadonlyArray<string>, checked: boolean) => {
     const next = new Set(selectedKeys);
@@ -1662,9 +1691,11 @@ function ImportCandidateList({
             />
             <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-1.5 text-left">
               <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-panel-open:rotate-90" />
-              <span className="truncate text-sm text-muted-foreground">Other folders</span>
+              <span className="truncate text-sm text-muted-foreground">
+                {uiText("Other folders")}
+              </span>
               <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
-                {other.length} {other.length === 1 ? "folder" : "folders"}
+                {other.length} {other.length === 1 ? uiText("folder") : uiText("folders")}
               </span>
             </CollapsibleTrigger>
           </div>

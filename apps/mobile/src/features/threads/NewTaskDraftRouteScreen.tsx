@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import {
   CommonActions,
@@ -67,8 +68,8 @@ const branchCheckouts = makeNewTaskBranchCheckouts({
     if (!isAtomCommandInterrupted(result)) {
       const error = squashAtomCommandFailure(result);
       Dialog.alert(
-        "Could not switch branch",
-        error instanceof Error ? error.message : "The branch could not be checked out.",
+        readUiText("Could not switch branch"),
+        error instanceof Error ? error.message : readUiText("The branch could not be checked out."),
       );
     }
     rootNavigationRef.dispatch({

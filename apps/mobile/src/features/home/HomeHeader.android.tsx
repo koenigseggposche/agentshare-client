@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { MenuAction } from "@react-native-menu/menu";
 import { NativeStackScreenOptions } from "../../native/StackHeader";
 import { ThreadListToolbar } from "./ThreadListToolbar";
@@ -10,16 +11,17 @@ function checkedMenuState(checked: boolean) {
 }
 
 export function HomeHeader(props: HomeHeaderProps) {
+  const uiText = useUiText();
   const hasCustomListOptions =
     props.selectedEnvironmentId !== null || props.selectedProjectKey !== null;
   const menuActions: MenuAction[] = [
     {
       id: "environment",
-      title: "Environment",
+      title: uiText("Environment"),
       subactions: [
         {
           id: "environment:all",
-          title: "All environments",
+          title: uiText("All environments"),
           state: checkedMenuState(props.selectedEnvironmentId === null),
         },
         ...props.environments.map((environment) => ({
@@ -34,11 +36,11 @@ export function HomeHeader(props: HomeHeaderProps) {
       : ([
           {
             id: "project",
-            title: "Project",
+            title: uiText("Project"),
             subactions: [
               {
                 id: "project:all",
-                title: "All projects",
+                title: uiText("All projects"),
                 state: checkedMenuState(props.selectedProjectKey === null),
               },
               ...props.projects.map((project) => ({

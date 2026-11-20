@@ -1,3 +1,4 @@
+import { readUiText } from "../i18n/uiText";
 import * as Dialog from "./ui/Dialog";
 import { requireNativeModule } from "expo";
 import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
@@ -126,12 +127,14 @@ function NativeVideoPreview(props: {
       // AVKit gives no retry, so re-mint now; the minted URL may already be unusable.
       if (ready) reauthorize();
       Dialog.alert(
-        "Could not open video",
+        readUiText("Could not open video"),
         ready
-          ? "This video couldn't be loaded or played. Check the connection, or touch and hold the video to save or share the original."
+          ? readUiText(
+              "This video couldn't be loaded or played. Check the connection, or touch and hold the video to save or share the original.",
+            )
           : error instanceof Error
             ? error.message
-            : "Could not load this video.",
+            : readUiText("Could not load this video."),
       );
       onRequestClose();
     });

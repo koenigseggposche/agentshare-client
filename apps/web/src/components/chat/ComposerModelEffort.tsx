@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { runtimePermissionLabels, workbenchLabels } from "@t3tools/shared/workbenchLabels";
 import { useClientSettings } from "../../hooks/useSettings";
 import {
@@ -186,6 +187,7 @@ function ColumnRow(props: {
   disabled?: boolean;
   onPick: () => void;
 }) {
+  const uiText = useUiText();
   const rowProps = {
     type: "button",
     role: "radio",
@@ -204,11 +206,11 @@ function ColumnRow(props: {
       <span className="min-w-0 flex-1 truncate">{props.label}</span>
       {props.selected ? (
         <>
-          {props.isDefault ? <span className="sr-only">Default</span> : null}
+          {props.isDefault ? <span className="sr-only">{uiText("Default")}</span> : null}
           <CheckIcon aria-hidden="true" className="size-3.5" />
         </>
       ) : props.isDefault ? (
-        <span className="text-muted-foreground/70 text-xs">Default</span>
+        <span className="text-muted-foreground/70 text-xs">{uiText("Default")}</span>
       ) : null}
     </>
   );
@@ -299,6 +301,7 @@ function EffortLevels(props: { traits: TraitsSelectionInput }) {
 type TraitsSelection = ReturnType<typeof useTraitsSelection>;
 
 function EffortRows(props: { control: ColumnControl; traits: TraitsSelection; locked: boolean }) {
+  const uiText = useUiText();
   const { control, traits } = props;
   const { descriptor } = control;
   if (control.kind === "boolean") {
@@ -307,7 +310,7 @@ function EffortRows(props: { control: ColumnControl; traits: TraitsSelection; lo
         {([true, false] as const).map((value) => (
           <ColumnRow
             key={String(value)}
-            label={value ? "On" : "Off"}
+            label={value ? uiText("On") : uiText("Off")}
             selected={(control.descriptor.currentValue === true) === value}
             tabStop={(control.descriptor.currentValue === true) === value}
             onPick={() => traits.changeBoolean(descriptor.id, value)}
@@ -366,6 +369,7 @@ function OptionMenuRow(props: {
   /** Holds the column's tab stop when the model has no levels. */
   tabStop: boolean;
 }) {
+  const uiText = useUiText();
   const { descriptor, traits } = props;
   const [open, setOpen] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -447,7 +451,7 @@ function OptionMenuRow(props: {
                   ) : null}
                 </span>
                 {choice.isDefault ? (
-                  <span className="text-muted-foreground/70 text-xs">Default</span>
+                  <span className="text-muted-foreground/70 text-xs">{uiText("Default")}</span>
                 ) : null}
                 <MenuRadioItemIndicator />
               </span>
@@ -571,6 +575,7 @@ function SpeedSegment(props: {
 }
 
 function SpeedControl(props: { traits: TraitsSelectionInput }) {
+  const uiText = useUiText();
   const traits = useTraitsSelection(props.traits);
   const { speedSelect, fastToggle } = splitSpeed(
     props.traits.provider,
@@ -599,7 +604,7 @@ function SpeedControl(props: { traits: TraitsSelectionInput }) {
               <SpeedSegment
                 key={String(value)}
                 checked={(fastToggle.currentValue === true) === value}
-                label={value ? "Fast" : "Standard"}
+                label={value ? uiText("Fast") : uiText("Standard")}
                 onPick={() => traits.changeBoolean(fastToggle.id, value)}
               />
             ))

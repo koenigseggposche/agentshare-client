@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
 import { type ComponentProps, type ReactNode } from "react";
 
@@ -47,6 +48,7 @@ export function CommandPaletteContent({
   testId,
   ...commandProps
 }: CommandPaletteContentProps) {
+  const uiText = useUiText();
   return (
     <div className="contents" data-testid={testId}>
       <Command {...commandProps}>
@@ -78,7 +80,7 @@ export function CommandPaletteContent({
             </KbdGroup>
             {footerActionLabel !== undefined ? (
               <KbdGroup>
-                <Kbd>Enter</Kbd>
+                <Kbd>{uiText("Enter")}</Kbd>
                 <span>{footerActionLabel}</span>
               </KbdGroup>
             ) : null}
@@ -89,7 +91,7 @@ export function CommandPaletteContent({
               </KbdGroup>
             ) : null}
             <KbdGroup>
-              <Kbd>Esc</Kbd>
+              <Kbd>{uiText("Esc")}</Kbd>
               <span>{escapeLabel ?? (language === "zh" ? "关闭" : "Close")}</span>
             </KbdGroup>
           </div>

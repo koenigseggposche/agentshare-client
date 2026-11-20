@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   type DesktopBridge,
   type DesktopPendingSnapShot,
@@ -222,6 +223,7 @@ export async function deliverSnapShot(
 }
 
 export function SnapShotCoordinator() {
+  const uiText = useUiText();
   const {
     activeDraftThread,
     activeThread,
@@ -347,8 +349,8 @@ export function SnapShotCoordinator() {
               "missing-project",
               stackedThreadToast({
                 type: "error",
-                title: "Snapshot taken, but no project is available",
-                description: "Add a project, then capture the window again.",
+                title: uiText("Snapshot taken, but no project is available"),
+                description: uiText("Add a project, then capture the window again."),
               }),
             );
             continue;
@@ -371,10 +373,11 @@ export function SnapShotCoordinator() {
               "delivery",
               stackedThreadToast({
                 type: "error",
-                title: "Snapshot failed",
-                description: `Capture ${item.id}: ${
-                  error instanceof Error ? error.message : "Try the capture again."
-                }`,
+                title: uiText("Snapshot failed"),
+                description: uiText("Capture {0}: {1}", [
+                  item.id,
+                  error instanceof Error ? error.message : "Try the capture again.",
+                ]),
               }),
             );
           }
@@ -387,8 +390,8 @@ export function SnapShotCoordinator() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Snapshot failed",
-            description: error instanceof Error ? error.message : "Try the capture again.",
+            title: uiText("Snapshot failed"),
+            description: error instanceof Error ? error.message : uiText("Try the capture again."),
           }),
         );
       })
@@ -455,8 +458,8 @@ export function SnapShotCoordinator() {
             toastManager.add(
               stackedThreadToast({
                 type: "error",
-                title: "Snapshot failed",
-                description: state.message ?? "Try the capture again.",
+                title: uiText("Snapshot failed"),
+                description: state.message ?? uiText("Try the capture again."),
               }),
             );
           });

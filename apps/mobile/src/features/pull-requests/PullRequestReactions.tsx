@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import { useNavigation } from "@react-navigation/native";
 import {
   applyPendingPullRequestReactions,
@@ -37,6 +39,7 @@ function ReactionPills(props: {
   readonly subjectId?: string;
   readonly onChanged: () => void;
 }) {
+  const uiText = useUiText();
   const target = pullRequestTarget(props.params);
   const setReaction = useAtomCommand(composerPullRequests.setReaction, { reportFailure: false });
   // Keyed by what the host last reported, so a refresh that lands the change drops the overlay.
@@ -61,7 +64,7 @@ function ReactionPills(props: {
         next.delete(content);
         return { signature: current.signature, values: next };
       });
-      Dialog.alert("Couldn't save the reaction", "Try again in a moment.");
+      Dialog.alert(readUiText("Couldn't save the reaction"), readUiText("Try again in a moment."));
       return;
     }
     props.onChanged();
@@ -89,7 +92,7 @@ function ReactionPills(props: {
       ))}
       {props.canReact ? (
         <Menu
-          accessibilityLabel="Add a reaction"
+          accessibilityLabel={uiText("Add a reaction")}
           actions={PULL_REQUEST_REACTION_ORDER.map((content) => ({
             id: content,
             title: `${pullRequestReactionEmoji(content)}  ${pullRequestReactionName(content)}`,
@@ -150,6 +153,7 @@ export function PullRequestCommentFooter(props: {
   readonly onChanged: () => void;
   readonly onEdit?: () => void;
 }) {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const { comment } = props;
   const reactions = comment.reactions ?? [];
@@ -169,7 +173,7 @@ export function PullRequestCommentFooter(props: {
       {canEdit && editableKind !== null ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Edit comment"
+          accessibilityLabel={uiText("Edit comment")}
           onPress={() => {
             props.onEdit?.();
             navigation.navigate("PullRequestEdit", {
@@ -187,7 +191,7 @@ export function PullRequestCommentFooter(props: {
           className={cn(PILL, "ml-auto border-transparent")}
         >
           <SymbolView name="pencil" size={13} tintColorClassName="accent-icon-muted" />
-          <Text className="text-xs font-t3-medium text-foreground-muted">Edit</Text>
+          <Text className="text-xs font-t3-medium text-foreground-muted">{uiText("Edit")}</Text>
         </Pressable>
       ) : null}
     </View>

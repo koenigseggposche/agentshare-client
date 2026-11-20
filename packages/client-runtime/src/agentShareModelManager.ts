@@ -54,16 +54,6 @@ export function modelManagerEntries(data: AgentShareModelManager, language: Lang
         add(t("停止模型", "Stop model"), { operation: "stopModel", target: id });
       if (!running)
         add(t("删除模型文件", "Delete model files"), { operation: "removeModel", target: id });
-      if (model?.share_allowed && runtime?.state === "ready" && !access?.draining) {
-        for (const [visibility, label] of [
-          ["off", t("关闭模型分享", "Turn sharing off")],
-          ["owner_only", t("仅自己的设备可用", "Share with my devices")],
-          ["community", t("分享到社区", "Share with the community")],
-        ] as const) {
-          if ((access?.visibility ?? "off") !== visibility)
-            add(label, { operation: "modelSharing", body: { id, visibility } });
-        }
-      }
     }
     const states: Record<string, string> = {
       downloading: t("下载中", "Downloading"),
@@ -89,6 +79,7 @@ export function modelManagerEntries(data: AgentShareModelManager, language: Lang
           : t("未分享", "Sharing off");
     return {
       id,
+      installed: Boolean(installed || busy || task?.state === "paused"),
       name: model?.name ?? id,
       description: model?.description ?? "",
       details: [

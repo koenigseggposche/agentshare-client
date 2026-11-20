@@ -1,3 +1,6 @@
+import { readUiText } from "../../i18n/uiText";
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { projectChangeRequestUrl } from "@t3tools/client-runtime/change-request-links";
 import { normalizeThreadPullRequestKey } from "@t3tools/client-runtime/thread-pull-requests";
 import { useAtomValue } from "@effect/atom-react";
@@ -216,7 +219,7 @@ const composerTargetKey = (target: ScopedThreadRef | DraftId): string =>
 function reportCheckoutCommandError(error: Error) {
   toastManager.add({
     type: "error",
-    title: "Could not copy checkout command",
+    title: readUiText("Could not copy checkout command"),
     description: error.message,
   });
 }
@@ -300,6 +303,7 @@ export function PullRequestDetailPanel({
   initialTab?: PullRequestDetailTab;
   onTabChange?: ((tab: PullRequestDetailTab) => void) | undefined;
 }) {
+  const uiText = useUiText();
   const environmentConfigs = useServerConfigs();
   const projects = useProjects();
   const project = projects.find(
@@ -475,11 +479,11 @@ export function PullRequestDetailPanel({
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const { copyToClipboard: copyReference } = useCopyToClipboard<string>({
     target: `${terminology.singular} reference`,
-    onCopy: (label) => toastManager.add({ type: "success", title: `${label} copied` }),
+    onCopy: (label) => toastManager.add({ type: "success", title: uiText("{0} copied", [label]) }),
     onError: (error, label) =>
       toastManager.add({
         type: "error",
-        title: `Failed to copy ${label}`,
+        title: uiText("Failed to copy {0}", [label]),
         description: error.message,
       }),
   });
@@ -688,10 +692,13 @@ export function PullRequestDetailPanel({
       return false;
     }
     if (action === "revert") {
-      toastManager.add({ type: "success", title: `Revert ${terminology.singular} opened` });
+      toastManager.add({
+        type: "success",
+        title: uiText("Revert {0} opened", [terminology.singular]),
+      });
     }
     if (action === "delete-branch") {
-      toastManager.add({ type: "success", title: "Branch deleted" });
+      toastManager.add({ type: "success", title: uiText("Branch deleted") });
     }
     if (pullRequestActionNeedsHostRefresh(action)) {
       void refreshFromHost();
@@ -721,7 +728,7 @@ export function PullRequestDetailPanel({
     });
     if (commentResult._tag === "Failure") {
       setPendingAction(null);
-      toastManager.add({ type: "error", title: "Could not post the comment" });
+      toastManager.add({ type: "error", title: uiText("Could not post the comment") });
       return { commentPosted: false };
     }
     const actionSucceeded = await finishAction(action);
@@ -813,11 +820,13 @@ export function PullRequestDetailPanel({
       writeTaskToComposer(attachTarget, task);
       toastManager.add({
         type: "success",
-        title: "Added to the composer",
+        title: uiText("Added to the composer"),
         description:
           task.prompt.length > 0
-            ? "The question is in the composer. Read it over, then send."
-            : `The ${terminology.singular} is in the composer. Type your question, then send.`,
+            ? uiText("The question is in the composer. Read it over, then send.")
+            : uiText("The {0} is in the composer. Type your question, then send.", [
+                terminology.singular,
+              ]),
       });
       return;
     }
@@ -844,18 +853,20 @@ export function PullRequestDetailPanel({
     if (opened === null) {
       toastManager.add({
         type: "error",
-        title: "Could not open a thread",
-        description: "Try again from the project, or open a thread first.",
+        title: uiText("Could not open a thread"),
+        description: uiText("Try again from the project, or open a thread first."),
       });
       return;
     }
     toastManager.add({
       type: "success",
-      title: "Asked in a thread",
+      title: uiText("Asked in a thread"),
       description:
         task.prompt.length > 0
-          ? "The question is in the composer. Read it over, then send."
-          : `The ${terminology.singular} is in the composer. Type your question, then send.`,
+          ? uiText("The question is in the composer. Read it over, then send.")
+          : uiText("The {0} is in the composer. Type your question, then send.", [
+              terminology.singular,
+            ]),
     });
   };
 
@@ -869,8 +880,8 @@ export function PullRequestDetailPanel({
       writeTaskToComposer(attachTarget, task);
       toastManager.add({
         type: "success",
-        title: "Added to the composer",
-        description: "The task is in the composer. Read it over, then send.",
+        title: uiText("Added to the composer"),
+        description: uiText("The task is in the composer. Read it over, then send."),
       });
       return;
     }
@@ -890,7 +901,7 @@ export function PullRequestDetailPanel({
     setHandoff(kind);
     const toastId = toastManager.add({
       type: "loading",
-      title: `Preparing the ${terminology.singular} checkout...`,
+      title: uiText("Preparing the {0} checkout...", [terminology.singular]),
     });
     const projectRef = scopeProjectRef(
       actingEnvironmentId,
@@ -905,8 +916,8 @@ export function PullRequestDetailPanel({
       setHandoff(null);
       toastManager.update(toastId, {
         type: "error",
-        title: "Could not open a thread for the checkout",
-        description: "Try again from the project, or open a thread first.",
+        title: uiText("Could not open a thread for the checkout"),
+        description: uiText("Try again from the project, or open a thread first."),
       });
       return;
     }
@@ -919,7 +930,7 @@ export function PullRequestDetailPanel({
       setHandoff(null);
       toastManager.update(toastId, {
         type: "error",
-        title: `Could not prepare the ${terminology.singular} checkout`,
+        title: uiText("Could not prepare the {0} checkout", [terminology.singular]),
         description: checkoutFailureDescription(
           isAtomCommandInterrupted(prepared) ? undefined : squashAtomCommandFailure(prepared),
         ),
@@ -939,8 +950,11 @@ export function PullRequestDetailPanel({
       // Sending after failed rebinding would use the previous checkout.
       toastManager.update(toastId, {
         type: "error",
-        title: "Checked out, but the thread stayed where it was",
-        description: `The checkout is ready on \`${prepared.value.branch}\`. Point a thread at it from the branch picker, then ask again.`,
+        title: uiText("Checked out, but the thread stayed where it was"),
+        description: uiText(
+          "The checkout is ready on `{0}`. Point a thread at it from the branch picker, then ask again.",
+          [prepared.value.branch],
+        ),
       });
       return;
     }
@@ -951,13 +965,17 @@ export function PullRequestDetailPanel({
         prepared.value.isOnPullRequestHead
           ? {
               type: "success",
-              title: mode === "local" ? "Checked out here" : "Checked out",
+              title: mode === "local" ? uiText("Checked out here") : uiText("Checked out"),
               description:
                 mode === "local"
-                  ? `This repository is on the ${terminology.singular}'s branch, with a thread open on it.`
-                  : `The ${terminology.singular} is in its own worktree, with a thread open on it.`,
+                  ? uiText("This repository is on the {0}'s branch, with a thread open on it.", [
+                      terminology.singular,
+                    ])
+                  : uiText("The {0} is in its own worktree, with a thread open on it.", [
+                      terminology.singular,
+                    ]),
             }
-          : offHeadPullRequestCheckoutToast(terminology),
+          : offHeadPullRequestCheckoutToast(terminology, uiText),
       );
       return;
     }
@@ -967,10 +985,10 @@ export function PullRequestDetailPanel({
       prepared.value.isOnPullRequestHead
         ? {
             type: "success",
-            title: "Checkout ready",
-            description: "The task is in the composer. Read it over, then send.",
+            title: uiText("Checkout ready"),
+            description: uiText("The task is in the composer. Read it over, then send."),
           }
-        : offHeadPullRequestCheckoutToast(terminology),
+        : offHeadPullRequestCheckoutToast(terminology, uiText),
     );
   };
 
@@ -1127,7 +1145,7 @@ export function PullRequestDetailPanel({
   const workflowApprovalsRequired =
     detail?.state === "open" ? (detail.workflowApprovalsRequired ?? 0) : 0;
   const freshness = detail === null ? null : resolveBaseFreshness(detail);
-  const visibleTabs = TABS.filter((item) => isTabAvailable(item.value));
+  const visibleTabs = translateUiLabels(TABS, uiText).filter((item) => isTabAvailable(item.value));
   const can = (action: PullRequestAction) =>
     detail?.capabilities.actions.includes(action) === true &&
     detail.viewerPermissions.actions.includes(action);
@@ -1183,7 +1201,7 @@ export function PullRequestDetailPanel({
     !conflicting &&
     allowedMergeMethods.length > 1;
   const statePresentation = detail
-    ? resolvePullRequestState({ state: detail.state, isDraft: detail.isDraft })
+    ? resolvePullRequestState({ state: detail.state, isDraft: detail.isDraft }, uiText)
     : null;
   const showsDeleteBranch = detail !== null && canDeletePullRequestBranch(detail);
   const environmentConnected = environments.some(
@@ -1206,9 +1224,9 @@ export function PullRequestDetailPanel({
   const checksSummary = checksStale
     ? checksState === null
       ? "No checks reported"
-      : pullRequestChecksStatePresentation(checksState).label
+      : pullRequestChecksStatePresentation(checksState, uiText).label
     : detail
-      ? summarizePullRequestChecks(detail.checks)
+      ? summarizePullRequestChecks(detail.checks, uiText)
       : null;
   const approvalCount =
     detail && !detail.commentsTruncated
@@ -1308,7 +1326,7 @@ export function PullRequestDetailPanel({
               ) : null}
               {!nativeStack && supportsStackActions && nativeStackQuery.error ? (
                 <Button variant="ghost" size="xs" onClick={nativeStackQuery.refresh}>
-                  Retry stack lookup
+                  {uiText("Retry stack lookup")}
                 </Button>
               ) : null}
               {nativeStack ? (
@@ -1398,7 +1416,7 @@ export function PullRequestDetailPanel({
             <Button
               size="icon-xs"
               variant="ghost"
-              aria-label={`Collapse ${terminology.singular} panel`}
+              aria-label={uiText("Collapse {0} panel", [terminology.singular])}
               onClick={onClose}
             >
               <PanelRightIcon className="size-3.5" />
@@ -1449,7 +1467,7 @@ export function PullRequestDetailPanel({
                       iconClassName="size-3"
                     />
                     <ArrowLeftIcon
-                      aria-label="receives changes from"
+                      aria-label={uiText("receives changes from")}
                       className="size-3 shrink-0 opacity-60"
                     />
                     <Tooltip>
@@ -1466,12 +1484,13 @@ export function PullRequestDetailPanel({
                   <span className="ml-auto inline-flex shrink-0 items-baseline justify-end gap-2 text-2xs">
                     <span
                       className="inline-flex items-baseline gap-1 tabular-nums"
-                      aria-label={`${detail.changedFiles.toLocaleString()} changed ${
-                        detail.changedFiles === 1 ? "file" : "files"
-                      }`}
+                      aria-label={uiText("{0} changed {1}", [
+                        detail.changedFiles.toLocaleString(uiText.language),
+                        detail.changedFiles === 1 ? "file" : "files",
+                      ])}
                     >
                       <FileDiffIcon aria-hidden className="size-3 self-center" />
-                      {detail.changedFiles.toLocaleString()}
+                      {detail.changedFiles.toLocaleString(uiText.language)}
                     </span>
                     <PullRequestChangeBreakdownStat
                       environmentId={environmentId}
@@ -1523,7 +1542,8 @@ export function PullRequestDetailPanel({
                 }
                 updated={
                   <span>
-                    updated <RelativeTime timestamp={detail.updatedAt} />
+                    {uiText("updated ")}
+                    <RelativeTime timestamp={detail.updatedAt} />
                   </span>
                 }
                 checkout={
@@ -1558,7 +1578,7 @@ export function PullRequestDetailPanel({
                     copiedLabel="Branch name copied"
                   />
                 }
-                files={`${detail.changedFiles.toLocaleString()} ${detail.changedFiles === 1 ? "file" : "files"}`}
+                files={`${detail.changedFiles.toLocaleString(uiText.language)} ${detail.changedFiles === 1 ? "file" : "files"}`}
                 diffStat={
                   <PullRequestChangeBreakdownStat
                     environmentId={environmentId}
@@ -1593,7 +1613,9 @@ export function PullRequestDetailPanel({
               ) : (
                 <PullRequestChecksStatusLine
                   className="text-muted-foreground"
-                  aria-label={checksSummary ? `Checks: ${checksSummary}` : "Checks"}
+                  aria-label={
+                    checksSummary ? uiText("Checks: {0}", [checksSummary]) : uiText("Checks")
+                  }
                   icon={
                     checksState !== null ? (
                       <PullRequestChecksPopover
@@ -1621,8 +1643,8 @@ export function PullRequestDetailPanel({
                     className="inline-flex items-center gap-1"
                     aria-label={
                       activityError
-                        ? "Comments unavailable"
-                        : `${detail.commentCount.toLocaleString()} ${
+                        ? uiText("Comments unavailable")
+                        : `${detail.commentCount.toLocaleString(uiText.language)} ${
                             detail.commentCount === 1 ? "comment" : "comments"
                           }`
                     }
@@ -1632,14 +1654,14 @@ export function PullRequestDetailPanel({
                       ? "-"
                       : activityPending
                         ? "…"
-                        : detail.commentCount.toLocaleString()}
+                        : detail.commentCount.toLocaleString(uiText.language)}
                   </span>
                   <span
                     className="inline-flex items-center gap-1"
                     aria-label={
                       activityError
-                        ? "Commits unavailable"
-                        : `${detail.commits.length.toLocaleString()} ${
+                        ? uiText("Commits unavailable")
+                        : `${detail.commits.length.toLocaleString(uiText.language)} ${
                             detail.commits.length === 1 ? "commit" : "commits"
                           }`
                     }
@@ -1649,19 +1671,19 @@ export function PullRequestDetailPanel({
                       ? "-"
                       : activityPending
                         ? "…"
-                        : detail.commits.length.toLocaleString()}
+                        : detail.commits.length.toLocaleString(uiText.language)}
                   </span>
                   {approvalCount > 0 ? (
                     <span
                       className={cn(
                         "inline-flex items-center gap-1",
-                        pullRequestReviewOutcomeToneClassName("approved"),
+                        pullRequestReviewOutcomeToneClassName("approved", uiText),
                       )}
                     >
                       <PullRequestReviewOutcomeIcon outcome="approved" className="size-3" />
-                      {approvalCount.toLocaleString()}
+                      {approvalCount.toLocaleString(uiText.language)}
                       <span className="sr-only">
-                        {approvalCount === 1 ? "approval" : "approvals"}
+                        {approvalCount === 1 ? uiText("approval") : uiText("approvals")}
                       </span>
                     </span>
                   ) : null}
@@ -1671,15 +1693,15 @@ export function PullRequestDetailPanel({
                   variant="ghost-muted"
                   aria-label={
                     timelineOrder === "newest"
-                      ? "Show oldest activity first"
-                      : "Show newest activity first"
+                      ? uiText("Show oldest activity first")
+                      : uiText("Show newest activity first")
                   }
                   onClick={() =>
                     setTimelineOrder((value) => (value === "newest" ? "oldest" : "newest"))
                   }
                 >
                   <ArrowDownUpIcon aria-hidden className="size-3" />
-                  {timelineOrder === "newest" ? "Newest first" : "Oldest first"}
+                  {timelineOrder === "newest" ? uiText("Newest first") : uiText("Oldest first")}
                 </Button>
               </div>
             ) : null}
@@ -1717,7 +1739,10 @@ export function PullRequestDetailPanel({
           <PullRequestsUnavailableState
             {...(isPullRequestNotFound(detailQuery.failure)
               ? {
-                  title: `${capitalizeTerm(terminology.singular)} #${reference.number} not found`,
+                  title: uiText("{0} #{1} not found", [
+                    capitalizeTerm(terminology.singular),
+                    reference.number,
+                  ]),
                   error: `It may be an issue rather than a ${terminology.singular}, or this account can't see it.`,
                 }
               : { error: detailQuery.error })}
@@ -1816,7 +1841,9 @@ export function PullRequestDetailPanel({
               <div className={cn("absolute inset-0", tab !== "code" && "invisible")}>
                 <Suspense
                   fallback={
-                    <DiffPanelLoadingState label={`Loading ${terminology.singular} diff...`} />
+                    <DiffPanelLoadingState
+                      label={uiText("Loading {0} diff...", [terminology.singular])}
+                    />
                   }
                 >
                   <PullRequestCodeTab

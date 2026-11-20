@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type {
   EnvironmentId,
   PullRequestAction,
@@ -94,6 +95,7 @@ export function PullRequestCheckoutMenu({
   /** The host's word for a change request, as in "pull request". */
   term: string;
 }) {
+  const uiText = useUiText();
   return (
     <Menu>
       <Tooltip>
@@ -105,11 +107,17 @@ export function PullRequestCheckoutMenu({
                 <Button
                   size="xs"
                   variant="outline"
-                  aria-label={handoff?.startsWith("checkout") ? "Checking out..." : "Check out"}
+                  aria-label={
+                    handoff?.startsWith("checkout")
+                      ? uiText("Checking out...")
+                      : uiText("Check out")
+                  }
                 >
                   <GitBranchIcon aria-hidden className="size-3.5" />
                   <span className="@max-[35rem]/pr-header:hidden">
-                    {handoff?.startsWith("checkout") ? "Checking out..." : "Check out"}
+                    {handoff?.startsWith("checkout")
+                      ? uiText("Checking out...")
+                      : uiText("Check out")}
                   </span>
                   <ChevronDownIcon aria-hidden className="size-3.5 text-muted-foreground" />
                 </Button>
@@ -117,24 +125,27 @@ export function PullRequestCheckoutMenu({
             />
           }
         />
-        <TooltipPopup>Check out this {term}</TooltipPopup>
+        <TooltipPopup>
+          {uiText("Check out this ")}
+          {term}
+        </TooltipPopup>
       </Tooltip>
       <MenuPopup align="end" side="bottom">
         <MenuItem disabled={!canPrepareWorktree} onClick={() => onCheckout("worktree")}>
           <GitBranchIcon className="mt-1 size-3.5 shrink-0 self-start" />
           <span className="flex min-w-0 flex-col">
-            <span>In a separate worktree</span>
+            <span>{uiText("In a separate worktree")}</span>
             <span className="text-xs text-muted-foreground">
-              Its own folder and thread. Nothing you have open moves.
+              {uiText("Its own folder and thread. Nothing you have open moves.")}
             </span>
           </span>
         </MenuItem>
         <MenuItem disabled={!canCheckoutHere} onClick={() => onCheckout("local")}>
           <FolderGit2Icon className="mt-1 size-3.5 shrink-0 self-start" />
           <span className="flex min-w-0 flex-col">
-            <span>In this repository</span>
+            <span>{uiText("In this repository")}</span>
             <span className="text-xs text-muted-foreground">
-              Switches the branch you are working in.
+              {uiText("Switches the branch you are working in.")}
             </span>
           </span>
         </MenuItem>
@@ -160,6 +171,7 @@ export function PullRequestResolveConflictsButton({
   unavailable: boolean;
   onResolve: () => void;
 }) {
+  const uiText = useUiText();
   return (
     <Tooltip>
       <TooltipTrigger
@@ -170,18 +182,20 @@ export function PullRequestResolveConflictsButton({
               variant="destructive-outline"
               disabled={handoff !== null || unavailable}
               onClick={onResolve}
-              aria-label={handoff === "conflicts" ? "Preparing..." : "Resolve conflicts"}
+              aria-label={
+                handoff === "conflicts" ? uiText("Preparing...") : uiText("Resolve conflicts")
+              }
             >
               <PullRequestGlyph.conflicting aria-hidden className="size-3.5" />
               <span className="@max-[30rem]/pr-header:hidden">
-                {handoff === "conflicts" ? "Preparing..." : "Resolve conflicts"}
+                {handoff === "conflicts" ? uiText("Preparing...") : uiText("Resolve conflicts")}
               </span>
             </Button>
           </span>
         }
       />
       <TooltipPopup side="top">
-        {handoff === "conflicts" ? "Preparing..." : "Resolve conflicts"}
+        {handoff === "conflicts" ? uiText("Preparing...") : uiText("Resolve conflicts")}
       </TooltipPopup>
     </Tooltip>
   );
@@ -215,6 +229,7 @@ export function PullRequestPrimaryAction({
   perform: PerformPullRequestAction;
   resolveConflicts: ReactNode;
 }) {
+  const uiText = useUiText();
   const inlineConfirm = useInlineActionConfirm(pullRequestKey);
   const actionPending = pendingAction !== null;
   return (
@@ -230,7 +245,8 @@ export function PullRequestPrimaryAction({
             }
           />
           <TooltipPopup side="top">
-            {armedAutoMergeLabel}: the host will merge this on its own once its requirements are met
+            {armedAutoMergeLabel}
+            {uiText(": the host will merge this on its own once its requirements are met")}
           </TooltipPopup>
         </Tooltip>
       ) : null}
@@ -246,15 +262,17 @@ export function PullRequestPrimaryAction({
                   variant="default"
                   disabled={actionPending}
                   onClick={() => void perform("ready")}
-                  aria-label="Ready for review"
+                  aria-label={uiText("Ready for review")}
                 >
                   <PullRequestGlyph.pullRequest aria-hidden className="size-3.5" />
-                  <span className="@max-[30rem]/pr-header:hidden">Ready for review</span>
+                  <span className="@max-[30rem]/pr-header:hidden">
+                    {uiText("Ready for review")}
+                  </span>
                 </Button>
               </span>
             }
           />
-          <TooltipPopup side="top">Ready for review</TooltipPopup>
+          <TooltipPopup side="top">{uiText("Ready for review")}</TooltipPopup>
         </Tooltip>
       ) : primaryAction === "enable-auto-merge" ? (
         <Tooltip>
@@ -275,9 +293,9 @@ export function PullRequestPrimaryAction({
                     : {})}
                   aria-label={
                     pendingAction === "enable-auto-merge"
-                      ? "Enabling..."
+                      ? uiText("Enabling...")
                       : inlineConfirm.isArmed("enable-auto-merge")
-                        ? "Confirm auto-merge?"
+                        ? uiText("Confirm auto-merge?")
                         : pendingAutoMergeLabel
                   }
                 >
@@ -293,9 +311,9 @@ export function PullRequestPrimaryAction({
                       </span>
                       <span className="col-start-1 row-start-1">
                         {pendingAction === "enable-auto-merge"
-                          ? "Enabling..."
+                          ? uiText("Enabling...")
                           : inlineConfirm.isArmed("enable-auto-merge")
-                            ? "Confirm auto-merge?"
+                            ? uiText("Confirm auto-merge?")
                             : pendingAutoMergeLabel}
                       </span>
                     </span>
@@ -307,9 +325,9 @@ export function PullRequestPrimaryAction({
           <TooltipPopup side="top">
             {mergeBlockedReason ??
               (pendingAction === "enable-auto-merge"
-                ? "Enabling..."
+                ? uiText("Enabling...")
                 : inlineConfirm.isArmed("enable-auto-merge")
-                  ? "Confirm auto-merge?"
+                  ? uiText("Confirm auto-merge?")
                   : pendingAutoMergeLabel)}
           </TooltipPopup>
         </Tooltip>
@@ -324,7 +342,8 @@ export function PullRequestPrimaryAction({
             }
           />
           <TooltipPopup side="top">
-            {armedAutoMergeLabel}: the host will merge this on its own once its requirements are met
+            {armedAutoMergeLabel}
+            {uiText(": the host will merge this on its own once its requirements are met")}
           </TooltipPopup>
         </Tooltip>
       ) : primaryAction === "merge" ? (
@@ -343,9 +362,9 @@ export function PullRequestPrimaryAction({
                     : {})}
                   aria-label={
                     pendingAction === "merge"
-                      ? "Merging..."
+                      ? uiText("Merging...")
                       : inlineConfirm.isArmed("merge")
-                        ? "Confirm merge?"
+                        ? uiText("Confirm merge?")
                         : selectedMergeMethodLabel
                   }
                 >
@@ -361,9 +380,9 @@ export function PullRequestPrimaryAction({
                       </span>
                       <span className="col-start-1 row-start-1">
                         {pendingAction === "merge"
-                          ? "Merging..."
+                          ? uiText("Merging...")
                           : inlineConfirm.isArmed("merge")
-                            ? "Confirm merge?"
+                            ? uiText("Confirm merge?")
                             : selectedMergeMethodLabel}
                       </span>
                     </span>
@@ -375,9 +394,9 @@ export function PullRequestPrimaryAction({
           <TooltipPopup side="top">
             {mergeBlockedReason ??
               (pendingAction === "merge"
-                ? "Merging..."
+                ? uiText("Merging...")
                 : inlineConfirm.isArmed("merge")
-                  ? "Confirm merge?"
+                  ? uiText("Confirm merge?")
                   : selectedMergeMethodLabel)}
           </TooltipPopup>
         </Tooltip>
@@ -403,6 +422,7 @@ export function PullRequestApproveWorkflowsButton({
   pendingAction: PullRequestAction | null;
   perform: PerformPullRequestAction;
 }) {
+  const uiText = useUiText();
   const inlineConfirm = useInlineActionConfirm(pullRequestKey);
   const actionPending = pendingAction !== null;
   return (
@@ -417,26 +437,26 @@ export function PullRequestApproveWorkflowsButton({
               {...inlineConfirm.props("approve-workflows", () => void perform("approve-workflows"))}
               aria-label={
                 pendingAction === "approve-workflows"
-                  ? "Approving..."
+                  ? uiText("Approving...")
                   : inlineConfirm.isArmed("approve-workflows")
-                    ? "Confirm approve?"
-                    : "Approve workflows to run"
+                    ? uiText("Confirm approve?")
+                    : uiText("Approve workflows to run")
               }
             >
               <PlayIcon aria-hidden className="size-3.5" />
               <span className="inline-grid">
                 <span aria-hidden className="invisible col-start-1 row-start-1">
-                  Approve workflows to run
+                  {uiText("Approve workflows to run")}
                 </span>
                 <span aria-hidden className="invisible col-start-1 row-start-1">
-                  Confirm approve?
+                  {uiText("Confirm approve?")}
                 </span>
                 <span className="col-start-1 row-start-1">
                   {pendingAction === "approve-workflows"
-                    ? "Approving..."
+                    ? uiText("Approving...")
                     : inlineConfirm.isArmed("approve-workflows")
-                      ? "Confirm approve?"
-                      : "Approve workflows to run"}
+                      ? uiText("Confirm approve?")
+                      : uiText("Approve workflows to run")}
                 </span>
               </span>
             </Button>
@@ -445,10 +465,10 @@ export function PullRequestApproveWorkflowsButton({
       />
       <TooltipPopup side="top">
         {pendingAction === "approve-workflows"
-          ? "Approving..."
+          ? uiText("Approving...")
           : inlineConfirm.isArmed("approve-workflows")
-            ? "Confirm approve?"
-            : "Approve workflows to run"}
+            ? uiText("Confirm approve?")
+            : uiText("Approve workflows to run")}
       </TooltipPopup>
     </Tooltip>
   );

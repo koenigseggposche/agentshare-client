@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import {
   formatSubagentDisplayTitle,
   resolveSubagentMetadata,
@@ -138,7 +139,7 @@ export function workflowRail(group: SubagentWorkflowGroup): ReadonlyArray<Workfl
   if (group.unphasedMembers.length > 0) {
     items.push({
       key: "unphased",
-      title: items.length === 0 ? "Agents" : "Other",
+      title: items.length === 0 ? readUiText("Agents") : readUiText("Other"),
       members: group.unphasedMembers,
     });
   }

@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import type { DesktopUpdateChannel } from "@t3tools/contracts";
@@ -39,6 +40,7 @@ export function UpdateTrackSwitchDialog({
   readonly channel: DesktopUpdateChannel;
   readonly onClose: () => void;
 }) {
+  const uiText = useUiText();
   // npm dist-tags match the desktop channel names.
   const release = useAtomValue(npmReleaseAtom(channel));
   if (AsyncResult.isSuccess(release) && release.value !== null) {
@@ -49,17 +51,25 @@ export function UpdateTrackSwitchDialog({
     <AlertDialog open onOpenChange={(open) => !open && onClose()}>
       <AlertDialogPopup>
         <AlertDialogHeader>
-          <AlertDialogTitle>Switch to {label}</AlertDialogTitle>
+          <AlertDialogTitle>
+            {uiText("Switch to ")}
+            {label}
+          </AlertDialogTitle>
           <AlertDialogDescription>
             {AsyncResult.isFailure(release)
               ? npmReleaseFailureMessage(release.cause)
               : AsyncResult.isSuccess(release)
-                ? `Could not find the latest ${label} release in this environment's npm registry.`
-                : "Checking releases…"}
+                ? uiText(
+                    "Could not find the latest {0} release in this environment's npm registry.",
+                    [label],
+                  )
+                : uiText("Checking releases…")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+          <AlertDialogClose render={<Button variant="outline" />}>
+            {uiText("Cancel")}
+          </AlertDialogClose>
         </AlertDialogFooter>
       </AlertDialogPopup>
     </AlertDialog>
@@ -73,6 +83,7 @@ function SwitchPlan({
   readonly release: ChannelSwitchRelease;
   readonly onClose: () => void;
 }) {
+  const uiText = useUiText();
   const updateState = useDesktopUpdateState();
   const { environments } = useEnvironments();
   const crossesLocal = desktopUpdateChannelOf(APP_VERSION) !== release.channel;
@@ -100,7 +111,11 @@ function SwitchPlan({
     setChecking(true);
     const fail = (description: string) =>
       toastManager.add(
-        stackedThreadToast({ type: "error", title: `Could not switch to ${label}`, description }),
+        stackedThreadToast({
+          type: "error",
+          title: uiText("Could not switch to {0}", [label]),
+          description,
+        }),
       );
     const prepared = await prepareLocalTrackSwitch(bridge, {
       channel: release.channel,
@@ -121,7 +136,7 @@ function SwitchPlan({
               ...(local.status === "available"
                 ? {
                     downloadLocal: (reportError) =>
-                      downloadLocalUpdate(bridge, { notifyDownloaded: false, reportError }),
+                      downloadLocalUpdate(bridge, { notifyDownloaded: false, reportError }, uiText),
                   }
                 : {}),
               // Install only a build the database check covers, pinned so nothing replaces it.
@@ -137,7 +152,7 @@ function SwitchPlan({
                   );
                   return false;
                 }
-                return installLocalUpdate(bridge, reportError, downloadedVersion);
+                return installLocalUpdate(bridge, reportError, downloadedVersion, uiText);
               },
             },
       ),
@@ -152,7 +167,7 @@ function SwitchPlan({
     <UpdateEverythingDialog
       open
       onOpenChange={(open) => !open && !checking && onClose()}
-      title={`Switch to ${label}?`}
+      title={uiText("Switch to {0}?", [label])}
       version={release.version}
       providerCount={0}
       rows={everything.rows}
@@ -168,7 +183,7 @@ function SwitchPlan({
           : []),
       ]}
       restarts={everything.restarts}
-      confirmLabel={checking ? "Checking…" : `Switch to ${label}`}
+      confirmLabel={checking ? uiText("Checking…") : uiText("Switch to {0}", [label])}
       busy={checking}
       disabledReason={
         !switchesLocal || localBlocked === null ? null : `This app cannot switch: ${localBlocked}.`

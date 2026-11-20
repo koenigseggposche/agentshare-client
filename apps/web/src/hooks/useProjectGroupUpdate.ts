@@ -1,3 +1,5 @@
+import { useUiText } from "../i18n/uiText";
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
 import { AuthOrchestrationOperateScope, type ProjectIconOverride } from "@t3tools/contracts";
 import {
   isAtomCommandInterrupted,
@@ -34,6 +36,7 @@ type ProjectGroupMember = Pick<
  * reports the first failure as a toast. Every machine must be connected first.
  */
 export function useProjectGroupUpdate() {
+  const uiText = useUiText();
   const serverConfigs = useServerConfigs();
   const updateProject = useOrchestrationCommand(projectEnvironment.update, {
     reportFailure: false,
@@ -44,7 +47,7 @@ export function useProjectGroupUpdate() {
     input: ProjectGroupUpdate | ((member: TMember) => ProjectGroupUpdate),
     failureTitle: string,
   ): Promise<AtomCommandResult<void, unknown>> => {
-    const denied = checkProjectAccess(members, failureTitle);
+    const denied = checkProjectAccess(members, failureTitle, uiText);
     if (denied) return denied;
     const unavailable = members.find((member) => {
       const environment = readEnvironment(member.environmentId);
@@ -54,11 +57,12 @@ export function useProjectGroupUpdate() {
       return failWith(
         failureTitle,
         `Connect ${unavailable.environmentLabel ?? "the selected environment"} and try again.`,
+        uiText,
       );
     }
     for (const member of members) {
       // Access can be revoked between writes.
-      const revoked = checkProjectAccess([member], failureTitle);
+      const revoked = checkProjectAccess([member], failureTitle, uiText);
       if (revoked) return revoked;
       const result = mapAtomCommandResult(
         await updateProject({
@@ -76,6 +80,7 @@ export function useProjectGroupUpdate() {
             ? `${failureTitle} on ${member.environmentLabel ?? "the current environment"}`
             : failureTitle,
           result,
+          uiText,
         );
         return result;
       }
@@ -129,6 +134,7 @@ export function useProjectPin() {
 export function checkProjectAccess(
   members: ReadonlyArray<ProjectGroupMember>,
   failureTitle: string,
+  uiText: UiTranslator = uiTranslators.en,
 ): AtomCommandResult<void, unknown> | null {
   const denied = members.find(
     (member) => !readEnvironmentScope(member.environmentId, AuthOrchestrationOperateScope),
@@ -137,24 +143,33 @@ export function checkProjectAccess(
     ? failWith(
         failureTitle,
         `This connection cannot change projects in ${denied.environmentLabel ?? "this environment"}.`,
+        uiText,
       )
     : null;
 }
 
-export function reportProjectFailure(title: string, result: AtomCommandResult<unknown, unknown>) {
+export function reportProjectFailure(
+  title: string,
+  result: AtomCommandResult<unknown, unknown>,
+  uiText: UiTranslator = uiTranslators.en,
+) {
   if (result._tag !== "Failure" || isAtomCommandInterrupted(result)) return;
   const error = squashAtomCommandFailure(result);
   toastManager.add(
     stackedThreadToast({
       type: "error",
       title,
-      description: error instanceof Error ? error.message : "An error occurred.",
+      description: error instanceof Error ? error.message : uiText("An error occurred."),
     }),
   );
 }
 
-function failWith(title: string, message: string): AtomCommandResult<void, unknown> {
+function failWith(
+  title: string,
+  message: string,
+  uiText: UiTranslator = uiTranslators.en,
+): AtomCommandResult<void, unknown> {
   const result = AsyncResult.failure<void, Error>(Cause.fail(new Error(message)));
-  reportProjectFailure(title, result);
+  reportProjectFailure(title, result, uiText);
   return result;
 }

@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useId, useRef, useState, type ComponentProps } from "react";
 
 import { cn } from "~/lib/utils";
@@ -9,6 +10,7 @@ export function PullRequestCommentBody({
   className,
   ...props
 }: ComponentProps<typeof PullRequestMarkdown>) {
+  const uiText = useUiText();
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
   const clip = useRef<HTMLDivElement>(null);
@@ -51,7 +53,7 @@ export function PullRequestCommentBody({
             setExpanded(!expanded);
           }}
         >
-          {expanded ? "Show less" : "Show full comment"}
+          {expanded ? uiText("Show less") : uiText("Show full comment")}
         </Button>
       ) : null}
     </div>

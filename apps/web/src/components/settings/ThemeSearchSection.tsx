@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import { RefreshIcon } from "~/components/ui/refresh-icon";
 import { ExternalLinkIcon, PackagePlusIcon, PaletteIcon, SearchIcon } from "lucide-react";
@@ -234,6 +236,7 @@ export function ThemeSearchSection({
   signal: AbortSignal;
   onInstalled: (themes: ReadonlyArray<ThemeDefinition>, context: { updated: boolean }) => void;
 }) {
+  const uiText = useUiText();
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState<OpenVsxThemeSort>("downloadCount");
   const [results, setResults] = useState<ReadonlyArray<OpenVsxThemeExtension> | null>(null);
@@ -251,7 +254,9 @@ export function ThemeSearchSection({
   };
 
   const handleSortChange = (value: OpenVsxThemeSort | null) => {
-    const nextSort = SORT_OPTIONS.find((option) => option.value === value)?.value;
+    const nextSort = translateUiLabels(SORT_OPTIONS, uiText).find(
+      (option) => option.value === value,
+    )?.value;
     if (!nextSort) return;
     setSortBy(nextSort);
     themeSearch.setSortBy(nextSort);
@@ -294,10 +299,10 @@ export function ThemeSearchSection({
     <section className="space-y-3" aria-labelledby="theme-search-heading">
       <div>
         <h3 className="text-sm font-medium" id="theme-search-heading">
-          Search community themes
+          {uiText("Search community themes")}
         </h3>
         <p className="mt-0.5 text-muted-foreground text-xs">
-          Find open-source themes from Open VSX.
+          {uiText("Find open-source themes from Open VSX.")}
         </p>
       </div>
       <InputGroup>
@@ -305,7 +310,7 @@ export function ThemeSearchSection({
           {isSearching ? <Spinner aria-hidden /> : <SearchIcon aria-hidden />}
         </InputGroupAddon>
         <InputGroupInput
-          aria-label="Search Open VSX themes"
+          aria-label={uiText("Search Open VSX themes")}
           autoFocus
           onChange={(event) => changeQuery(event.currentTarget.value)}
           onKeyDown={(event) => {
@@ -313,7 +318,7 @@ export function ThemeSearchSection({
             if (event.key === "Enter" && !isSearching && installingId === null)
               themeSearch.searchNow();
           }}
-          placeholder="Search themes..."
+          placeholder={uiText("Search themes...")}
           size="lg"
           type="search"
           value={query}
@@ -323,7 +328,7 @@ export function ThemeSearchSection({
       {!isSearching || results !== null ? (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <p className="text-muted-foreground text-xs">Popular</p>
+            <p className="text-muted-foreground text-xs">{uiText("Popular")}</p>
             {SUGGESTED_SEARCHES.map((suggestion) => (
               <Button
                 key={suggestion}
@@ -344,19 +349,23 @@ export function ThemeSearchSection({
           </div>
           {results && results.length > 0 ? (
             <div className="flex shrink-0 items-center justify-end gap-2">
-              <p className="text-muted-foreground text-xs">Sort</p>
+              <p className="text-muted-foreground text-xs">{uiText("Sort")}</p>
               <Select
                 disabled={installingId !== null}
                 value={sortBy}
                 onValueChange={handleSortChange}
               >
-                <SelectTrigger size="sm" className="w-40" aria-label="Sort themes">
+                <SelectTrigger size="sm" className="w-40" aria-label={uiText("Sort themes")}>
                   <SelectValue>
-                    {SORT_OPTIONS.find((option) => option.value === sortBy)?.label}
+                    {
+                      translateUiLabels(SORT_OPTIONS, uiText).find(
+                        (option) => option.value === sortBy,
+                      )?.label
+                    }
                   </SelectValue>
                 </SelectTrigger>
                 <SelectPopup align="end" alignItemWithTrigger={false}>
-                  {SORT_OPTIONS.map((option) => (
+                  {translateUiLabels(SORT_OPTIONS, uiText).map((option) => (
                     <SelectItem key={option.value} hideIndicator value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -370,9 +379,12 @@ export function ThemeSearchSection({
 
       <div className="sr-only" role="status">
         {isSearching
-          ? "Searching themes..."
+          ? uiText("Searching themes...")
           : results
-            ? `${results.length} supported ${results.length === 1 ? "theme" : "themes"} found.`
+            ? uiText("{0} supported {1} found.", [
+                results.length,
+                results.length === 1 ? "theme" : "themes",
+              ])
             : ""}
       </div>
 
@@ -384,15 +396,16 @@ export function ThemeSearchSection({
 
       {isSearching && results === null ? (
         <div className="flex min-h-20 items-center justify-center gap-2 text-muted-foreground text-sm">
-          <Spinner /> Searching themes...
+          <Spinner />
+          {uiText(" Searching themes...")}
         </div>
       ) : null}
 
       {results ? (
         results.length === 0 ? (
           <div className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-dashed text-center">
-            <p className="text-sm font-medium">No supported open-source themes found</p>
-            <p className="mt-1 text-muted-foreground text-xs">Try a broader search.</p>
+            <p className="text-sm font-medium">{uiText("No supported open-source themes found")}</p>
+            <p className="mt-1 text-muted-foreground text-xs">{uiText("Try a broader search.")}</p>
           </div>
         ) : (
           <div className="grid gap-2 sm:grid-cols-2">
@@ -414,18 +427,18 @@ export function ThemeSearchSection({
                       <h4 className="truncate text-sm font-medium">{extension.name}</h4>
                       <p className="truncate text-muted-foreground text-xs">
                         {extension.publisher} · {DOWNLOAD_FORMAT.format(extension.downloadCount)}{" "}
-                        downloads
+                        {uiText("downloads")}
                       </p>
                     </div>
                   </div>
                   <p className="line-clamp-2 min-h-8 text-muted-foreground text-xs leading-4">
-                    {extension.description || "A community color theme for your editor."}
+                    {extension.description || uiText("A community color theme for your editor.")}
                   </p>
                   <div className="mt-auto flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2">
                       {extension.sourceUrl ? (
                         <Button
-                          aria-label={`View source for ${extension.name}`}
+                          aria-label={uiText("View source for {0}", [extension.name])}
                           render={<a href={extension.sourceUrl} rel="noreferrer" target="_blank" />}
                           size="icon-micro"
                           variant="ghost-muted"
@@ -466,14 +479,20 @@ export function ThemeSearchSection({
       >
         <AlertDialogPopup>
           <AlertDialogHeader>
-            <AlertDialogTitle>Update “{pendingUpdate?.name}”?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {uiText("Update “")}
+              {pendingUpdate?.name}”?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This replaces its installed variants, including any local edits. Variants no longer in
-              the extension will be removed.
+              {uiText(
+                "This replaces its installed variants, including any local edits. Variants no longer in the extension will be removed.",
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+            <AlertDialogClose render={<Button variant="outline" />}>
+              {uiText("Cancel")}
+            </AlertDialogClose>
             <Button
               onClick={() => {
                 const extension = pendingUpdate;
@@ -481,7 +500,7 @@ export function ThemeSearchSection({
                 if (extension) void handleInstall(extension, true);
               }}
             >
-              Update theme
+              {uiText("Update theme")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>

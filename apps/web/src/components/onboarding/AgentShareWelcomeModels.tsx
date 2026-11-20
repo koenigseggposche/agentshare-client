@@ -37,9 +37,7 @@ export function AgentShareWelcomeModels({ environmentId }: { environmentId: Envi
       <Button
         variant="ghost-muted"
         size="sm"
-        render={
-          <Link to="/settings/agentshare" search={{ machine: environmentId, section: "models" }} />
-        }
+        render={<Link to="/settings/providers" search={{ machine: environmentId }} />}
       >
         {t("账号与模型设置", "Account and model settings")}
       </Button>

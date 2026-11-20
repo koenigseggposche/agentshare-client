@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useEffect, useRef, type KeyboardEvent } from "react";
 import { ChevronDownIcon, ChevronUpIcon, XIcon } from "lucide-react";
 import { Button } from "../ui/button";
@@ -24,6 +25,7 @@ interface ThreadFindBarProps {
 export const THREAD_FIND_BAR_RESERVED_HEIGHT = 36 + THREAD_DETAILS_CARD_GAP;
 
 export function ThreadFindBar(props: ThreadFindBarProps) {
+  const uiText = useUiText();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- focuses and selects the input DOM node when the bar opens or a find shortcut fires
@@ -69,7 +71,7 @@ export function ThreadFindBar(props: ThreadFindBarProps) {
         size="lg"
         onContextMenu={(event) => event.stopPropagation()}
         role="search"
-        aria-label="Find in thread"
+        aria-label={uiText("Find in thread")}
         aria-busy={props.status === "loading" || props.counting === true}
         className="w-full"
       >
@@ -78,8 +80,8 @@ export function ThreadFindBar(props: ThreadFindBarProps) {
           type="search"
           size="sm"
           value={props.query}
-          aria-label="Find in thread"
-          placeholder="Find in thread"
+          aria-label={uiText("Find in thread")}
+          placeholder={uiText("Find in thread")}
           maxLength={200}
           spellCheck={false}
           autoComplete="off"
@@ -98,13 +100,13 @@ export function ThreadFindBar(props: ThreadFindBarProps) {
           </span>
           {props.status === "error" ? (
             <Button size="xs" variant="ghost" onClick={props.onRetry}>
-              Retry
+              {uiText("Retry")}
             </Button>
           ) : null}
           <Button
             size="icon-xs"
             variant="ghost"
-            aria-label="Previous match"
+            aria-label={uiText("Previous match")}
             disabled={navigationDisabled}
             onClick={props.onPrevious}
           >
@@ -113,13 +115,18 @@ export function ThreadFindBar(props: ThreadFindBarProps) {
           <Button
             size="icon-xs"
             variant="ghost"
-            aria-label="Next match"
+            aria-label={uiText("Next match")}
             disabled={navigationDisabled}
             onClick={props.onNext}
           >
             <ChevronDownIcon />
           </Button>
-          <Button size="icon-xs" variant="ghost" aria-label="Close find" onClick={props.onClose}>
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label={uiText("Close find")}
+            onClick={props.onClose}
+          >
             <XIcon />
           </Button>
         </InputGroupAddon>

@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { translateUiLabels, uiTranslators } from "@t3tools/shared/uiMessages";
 import type { AnyRouter } from "@tanstack/react-router";
 
 import {
@@ -36,6 +38,7 @@ const toggleOverlay =
 export function installCommandPaletteCommands(
   router: AnyRouter,
   options: Pick<CommandScopeOptions, "keybindings"> = {},
+  uiText: UiTranslator = uiTranslators.en,
 ): () => void {
   const readRouteThreadRef = () => {
     const target = resolveThreadRouteTarget(router.state.matches.at(-1)?.params ?? {});
@@ -68,12 +71,15 @@ export function installCommandPaletteCommands(
         const nextMode =
           appearanceMode === "system" ? "light" : appearanceMode === "light" ? "dark" : "system";
         if (!setAppearanceMode(nextMode)) {
-          notifyThemeSaveFailure();
+          notifyThemeSaveFailure(uiText);
           return;
         }
         toastManager.add({
           id: "appearance-cycle",
-          title: `Appearance: ${APPEARANCE_OPTIONS.find((option) => option.mode === nextMode)?.label}`,
+          title: uiText("Appearance: {0}", [
+            translateUiLabels(APPEARANCE_OPTIONS, uiText).find((option) => option.mode === nextMode)
+              ?.label,
+          ]),
           timeout: 1500,
         });
       },

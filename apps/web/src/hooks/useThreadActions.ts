@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../i18n/uiText";
 import {
   parseScopedThreadKey,
   scopeProjectRef,
@@ -185,15 +188,18 @@ async function requestThreadUnpinConfirmation(input: {
   );
 }
 
-export async function navigateAfterThreadDeletion(navigate: () => Promise<void>) {
+export async function navigateAfterThreadDeletion(
+  navigate: () => Promise<void>,
+  uiText: UiTranslator = uiTranslators.en,
+) {
   const result = await settlePromise(navigate);
   if (result._tag === "Failure") {
     const error = squashAtomCommandFailure(result);
     toastManager.add(
       stackedThreadToast({
         type: "error",
-        title: "Thread deleted, but navigation failed",
-        description: error instanceof Error ? error.message : "An error occurred.",
+        title: uiText("Thread deleted, but navigation failed"),
+        description: error instanceof Error ? error.message : uiText("An error occurred."),
       }),
     );
   }
@@ -260,13 +266,13 @@ export function canTurnThreadIntoProject(threadRef: ScopedThreadRef): boolean {
   return project !== null && isScratchProject(project, config.scratchWorkspaceRoot);
 }
 
-function threadOperationFailure(target: ScopedThreadRef) {
+function threadOperationFailure(target: ScopedThreadRef, uiText: UiTranslator = uiTranslators.en) {
   return readEnvironmentScope(target.environmentId, AuthOrchestrationOperateScope)
     ? null
     : AsyncResult.failure(
         Cause.fail(
           new EnvironmentAuthorizationError({
-            message: "This connection cannot change threads.",
+            message: uiText("This connection cannot change threads."),
             requiredScope: AuthOrchestrationOperateScope,
           }),
         ),
@@ -274,6 +280,7 @@ function threadOperationFailure(target: ScopedThreadRef) {
 }
 
 export function useThreadActions() {
+  const uiText = useUiText();
   const archiveThreadMutation = useOrchestrationCommand(threadEnvironment.archive, {
     reportFailure: false,
   });
@@ -436,7 +443,7 @@ export function useThreadActions() {
     target: ScopedThreadRef,
     opts: { deletedThreadKeys?: ReadonlySet<string> } = {},
   ) => {
-    const permissionFailure = threadOperationFailure(target);
+    const permissionFailure = threadOperationFailure(target, uiText);
     if (permissionFailure) return permissionFailure;
     const resolved = resolveThreadTarget(target);
     if (!resolved) {
@@ -508,7 +515,7 @@ export function useThreadActions() {
       localApi
     ) {
       const sessionResult = await loadSessionState(threadRef.environmentId);
-      const permissionFailure = threadOperationFailure(threadRef);
+      const permissionFailure = threadOperationFailure(threadRef, uiText);
       if (permissionFailure) return permissionFailure;
       canDeleteWorktree =
         sessionResult._tag === "Success" &&
@@ -578,16 +585,18 @@ export function useThreadActions() {
       const fallbackThread = fallbackThreadId
         ? readThreadShell(scopeThreadRef(threadRef.environmentId, fallbackThreadId))
         : null;
-      await navigateAfterThreadDeletion(() =>
-        fallbackThread
-          ? router.navigate({
-              to: "/$environmentId/$threadId",
-              params: buildThreadRouteParams(
-                scopeThreadRef(fallbackThread.environmentId, fallbackThread.id),
-              ),
-              replace: true,
-            })
-          : router.navigate({ to: "/", replace: true }),
+      await navigateAfterThreadDeletion(
+        () =>
+          fallbackThread
+            ? router.navigate({
+                to: "/$environmentId/$threadId",
+                params: buildThreadRouteParams(
+                  scopeThreadRef(fallbackThread.environmentId, fallbackThread.id),
+                ),
+                replace: true,
+              })
+            : router.navigate({ to: "/", replace: true }),
+        uiText,
       );
     }
 
@@ -607,7 +616,7 @@ export function useThreadActions() {
       : AsyncResult.failure(
           Cause.fail(
             new EnvironmentAuthorizationError({
-              message: "This connection can no longer remove worktrees.",
+              message: uiText("This connection can no longer remove worktrees."),
               requiredScope: AuthSourceControlWriteScope,
             }),
           ),
@@ -639,10 +648,13 @@ export function useThreadActions() {
         stackedThreadToast({
           type: "error",
           title: removalFailed
-            ? "Failed to delete worktree"
-            : "Worktree deleted, but Git status refresh failed",
+            ? uiText("Failed to delete worktree")
+            : uiText("Worktree deleted, but Git status refresh failed"),
           description: removalFailed
-            ? `Could not remove ${displayWorktreePath ?? orphanedWorktreePath}. ${message}`
+            ? uiText("Could not remove {0}. {1}", [
+                displayWorktreePath ?? orphanedWorktreePath,
+                message,
+              ])
             : message,
         }),
       );
@@ -785,13 +797,13 @@ export function useThreadActions() {
   };
 
   const confirmAndUnpinThread = async (target: ScopedThreadRef) => {
-    const permissionFailure = threadOperationFailure(target);
+    const permissionFailure = threadOperationFailure(target, uiText);
     if (permissionFailure) return permissionFailure;
     const localApi = readLocalApi();
     const resolved = resolveThreadTarget(target);
     const confirmationResult = await requestThreadUnpinConfirmation({
       enabled: confirmThreadUnpin,
-      title: resolved?.thread.title ?? "this thread",
+      title: resolved?.thread.title ?? uiText("this thread"),
       confirm: localApi ? (message) => localApi.dialogs.confirm(message) : null,
     });
     if (confirmationResult._tag === "Failure") {
@@ -922,7 +934,7 @@ export function useThreadActions() {
     );
 
   const confirmAndDeleteThread = async (target: ScopedThreadRef) => {
-    const permissionFailure = threadOperationFailure(target);
+    const permissionFailure = threadOperationFailure(target, uiText);
     if (permissionFailure) return permissionFailure;
     const localApi = readLocalApi();
     const resolved = resolveThreadTarget(target);

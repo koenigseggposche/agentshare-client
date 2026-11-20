@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type {
   KeybindingCommand,
   ProjectId,
@@ -43,6 +44,7 @@ export function useProjectScriptEditing(input: {
   readonly scripts: ReadonlyArray<ProjectScript>;
   readonly settings: UnifiedSettings;
 }) {
+  const uiText = useUiText();
   const { environmentId, project, scripts, settings } = input;
   const allProjects = useProjects();
   const updateProjectScriptSettings = useAtomCommand(serverEnvironment.updateSettings, {
@@ -79,7 +81,7 @@ export function useProjectScriptEditing(input: {
         Cause.fail(
           new EnvironmentAuthorizationError({
             requiredScope: AuthSettingsWriteScope,
-            message: "This connection cannot change keyboard shortcuts.",
+            message: uiText("This connection cannot change keyboard shortcuts."),
           }),
         ),
       );
@@ -124,8 +126,12 @@ export function useProjectScriptEditing(input: {
           new EnvironmentAuthorizationError({
             requiredScope: AuthSettingsWriteScope,
             message: isDeletingScript
-              ? "The script was deleted, but its keyboard shortcut could not be removed because permission changed."
-              : "The script was saved, but this connection can no longer change keyboard shortcuts.",
+              ? uiText(
+                  "The script was deleted, but its keyboard shortcut could not be removed because permission changed.",
+                )
+              : uiText(
+                  "The script was saved, but this connection can no longer change keyboard shortcuts.",
+                ),
           }),
         ),
       );
@@ -251,15 +257,16 @@ export function useProjectScriptEditing(input: {
     if (result._tag === "Success") {
       toastManager.add({
         type: "success",
-        title: `Deleted action "${deletedName ?? "Unknown"}"`,
+        title: uiText('Deleted action "{0}"', [deletedName ?? "Unknown"]),
       });
     } else if (!isAtomCommandInterrupted(result)) {
       const error = squashAtomCommandFailure(result);
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Could not delete action",
-          description: error instanceof Error ? error.message : "An unexpected error occurred.",
+          title: uiText("Could not delete action"),
+          description:
+            error instanceof Error ? error.message : uiText("An unexpected error occurred."),
         }),
       );
     }

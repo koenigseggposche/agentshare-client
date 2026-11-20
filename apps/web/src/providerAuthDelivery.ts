@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { runAtomCommand } from "@t3tools/client-runtime/state/runtime";
 import { readCodexAuthDelivery } from "@t3tools/shared/codexAuthHandoff";
 
@@ -13,7 +15,7 @@ type ProviderAuthDelivery = NonNullable<ReturnType<typeof readCodexAuthDelivery>
  * then hand it to its environment once that environment connects. Hosted web receives only
  * the one-time code; the selected environment verifies and stores tokens.
  */
-export function startProviderAuthDelivery(): void {
+export function startProviderAuthDelivery(uiText: UiTranslator = uiTranslators.en): void {
   if (!window.location.hash.startsWith("#codex-auth=")) return;
   const delivery = readCodexAuthDelivery(window.location.href);
   window.history.replaceState(
@@ -25,17 +27,20 @@ export function startProviderAuthDelivery(): void {
 
   const presentationAtom = environmentPresentations.presentationAtom(delivery.environmentId);
   if (appAtomRegistry.get(presentationAtom)?.connection.phase === "connected") {
-    void completeProviderAuth(delivery);
+    void completeProviderAuth(delivery, uiText);
     return;
   }
   const unsubscribe = appAtomRegistry.subscribe(presentationAtom, (presentation) => {
     if (presentation?.connection.phase !== "connected") return;
     unsubscribe();
-    void completeProviderAuth(delivery);
+    void completeProviderAuth(delivery, uiText);
   });
 }
 
-async function completeProviderAuth(delivery: ProviderAuthDelivery): Promise<void> {
+async function completeProviderAuth(
+  delivery: ProviderAuthDelivery,
+  uiText: UiTranslator = uiTranslators.en,
+): Promise<void> {
   try {
     const result = await runAtomCommand(
       appAtomRegistry,
@@ -53,15 +58,15 @@ async function completeProviderAuth(delivery: ProviderAuthDelivery): Promise<voi
     if (result._tag === "Failure") {
       toastManager.add({
         type: "error",
-        title: "ChatGPT sign-in couldn't finish",
-        description: "Return to the provider and try again.",
+        title: uiText("ChatGPT sign-in couldn't finish"),
+        description: uiText("Return to the provider and try again."),
       });
     }
   } catch {
     toastManager.add({
       type: "error",
-      title: "ChatGPT sign-in couldn't finish",
-      description: "Reconnect to the environment and try again.",
+      title: uiText("ChatGPT sign-in couldn't finish"),
+      description: uiText("Reconnect to the environment and try again."),
     });
   }
 }

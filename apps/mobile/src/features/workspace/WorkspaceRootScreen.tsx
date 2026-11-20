@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { WorkspaceNoTabs } from "./WorkspaceNoTabs";
 import { useWorkbenchLabels, useEnabledNavigationTabs } from "./navigation-tabs";
 import { WorkspaceExtraTab } from "./WorkspaceExtraTab";
@@ -50,6 +51,7 @@ function WorkspaceRootTitle(props: {
   readonly columnWidth: number;
   readonly onOpenEnvironments: () => void;
 }) {
+  const uiText = useUiText();
   const { state, settingsOpen } = useWorkspaceTabs()!;
   const maxWidth = Math.max(0, props.columnWidth - (use(HeaderItemsWidthContext) ?? 160));
   const labels = useWorkbenchLabels();
@@ -62,7 +64,7 @@ function WorkspaceRootTitle(props: {
   return (
     <View style={{ width: maxWidth, minHeight: 32, justifyContent: "center" }}>
       <WorkspaceConnectionTitle
-        brand={<CompactBrandTitle accessibilityLabel={`AgentShare, ${tabTitle}`} fit />}
+        brand={<CompactBrandTitle accessibilityLabel={uiText("AgentShare, {0}", [tabTitle])} fit />}
         maxWidth={maxWidth}
         onPress={props.onOpenEnvironments}
       />
@@ -71,6 +73,7 @@ function WorkspaceRootTitle(props: {
 }
 
 function WorkspaceRootContent() {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const selectTab = useSelectWorkspaceTab();
   const { width: windowWidth } = useWindowDimensions();
@@ -165,7 +168,7 @@ function WorkspaceRootContent() {
         ) : (
           <AppBar
             embedded
-            title="AgentShare"
+            title={uiText("AgentShare")}
             titleContent={renderHeaderTitle()}
             actions={[
               ...(state.selectedTab === "threads" || state.selectedTab === "pullRequests"

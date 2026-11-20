@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { capitalizeTerm } from "@t3tools/client-runtime/source-control-clients";
 import type { EnvironmentId, PullRequestRef, PullRequestReviewVerdict } from "@t3tools/contracts";
@@ -66,6 +68,7 @@ export function PullRequestReviewForm({
   onPendingChange: (pending: boolean) => void;
   onSubmitted: () => void;
 }) {
+  const uiText = useUiText();
   const [requestedVerdict, setRequestedVerdict] = useState<PullRequestReviewVerdict>("comment");
   const comments = usePendingReviewComments(reference);
   const reviewKey = pullRequestReviewKey(reference);
@@ -77,7 +80,9 @@ export function PullRequestReviewForm({
     reportFailure: false,
   });
 
-  const offered = VERDICTS.filter((verdict) => verdicts.includes(verdict.value));
+  const offered = translateUiLabels(VERDICTS, uiText).filter((verdict) =>
+    verdicts.includes(verdict.value),
+  );
   const selectedVerdict =
     offered.find((verdict) => verdict.value === requestedVerdict) ?? offered[0];
 
@@ -99,7 +104,7 @@ export function PullRequestReviewForm({
     if (result._tag === "Failure") {
       toastManager.add({
         type: "error",
-        title: "The review could not be submitted",
+        title: uiText("The review could not be submitted"),
         description: readableFailure(
           squashAtomCommandFailure(result),
           "The host refused the review. Your draft is still here to try again.",
@@ -136,7 +141,7 @@ export function PullRequestReviewForm({
         rows={3}
         value={body}
         placeholder={placeholder}
-        aria-label="Review summary"
+        aria-label={uiText("Review summary")}
         onChange={(event) => setSummary(reviewKey, event.target.value)}
       />
       <div className="mt-2 flex justify-end gap-2">
@@ -148,7 +153,11 @@ export function PullRequestReviewForm({
               if (value !== null) setRequestedVerdict(value);
             }}
           >
-            <SelectTrigger size="xs" className="mr-auto w-auto min-w-0" aria-label="Review verdict">
+            <SelectTrigger
+              size="xs"
+              className="mr-auto w-auto min-w-0"
+              aria-label={uiText("Review verdict")}
+            >
               <span className="flex items-center gap-1.5">
                 {selectedVerdict?.icon}
                 {selectedVerdict?.label}
@@ -175,7 +184,7 @@ export function PullRequestReviewForm({
             if (selectedVerdict !== undefined) void submit(selectedVerdict);
           }}
         >
-          {pending ? "Submitting..." : "Submit review"}
+          {pending ? uiText("Submitting...") : uiText("Submit review")}
         </Button>
       </div>
     </>

@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { SheetHeader } from "../../components/ui/SheetHeader";
 import { IconButton } from "../../components/ui/IconButton";
@@ -26,6 +27,7 @@ export function ConnectOnboardingRouteScreen() {
 }
 
 function ConfiguredConnectOnboardingRouteScreen() {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { isSignedIn, userId } = useAuth({ treatPendingAsSignedOut: false });
@@ -52,7 +54,7 @@ function ConfiguredConnectOnboardingRouteScreen() {
     void (async () => {
       if (userId) {
         const result = await settlePromise(() => optOutOfConnectOnboarding(userId));
-        reportAtomCommandResult(result, { label: "connect onboarding opt-out" });
+        reportAtomCommandResult(result, { label: uiText("connect onboarding opt-out") });
       }
       navigation.goBack();
     })();
@@ -62,7 +64,7 @@ function ConfiguredConnectOnboardingRouteScreen() {
     <View collapsable={false} className="flex-1 bg-sheet">
       <SheetHeader
         presentation={Platform.OS === "android" ? "inline" : "native"}
-        title="Set up T3 Connect"
+        title={uiText("Set up T3 Connect")}
         onClose={handleClose}
         trailing={
           Platform.OS === "android" ? (
@@ -70,14 +72,14 @@ function ConfiguredConnectOnboardingRouteScreen() {
               <View
                 className="size-12 items-center justify-center"
                 accessible
-                accessibilityLabel="Refreshing environments"
+                accessibilityLabel={uiText("Refreshing environments")}
                 accessibilityState={{ busy: true }}
               >
                 <AppActivityIndicator />
               </View>
             ) : (
               <IconButton
-                accessibilityLabel="Refresh environments"
+                accessibilityLabel={uiText("Refresh environments")}
                 icon="arrow.clockwise"
                 onPress={handleRefresh}
               />
@@ -113,13 +115,17 @@ function ConfiguredConnectOnboardingRouteScreen() {
         ) : (
           <View collapsable={false} className="rounded-[24px] bg-grouped-card p-5">
             <Text className="text-sm leading-normal text-foreground-muted">
-              Sign in to your T3 account to set up T3 Connect.
+              {uiText("Sign in to your T3 account to set up T3 Connect.")}
             </Text>
           </View>
         )}
 
         {userId ? (
-          <Button label={"Don't show this again"} tone="text" onPress={handleDontShowAgain} />
+          <Button
+            label={uiText("Don't show this again")}
+            tone="text"
+            onPress={handleDontShowAgain}
+          />
         ) : null}
       </ScrollView>
     </View>

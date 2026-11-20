@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { offersLinkedEnvironments } from "@t3tools/client-runtime/link-request";
 import { peerLinkHealth } from "@t3tools/client-runtime/state/peerLinks";
 import { useFocusEffect } from "@react-navigation/native";
@@ -17,6 +18,7 @@ export function LinkedEnvironmentsSection(props: {
   readonly environmentId: EnvironmentId;
   readonly environmentLabel: string;
 }) {
+  const uiText = useUiText();
   const config = useEnvironmentServerConfig(props.environmentId);
   const canRead = useEnvironmentScope(props.environmentId, AuthAccessReadScope);
   const supported = canRead && offersLinkedEnvironments(config);
@@ -44,7 +46,7 @@ export function LinkedEnvironmentsSection(props: {
   const now = DateTime.makeUnsafe(nowMs);
   return (
     <View className="mt-5 gap-3">
-      <SettingsSection title={`Linked from ${props.environmentLabel}`}>
+      <SettingsSection title={uiText("Linked from {0}", [props.environmentLabel])}>
         {links.data.links.map((link) => {
           const health = peerLinkHealth(link, now);
           const status =

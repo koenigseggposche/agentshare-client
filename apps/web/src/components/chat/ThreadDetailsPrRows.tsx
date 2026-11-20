@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { pipe } from "effect/Function";
 import { ThreadDetailsControl } from "./ThreadDetailsControl";
 import type { EnvironmentId, ScopedThreadRef, ThreadPullRequestLink } from "@t3tools/contracts";
@@ -35,6 +36,7 @@ function ThreadDetailsPrLinkRow({
   onActed?: (() => void) | undefined;
   onStopWatching?: (() => void) | undefined;
 }) {
+  const uiText = useUiText();
   const projects = useProjects();
   const parsed = sourceControlClients.parseChangeRequestUrl(link.url)?.link;
   const project =
@@ -52,7 +54,7 @@ function ThreadDetailsPrLinkRow({
       pr={pr}
       number={link.number}
       reference={link}
-      status={prStatusIndicator(pr, linked?.sourceControlProvider)}
+      status={prStatusIndicator(pr, linked?.sourceControlProvider, uiText)}
       project={project}
       label={`#${link.number}${link.snapshot === null ? "" : `: ${link.snapshot.title}`}`}
       openAriaLabel={link.url}
@@ -75,6 +77,7 @@ export function ThreadDetailsPrRows({
   currentLink: ThreadPullRequestLink | null;
   onOpenLink: (event: ReactMouseEvent<HTMLElement>, url: string) => void;
 }) {
+  const uiText = useUiText();
   const [expanded, setExpanded] = useState(false);
   const watch = useAtomCommand(threadEnvironment.watchPullRequest, { reportFailure: true });
   const stopWatching = (link: ThreadPullRequestLink | null) =>
@@ -131,7 +134,7 @@ export function ThreadDetailsPrRows({
           // Chevrons, not plus and minus: the plus already means "add" in this card.
           icon={expanded ? ChevronUp : ChevronDown}
         />
-        {expanded ? "Show less" : `Show ${rest.length} more`}
+        {expanded ? uiText("Show less") : uiText("Show {0} more", [rest.length])}
       </ThreadDetailsControl>
     </>
   );

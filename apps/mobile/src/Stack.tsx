@@ -1,5 +1,13 @@
-import { SettingsAgentShareModelsRouteScreen } from "./features/settings/SettingsAgentShareModelsRouteScreen";
-import { SettingsAgentShareRouteScreen } from "./features/settings/SettingsAgentShareRouteScreen";
+import { useLayoutEffect } from "react";
+import { useUiText } from "./i18n/uiText";
+import { ProjectCodingTerminalRouteScreen } from "./features/terminal/ProjectCodingTerminalRouteScreen";
+import {
+  SettingsAccountRouteScreen,
+  SettingsWalletRouteScreen,
+  SettingsLocalModelsRouteScreen,
+  SettingsModelSharingRouteScreen,
+  SettingsCodingToolsRouteScreen,
+} from "./features/settings/AgentShareHostSettings";
 import { isDraftThreadRoute } from "./features/threads/thread-route-state";
 import { ComponentCatalogScreen } from "./features/development/ComponentCatalogScreen";
 import { PullRequestGuideStopScreen } from "./features/pull-requests/guide/PullRequestGuideScreen";
@@ -206,15 +214,30 @@ const THREAD_SETTINGS_SHEET_OPTIONS = {
 const SETTINGS_PAGE_OPTIONS = SHEET_GLASS_HEADER_OPTIONS;
 
 const SETTINGS_SCREENS = {
-  SettingsAgentShareModels: createNativeStackScreen({
-    screen: SettingsAgentShareModelsRouteScreen,
-    linking: "settings/agentshare/models/:environmentId",
+  SettingsAccount: createNativeStackScreen({
+    screen: SettingsAccountRouteScreen,
+    linking: "settings/account",
+    options: { ...SETTINGS_PAGE_OPTIONS, title: "Account and security" },
+  }),
+  SettingsWallet: createNativeStackScreen({
+    screen: SettingsWalletRouteScreen,
+    linking: "settings/wallet",
+    options: { ...SETTINGS_PAGE_OPTIONS, title: "Wallet and records" },
+  }),
+  SettingsLocalModels: createNativeStackScreen({
+    screen: SettingsLocalModelsRouteScreen,
+    linking: "settings/local-models",
     options: { ...SETTINGS_PAGE_OPTIONS, title: "Local models" },
   }),
-  SettingsAgentShare: createNativeStackScreen({
-    screen: SettingsAgentShareRouteScreen,
-    linking: "settings/agentshare",
-    options: { ...SETTINGS_PAGE_OPTIONS, title: "AgentShare" },
+  SettingsModelSharing: createNativeStackScreen({
+    screen: SettingsModelSharingRouteScreen,
+    linking: "settings/model-sharing",
+    options: { ...SETTINGS_PAGE_OPTIONS, title: "Model sharing" },
+  }),
+  SettingsCodingTools: createNativeStackScreen({
+    screen: SettingsCodingToolsRouteScreen,
+    linking: "settings/coding-tools",
+    options: { ...SETTINGS_PAGE_OPTIONS, title: "Coding tools" },
   }),
   Settings: createNativeStackScreen({
     screen: SettingsRouteScreen,
@@ -534,6 +557,7 @@ function RootStackLayout(props: {
 }
 
 function NotFoundScreen() {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const screenBgStyle = StyleSheet.flatten(useResolveClassNames("bg-screen"));
   const primaryBgStyle = StyleSheet.flatten(useResolveClassNames("bg-primary"));
@@ -560,13 +584,15 @@ function NotFoundScreen() {
       style={[{ flex: 1 }, screenBgStyle]}
     >
       <Text className="text-3xl font-t3-bold text-foreground" selectable>
-        Route not found
+        {uiText("Route not found")}
       </Text>
       <Pressable
         style={returnHomeButtonStyle}
         onPress={() => navigation.dispatch(StackActions.replace("Home"))}
       >
-        <Text className="text-base font-t3-bold text-primary-foreground">Return home</Text>
+        <Text className="text-base font-t3-bold text-primary-foreground">
+          {uiText("Return home")}
+        </Text>
       </Pressable>
     </ScrollView>
   );
@@ -782,6 +808,11 @@ const RootStackConfig = createWorkspaceStackNavigator({
           : THREAD_SETTINGS_SHEET_OPTIONS),
       },
     }),
+    ProjectCodingTerminal: createNativeStackScreen({
+      screen: ProjectCodingTerminalRouteScreen,
+      linking: `${THREAD_LINKING_PREFIX}/coding-terminal`,
+      options: SOLID_HEADER_OPTIONS,
+    }),
     ThreadTerminal: createNativeStackScreen({
       screen: ThreadTerminalRouteScreen,
       linking: `${THREAD_LINKING_PREFIX}/terminal`,
@@ -952,7 +983,7 @@ const RootStackConfig = createWorkspaceStackNavigator({
       linking: "settings/data-use",
       options: {
         ...DATA_USE_HEADER_OPTIONS,
-        title: "Data & privacy / 数据与隐私",
+        title: "Data & privacy",
       },
     }),
     ConnectOnboarding: createNativeStackScreen({
@@ -1002,10 +1033,69 @@ const RootStackConfig = createWorkspaceStackNavigator({
   },
 });
 
+const SCREEN_TITLES: Readonly<Record<string, string>> = {
+  ProjectCodingTerminal: "Coding terminal",
+  SettingsAccount: "Account and security",
+  SettingsWallet: "Wallet and records",
+  SettingsLocalModels: "Local models",
+  SettingsModelSharing: "Model sharing",
+  SettingsCodingTools: "Coding tools",
+  Settings: "Settings",
+  SettingsEnvironments: "Environments",
+  SettingsEnvironmentDetail: "Environment",
+  SettingsEnvironmentNewThreads: "Threads",
+  SettingsEnvironmentSourceControl: "Source control",
+  SettingsEnvironmentAgentBehavior: "Threads",
+  SettingsWorktrees: "Worktrees",
+  SettingsLabs: "Labs",
+  SettingsProviderAccounts: "Model connections",
+  SettingsEnvironmentMaintenance: "Maintenance",
+  SettingsNotifications: "Notifications",
+  SettingsThreads: "Threads",
+  SettingsAbout: "About",
+  SettingsEnvironmentNew: "Add Environment",
+  SettingsArchive: "Archive",
+  SettingsNavigation: "Navigation tabs",
+  SettingsAppearance: "Appearance",
+  SettingsProjectGrouping: "General",
+  SettingsOrganization: "General",
+  SettingsProjectOverview: "Projects",
+  SettingsKeyboard: "Keyboard",
+  SettingsMicrophone: "Microphone",
+  SettingsFollowUp: "Chat",
+  SettingsScheduledTasks: "Scheduled tasks",
+  SettingsScheduledTaskNew: "New scheduled task",
+  SettingsScheduledTaskEdit: "Edit scheduled task",
+  SettingsScheduledTaskBranch: "Base branch",
+  SettingsClientStorage: "Client Storage",
+  SettingsDiagnostics: "Diagnostics",
+  SettingsUsageAccount: "Account",
+  SettingsOpenSourceLicenses: "Open source licenses",
+  SettingsOpenSourceLicense: "License notice",
+  SettingsUsage: "Usage",
+  ComponentCatalog: "UI components",
+  NewTaskProject: "Choose project",
+  NewTaskEnvironment: "Environment",
+  NewTaskBranch: "Branch",
+  AddProject: "Add project",
+  ThreadFiles: "Files",
+  SettingsDataUse: "Data & privacy",
+  ConnectOnboarding: "Set up T3 Connect",
+  Connections: "Environments",
+  ConnectionsNew: "Add Environment",
+};
+
 function GuardedScreenLayout(props: {
   readonly children: ReactNode;
   readonly route: { readonly name: string; readonly params?: object | undefined };
 }) {
+  const uiText = useUiText();
+  const navigation = useNavigation();
+  const title = SCREEN_TITLES[props.route.name];
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Synchronize app-owned native header titles with the client's persisted language without remounting screens.
+  useLayoutEffect(() => {
+    if (title) navigation.setOptions({ title: uiText(title), headerBackTitle: uiText("Back") });
+  }, [navigation, title, uiText]);
   return (
     <RenderErrorBoundary
       resetKeys={[props.route.params]}
@@ -1019,16 +1109,20 @@ function GuardedScreenLayout(props: {
 }
 
 function ScreenRenderFallback(props: RenderFailureProps & { readonly routeName: string }) {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const exit = navigation.canGoBack()
-    ? { label: "Go back", onPress: () => navigation.goBack() }
+    ? { label: uiText("Go back"), onPress: () => navigation.goBack() }
     : props.routeName === "Home"
       ? // Home itself failed, and the Settings list renders inside it; open a Settings page.
         {
-          label: "Open settings",
+          label: uiText("Open settings"),
           onPress: () => openSettings(navigation, DEFAULT_SETTINGS_PAGE),
         }
-      : { label: "Return home", onPress: () => navigation.dispatch(StackActions.replace("Home")) };
+      : {
+          label: uiText("Return home"),
+          onPress: () => navigation.dispatch(StackActions.replace("Home")),
+        };
 
   return <RenderFailureView {...props} exit={exit} />;
 }

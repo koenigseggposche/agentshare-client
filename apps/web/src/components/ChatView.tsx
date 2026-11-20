@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { ChildThreadApprovals } from "./chat/ChildThreadApprovals";
 import { workspaceAreaProps } from "../lib/workspaceFocus";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
@@ -414,6 +415,7 @@ type ChatViewProps =
 const DismissedFallbackWindowSchema = Schema.NullOr(Schema.String);
 
 export default function ChatView(props: ChatViewProps) {
+  const uiText = useUiText();
   const {
     environmentId,
     threadId,
@@ -459,7 +461,7 @@ export default function ChatView(props: ChatViewProps) {
     reportFailure: false,
   });
   const loadEarlierThreadHistory = useAtomCommand(threadEnvironment.loadEarlierHistory, {
-    label: "load earlier thread history",
+    label: uiText("load earlier thread history"),
     reportFailure: false,
   });
   const { environments } = useEnvironments();
@@ -627,8 +629,10 @@ export default function ChatView(props: ChatViewProps) {
     if (!inserted) {
       toastManager.add({
         type: "warning",
-        title: "The composer is not ready",
-        description: "Try citing the selection after the connection or pending input is resolved.",
+        title: uiText("The composer is not ready"),
+        description: uiText(
+          "Try citing the selection after the connection or pending input is resolved.",
+        ),
       });
     }
     return inserted;
@@ -792,6 +796,7 @@ export default function ChatView(props: ChatViewProps) {
         draftThread,
         (draftFallback ? draftFallback.selection : draftDefaultModelSelection) ??
           NO_PROVIDER_MODEL_SELECTION,
+        uiText,
       )
     : undefined;
   const isServerThread = serverThread !== null;
@@ -885,7 +890,7 @@ export default function ChatView(props: ChatViewProps) {
     }
     if (parentSubagentThreadRef !== null) {
       return {
-        title: parentSubagentThread?.title ?? "Parent thread",
+        title: parentSubagentThread?.title ?? uiText("Parent thread"),
         open: (): void => {
           void navigate({
             to: "/$environmentId/$threadId",
@@ -918,7 +923,7 @@ export default function ChatView(props: ChatViewProps) {
       ? null
       : {
           threadId: parentSubagentThreadRef.threadId,
-          title: parentSubagentThread?.title ?? "Parent thread",
+          title: parentSubagentThread?.title ?? uiText("Parent thread"),
         };
   const threadError = isServerThread
     ? (localServerError ?? serverRuntime?.lastError ?? null)
@@ -1468,7 +1473,7 @@ export default function ChatView(props: ChatViewProps) {
   const downloadFileAttachment = async (attachment: ChatFileAttachment) => {
     const connection = readPreparedConnection(environmentId);
     if (!connection) {
-      toastManager.add({ type: "error", title: "The environment is not connected." });
+      toastManager.add({ type: "error", title: uiText("The environment is not connected.") });
       return;
     }
 
@@ -1487,7 +1492,8 @@ export default function ChatView(props: ChatViewProps) {
       toastManager.add({
         type: "error",
         title: "Could not download " + attachment.name,
-        description: error instanceof Error ? error.message : "The attachment is unavailable.",
+        description:
+          error instanceof Error ? error.message : uiText("The attachment is unavailable."),
       });
     }
   };
@@ -1847,8 +1853,8 @@ export default function ChatView(props: ChatViewProps) {
     if (prompt !== null && !composer.insertTextAtEnd(prompt, { ensureLeadingBoundary: true })) {
       toastManager.add({
         type: "error",
-        title: "Unable to add to chat",
-        description: "The composer is busy; try again once it is ready.",
+        title: uiText("Unable to add to chat"),
+        description: uiText("The composer is busy; try again once it is ready."),
       });
       return;
     }
@@ -2327,7 +2333,7 @@ export default function ChatView(props: ChatViewProps) {
         });
   const copyActiveThreadReference = () => {
     if (activeThreadReferenceCopyTarget === null) return;
-    void copyThreadReference(activeThreadReferenceCopyTarget);
+    void copyThreadReference(activeThreadReferenceCopyTarget, uiText);
   };
   const pullRequestPanelTarget = activeThread
     ? threadPullRequestPanelTarget({
@@ -2524,35 +2530,42 @@ export default function ChatView(props: ChatViewProps) {
   };
   const handleRestoreThreadBranchStable = useStableCallback(handleRestoreThreadBranch);
   const feedbackBannerItems = feedbackSubmissions.flatMap((submission) => {
-    const item = feedbackBannerItem(submission, () => {
-      setFeedbackSubmissionsByThreadKey((current) => ({
-        ...current,
-        [routeThreadKey]: (current[routeThreadKey] ?? []).filter(
-          (entry) => entry.id !== submission.id,
-        ),
-      }));
-    });
+    const item = feedbackBannerItem(
+      submission,
+      () => {
+        setFeedbackSubmissionsByThreadKey((current) => ({
+          ...current,
+          [routeThreadKey]: (current[routeThreadKey] ?? []).filter(
+            (entry) => entry.id !== submission.id,
+          ),
+        }));
+      },
+      uiText,
+    );
     return item ? [item] : [];
   });
   const limitRecoveryBanner =
     serverRuntime?.status === "failed" &&
     serverRuntime.lastErrorClass === "usage_limit" &&
     activeThreadShell?.latestRun
-      ? usageLimitRecoveryBannerItem({
-          runId: activeThreadShell.latestRun.runId,
-          resetAt: serverRuntime.usageLimitResetAt ?? null,
-          stoppedAt: activeThreadShell.latestRun.completedAt ?? activeThreadShell.updatedAt,
-          recovery: activeThreadShell.limitRecovery ?? null,
-          snoozedUntil: activeThreadShell.snoozedUntil,
-          timestampFormat,
-          onChange: async (limitRecovery) => {
-            const result = await updateThreadMetadata({
-              environmentId,
-              input: { threadId: activeThreadShell.id, limitRecovery },
-            });
-            if (result._tag === "Failure") throw squashAtomCommandFailure(result);
+      ? usageLimitRecoveryBannerItem(
+          {
+            runId: activeThreadShell.latestRun.runId,
+            resetAt: serverRuntime.usageLimitResetAt ?? null,
+            stoppedAt: activeThreadShell.latestRun.completedAt ?? activeThreadShell.updatedAt,
+            recovery: activeThreadShell.limitRecovery ?? null,
+            snoozedUntil: activeThreadShell.snoozedUntil,
+            timestampFormat,
+            onChange: async (limitRecovery) => {
+              const result = await updateThreadMetadata({
+                environmentId,
+                input: { threadId: activeThreadShell.id, limitRecovery },
+              });
+              if (result._tag === "Failure") throw squashAtomCommandFailure(result);
+            },
           },
-        })
+          uiText,
+        )
       : null;
   const composerBannerItems = (() => {
     const fallbackSelection = draftFallback?.selection;
@@ -3331,6 +3344,7 @@ export default function ChatView(props: ChatViewProps) {
               activeThreadTitle={activeThread.title}
               activeThreadLinkOrigin={activeThreadShell?.linkOrigin?.label ?? null}
               activeProject={activeProject ?? null}
+              worktreePath={activeThread.worktreePath}
               parentThreadLink={headerParentThreadLink}
               onOpenThread={onOpenRelatedThreadStable}
               rightPanelOpen={inlineRightPanelOwnsTitleBar}

@@ -1,3 +1,4 @@
+import { readUiTranslator } from "../../i18n/uiText";
 import {
   canSnooze,
   effectiveSnoozed,
@@ -477,6 +478,8 @@ function resolveThreadListV2ItemTimeLabel(
     variant === "slim" && !snoozed ? resolveSettledThreadTimestamp(thread) : null;
   return relativeTime(
     settledTimestamp ?? thread.latestUserMessageAt ?? thread.updatedAt ?? thread.createdAt,
+    undefined,
+    readUiTranslator().language,
   );
 }
 

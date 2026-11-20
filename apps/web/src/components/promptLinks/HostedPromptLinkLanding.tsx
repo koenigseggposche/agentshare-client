@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { translateUiLabels, uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import {
   type LinkedPrompt,
   parseNewThreadLink,
@@ -35,6 +38,7 @@ const PROMPT_HEADER = {
 
 function summarize(
   appPath: string,
+  uiText: UiTranslator = uiTranslators.en,
 ): { ok: true; value: LinkSummary } | { ok: false; error: string } {
   const url = new URL(appPath, window.location.origin);
   if (url.pathname !== "/new") {
@@ -45,12 +49,18 @@ function summarize(
       value:
         prompt.value === null
           ? {
-              title: "Open this thread",
-              description: "It opens in AgentShare if you're connected to the machine it runs on.",
+              title: uiText("Open this thread"),
+              description: uiText(
+                "It opens in AgentShare if you're connected to the machine it runs on.",
+              ),
               prompt: null,
               details: [],
             }
-          : { ...PROMPT_HEADER, prompt: prompt.value, details: ["Opens one of your threads."] },
+          : {
+              ...translateUiLabels(PROMPT_HEADER, uiText),
+              prompt: prompt.value,
+              details: ["Opens one of your threads."],
+            },
     };
   }
   const link = parseNewThreadLink(url.search);
@@ -60,7 +70,7 @@ function summarize(
     return {
       ok: true,
       value: {
-        ...PROMPT_HEADER,
+        ...translateUiLabels(PROMPT_HEADER, uiText),
         prompt: link.value.prompt,
         details: [`Pull request ${owner}/${name}#${number}`],
       },
@@ -70,7 +80,7 @@ function summarize(
   return {
     ok: true,
     value: {
-      ...PROMPT_HEADER,
+      ...translateUiLabels(PROMPT_HEADER, uiText),
       prompt: link.value.prompt,
       details: [
         repository ? `Repository ${repository.owner}/${repository.name}` : "No project",
@@ -119,7 +129,8 @@ function HostedPromptLinkLanding({
   readonly openInAppRemembered: boolean;
   readonly onChoose: (choice: "app" | "browser", remember: boolean) => void;
 }) {
-  const summary = summarize(appPath);
+  const uiText = useUiText();
+  const summary = summarize(appPath, uiText);
   const [remember, setRemember] = useState(false);
   const deepLink = promptLinkDeepLink(appPath);
   const onPhone = /android|iphone|ipad/i.test(navigator.userAgent);
@@ -135,7 +146,10 @@ function HostedPromptLinkLanding({
   if (!summary.ok) {
     return (
       <StandalonePage>
-        <StandalonePageHeader title="Could not open the link" description={summary.error} />
+        <StandalonePageHeader
+          title={uiText("Could not open the link")}
+          description={summary.error}
+        />
       </StandalonePage>
     );
   }
@@ -146,10 +160,15 @@ function HostedPromptLinkLanding({
       <StandalonePageHeader title={title} description={description} />
       {prompt !== null && prompt.hiddenCharacters > 0 ? (
         <Alert className="mt-5" variant="error">
-          <AlertTitle>This prompt had hidden characters, it may be malicious</AlertTitle>
+          <AlertTitle>
+            {uiText("This prompt had hidden characters, it may be malicious")}
+          </AlertTitle>
           <AlertDescription>
-            T3 Code removed {prompt.hiddenCharacters} hidden character
-            {prompt.hiddenCharacters === 1 ? "" : "s"}. Read the prompt before you send it.
+            {uiText("T3 Code removed ")}
+            {prompt.hiddenCharacters}
+            {uiText(" hidden character")}
+            {prompt.hiddenCharacters === 1 ? "" : uiText.language === "en" ? "s" : ""}
+            {uiText(". Read the prompt before you send it.")}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -163,17 +182,17 @@ function HostedPromptLinkLanding({
       ) : null}
       <div className="mt-6 flex flex-wrap gap-2">
         <Button render={<a href={deepLink} />} onClick={() => onChoose("app", remember)}>
-          {onPhone ? "Open in app" : "Open in desktop app"}
+          {onPhone ? uiText("Open in app") : uiText("Open in desktop app")}
         </Button>
         {canContinue ? (
           <Button variant="outline" onClick={() => onChoose("browser", remember)}>
-            Continue here
+            {uiText("Continue here")}
           </Button>
         ) : null}
       </div>
       <label className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
         <Checkbox checked={remember} onCheckedChange={(checked) => setRemember(checked === true)} />
-        Remember my choice
+        {uiText("Remember my choice")}
       </label>
     </StandalonePage>
   );

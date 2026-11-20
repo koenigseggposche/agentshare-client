@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { readUiTranslator } from "../../i18n/uiText";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { NativeReviewDiffRow, NativeReviewDiffTheme } from "../diffs/nativeReviewDiffSurface";
 import type { NativeReviewDiffFile } from "../diffs/nativeReviewDiffTypes";
 import * as Arr from "effect/Array";
@@ -243,13 +246,16 @@ function createNoticeRow(fileId: string, suffix: string, text: string): NativeRe
   };
 }
 
-function noticeRowsForFile(file: ReviewRenderableFile): ReadonlyArray<NativeReviewDiffRow> {
+function noticeRowsForFile(
+  file: ReviewRenderableFile,
+  uiText: UiTranslator = uiTranslators.en,
+): ReadonlyArray<NativeReviewDiffRow> {
   if (file.notice) return [createNoticeRow(file.id, "loading", file.notice)];
   if (file.rows.length > 0) {
     return [];
   }
 
-  const previewState = getReviewFilePreviewState(file);
+  const previewState = getReviewFilePreviewState(file, uiText);
   if (previewState.kind === "suppressed" && previewState.reason === "non-text") {
     return [
       createNoticeRow(file.id, "non-text", "Unsupported format. Diff contents are not available."),
@@ -422,7 +428,7 @@ function prepareFileRows(file: ReviewRenderableFile): PreparedNativeReviewFileRo
   if (sourceRows !== file.rows) {
     rows.push(createNoticeRow(file.id, "truncated", TRUNCATED_FILE_NOTICE));
   }
-  rows.push(...noticeRowsForFile(file));
+  rows.push(...noticeRowsForFile(file, readUiTranslator()));
   if (file.noEOFCRAdditions || file.noEOFCRDeletions) {
     const side = file.noEOFCRAdditions
       ? file.noEOFCRDeletions

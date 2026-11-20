@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { PullRequestUpdateMethod } from "@t3tools/contracts";
 import { TriangleAlertIcon } from "lucide-react";
 import type { ReactNode } from "react";
@@ -31,10 +32,11 @@ function PullRequestBaseFreshnessWarning({
   readonly className?: string;
   readonly children?: ReactNode;
 }) {
+  const uiText = useUiText();
   const behind =
     freshness.behindBy === null
       ? ""
-      : ` by ${freshness.behindBy.toLocaleString()} ${
+      : ` by ${freshness.behindBy.toLocaleString(uiText.language)} ${
           freshness.behindBy === 1 ? "commit" : "commits"
         }`;
   const summary = `This branch is out-of-date with ${baseBranch}${behind}.`;
@@ -60,7 +62,9 @@ function PullRequestBaseFreshnessWarning({
       </PopoverTrigger>
       <PopoverPopup align="start" side="bottom" className="max-w-80" padding="compact">
         <p className="text-xs text-foreground">{summary}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">Changes can be cleanly merged.</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {uiText("Changes can be cleanly merged.")}
+        </p>
         {freshness.methods.length > 0 ? (
           <span className="mt-2 flex flex-wrap items-center gap-1.5">
             {freshness.methods.map((method) => (
@@ -72,7 +76,7 @@ function PullRequestBaseFreshnessWarning({
                 onClick={() => onUpdate(method)}
               >
                 <PullRequestGlyph.merged aria-hidden className="size-3" />
-                {method === "rebase" ? "Update with rebase" : "Update branch"}
+                {method === "rebase" ? uiText("Update with rebase") : uiText("Update branch")}
               </Button>
             ))}
           </span>
@@ -98,10 +102,14 @@ export function PullRequestBaseBranch({
   readonly onUpdate: (method: PullRequestUpdateMethod) => void;
   readonly iconClassName?: string;
 }) {
+  const uiText = useUiText();
   const label = (
     <>
       {stacked ? (
-        <PullRequestGlyph.stack aria-label="Stacked pull request" className="size-3 shrink-0" />
+        <PullRequestGlyph.stack
+          aria-label={uiText("Stacked pull request")}
+          className="size-3 shrink-0"
+        />
       ) : null}
       <code className="flex min-w-0">
         <MiddleTruncate value={baseBranch} showTitle={false} />
@@ -131,7 +139,9 @@ export function PullRequestBaseBranch({
           </span>
         }
       />
-      <TooltipPopup side="top">{stacked ? `Stacked on ${baseBranch}` : baseBranch}</TooltipPopup>
+      <TooltipPopup side="top">
+        {stacked ? uiText("Stacked on {0}", [baseBranch]) : baseBranch}
+      </TooltipPopup>
     </Tooltip>
   );
 }

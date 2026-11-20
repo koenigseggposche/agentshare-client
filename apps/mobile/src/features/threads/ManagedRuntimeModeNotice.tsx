@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   clampManagedRuntimeMode,
   managedRuntimeModeDenial,
@@ -24,6 +25,7 @@ export function ManagedRuntimeModeNotice(props: {
   readonly supportedRuntimeModes: ReadonlyArray<RuntimeMode> | undefined;
   readonly policy: ManagedPolicySummary | undefined;
 }) {
+  const uiText = useUiText();
   const draftSettings = useComposerDraftSettings(props.threadKey);
   const runtimeMode = draftSettings.runtimeMode ?? props.threadRuntimeMode;
   const denial = managedRuntimeModeDenial(props.policy, runtimeMode);
@@ -38,11 +40,11 @@ export function ManagedRuntimeModeNotice(props: {
   return (
     <View className="gap-2 px-4 pb-3">
       <AppText textRole="footnote" className="text-foreground-muted">
-        {`${denial} Switch this thread's mode to continue.`}
+        {uiText("{0} Switch this thread's mode to continue.", [denial])}
       </AppText>
       {target === undefined || targetLabel === undefined ? null : (
         <Button
-          label={`Switch to ${targetLabel}`}
+          label={uiText("Switch to {0}", [targetLabel])}
           onPress={() => updateComposerDraftSettings(props.threadKey, { runtimeMode: target })}
         />
       )}

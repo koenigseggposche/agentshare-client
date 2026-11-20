@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { useAuth, useClerk } from "@clerk/react";
 import { readConnectAuthorizeRequest } from "@t3tools/shared/connectAuth";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
@@ -19,6 +21,7 @@ const invalidLinkMessage = {
 } as const;
 
 export function ConnectCliAuthorizeSurface() {
+  const uiText = useUiText();
   const [request] = useState(() => readConnectAuthorizeRequest(new URL(window.location.href)));
   const clerk = useClerk();
   const { isLoaded, isSignedIn } = useAuth();
@@ -61,7 +64,7 @@ export function ConnectCliAuthorizeSurface() {
   if (!request) {
     return (
       <StandalonePage>
-        <StandalonePageHeader {...invalidLinkMessage} />
+        <StandalonePageHeader {...translateUiLabels(invalidLinkMessage, uiText)} />
       </StandalonePage>
     );
   }
@@ -70,17 +73,17 @@ export function ConnectCliAuthorizeSurface() {
     <StandalonePage>
       <StandalonePageHeader
         context="Browser authorization"
-        title="Connecting your terminal"
+        title={uiText("Connecting your terminal")}
         description={
           isSignedIn
-            ? "Redirecting to authorize T3 Connect for your CLI…"
-            : "Sign in to continue authorizing T3 Connect for your CLI."
+            ? uiText("Redirecting to authorize T3 Connect for your CLI…")
+            : uiText("Sign in to continue authorizing T3 Connect for your CLI.")
         }
       />
       {isLoaded && !isSignedIn ? (
         <div className="mt-6">
           <Button type="button" onClick={openSignIn}>
-            Sign in
+            {uiText("Sign in")}
           </Button>
         </div>
       ) : null}

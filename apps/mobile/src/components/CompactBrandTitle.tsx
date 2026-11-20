@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../i18n/uiText";
 import { NATIVE_WORKSPACE_COLUMNS_SUPPORTED } from "../native/NativeWorkspaceColumns";
 import Constants from "expo-constants";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
@@ -25,6 +28,7 @@ export function CompactBrandTitle(
     readonly fit?: boolean;
   } = {},
 ) {
+  const uiText = useUiText();
   const stageLabel = resolveMobileStageLabel(Constants.expoConfig?.extra?.appVariant);
   const titleOffset = brandTitleOffset();
   const { scale } = useAndroidControlSizing();
@@ -40,7 +44,7 @@ export function CompactBrandTitle(
         props.fit && showStage ? (event) => setFullWidth(event.nativeEvent.layout.width) : undefined
       }
       aria-level={1}
-      accessibilityLabel={props.accessibilityLabel ?? "AgentShare, Threads"}
+      accessibilityLabel={props.accessibilityLabel ?? uiText("AgentShare, Threads")}
       accessible
       role="heading"
       className="flex-row items-center gap-1.5"
@@ -58,7 +62,7 @@ export function CompactBrandTitle(
         className="font-t3-medium text-foreground-muted"
         style={{ fontSize: 21 * scale, letterSpacing: -0.5 * scale }}
       >
-        AgentShare
+        {uiText("AgentShare")}
       </Text>
       {showStage ? (
         <View
@@ -100,11 +104,12 @@ function renderCompactBrandTitle() {
 
 export function getCompactBrandHeaderOptions(
   fallbackTitleStyle?: NativeStackNavigationOptions["headerTitleStyle"],
+  uiText: UiTranslator = uiTranslators.en,
 ): NativeStackNavigationOptions {
   return {
     headerTitle: renderCompactBrandTitle,
     headerTitleStyle: fallbackTitleStyle,
-    title: "Threads",
+    title: uiText("Threads"),
     unstable_headerLeftItems: undefined,
   };
 }

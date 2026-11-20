@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { AsyncResult } from "effect/reactivity";
 import { useAdaptiveWorkspaceLayout } from "../layout/adaptive-workspace-context";
@@ -26,6 +27,7 @@ import { SettingsSection } from "./components/SettingsSection";
 import { resolveWorkspaceTabOrder } from "../workspace/workspace-tabs-state";
 
 export function SettingsNavigationRouteScreen() {
+  const uiText = useUiText();
   const insets = useSafeAreaInsets();
   const order = useNavigationTabOrder();
   const { layout } = useAdaptiveWorkspaceLayout();
@@ -37,7 +39,7 @@ export function SettingsNavigationRouteScreen() {
   const ready = customizable && AsyncResult.isSuccess(preferences) && !preferences.waiting;
   const save = useAtomSet(updateMobilePreferencesAtom);
   return (
-    <SettingsScreen title="Navigation tabs">
+    <SettingsScreen title={uiText("Navigation tabs")}>
       <ScreenScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentContainerClassName="gap-4 px-5 pt-4"
@@ -45,10 +47,14 @@ export function SettingsNavigationRouteScreen() {
       >
         <Text className="px-2 text-sm text-foreground-muted">
           {customizable
-            ? "Phones show the first four enabled sections; Android tablet rails show all enabled sections. Remaining sections appear at the top of Settings. Hidden sections appear only here. Settings always stays last. Saved on this device."
-            : "Tab customization becomes available when there are six sections, including Settings."}
+            ? uiText(
+                "Phones show the first four enabled sections; Android tablet rails show all enabled sections. Remaining sections appear at the top of Settings. Hidden sections appear only here. Settings always stays last. Saved on this device.",
+              )
+            : uiText(
+                "Tab customization becomes available when there are six sections, including Settings.",
+              )}
         </Text>
-        <SettingsSection title="Tab order">
+        <SettingsSection title={uiText("Tab order")}>
           {order.map((tab, index) => (
             <View key={tab} className="flex-row items-center gap-3 px-4 py-3">
               <SymbolView
@@ -60,10 +66,10 @@ export function SettingsNavigationRouteScreen() {
                 <Text>{WORKSPACE_TAB_LABELS[tab]}</Text>
                 <Text className="text-xs text-foreground-muted">
                   {hidden.includes(tab)
-                    ? "Hidden"
+                    ? uiText("Hidden")
                     : enabled.indexOf(tab) < capacity
-                      ? `Tab ${enabled.indexOf(tab) + 1}`
-                      : "In Settings"}
+                      ? uiText("Tab {0}", [enabled.indexOf(tab) + 1])
+                      : uiText("In Settings")}
                 </Text>
               </View>
               <IconButton
@@ -83,7 +89,7 @@ export function SettingsNavigationRouteScreen() {
               />
               <IconButton
                 icon="arrow.up"
-                accessibilityLabel={`Move ${WORKSPACE_TAB_LABELS[tab]} up`}
+                accessibilityLabel={uiText("Move {0} up", [WORKSPACE_TAB_LABELS[tab]])}
                 disabled={!ready || index === 0}
                 onPress={() =>
                   save({
@@ -99,7 +105,7 @@ export function SettingsNavigationRouteScreen() {
               />
               <IconButton
                 icon="arrow.down"
-                accessibilityLabel={`Move ${WORKSPACE_TAB_LABELS[tab]} down`}
+                accessibilityLabel={uiText("Move {0} down", [WORKSPACE_TAB_LABELS[tab]])}
                 disabled={!ready || index === order.length - 1}
                 onPress={() =>
                   save({
@@ -117,7 +123,7 @@ export function SettingsNavigationRouteScreen() {
           ))}
         </SettingsSection>
         <Button
-          label="Reset tabs"
+          label={uiText("Reset tabs")}
           tone="text"
           disabled={!ready}
           onPress={() => save({ navigationTabOrder: [], hiddenNavigationTabs: [] })}

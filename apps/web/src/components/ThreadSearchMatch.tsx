@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import {
   findSearchTokenRanges,
   splitSearchText,
@@ -36,11 +37,12 @@ export function ThreadSearchMatchExcerpt(props: {
     readonly query: string;
   };
 }) {
+  const uiText = useUiText();
   const isUser = props.match.source === "user";
   return (
     <span className="truncate text-xs text-muted-foreground/85">
       <span className={isUser ? "text-info-foreground" : "text-success-foreground"}>
-        {isUser ? "You:" : "Agent:"}
+        {isUser ? uiText("You:") : uiText("Agent:")}
       </span>{" "}
       <HighlightedSearchText
         text={props.match.snippet}

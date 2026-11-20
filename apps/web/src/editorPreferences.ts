@@ -1,3 +1,4 @@
+import { useUiText } from "./i18n/uiText";
 import {
   AuthOrchestrationOperateScope,
   EDITORS,
@@ -68,6 +69,7 @@ export function useOpenInPreferredEditor(
   environmentId: EnvironmentId | null,
   availableEditors: readonly EditorId[],
 ) {
+  const uiText = useUiText();
   const openInEditor = useAtomCommand(shellEnvironment.openInEditor, {
     reportFailure: false,
   });
@@ -98,7 +100,7 @@ export function useOpenInPreferredEditor(
         Cause.fail(
           new EnvironmentAuthorizationError({
             requiredScope: AuthOrchestrationOperateScope,
-            message: "This connection cannot open an editor on this environment.",
+            message: uiText("This connection cannot open an editor on this environment."),
           }),
         ),
       );

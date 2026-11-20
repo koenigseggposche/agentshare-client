@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useState } from "react";
 import { Platform, View } from "react-native";
 import { WebView } from "react-native-webview";
@@ -14,13 +15,15 @@ import { isPdfPreviewUri } from "../../lib/pdfPreview";
 import { useNativeColumnLayoutMetrics } from "../../native/native-layout-metrics";
 
 export function WorkspaceFileWebPreview(props: { readonly uri: string | null }) {
+  const uiText = useUiText();
   if (props.uri === null) {
-    return <FilePreviewLoading message="Preparing preview..." background="card" />;
+    return <FilePreviewLoading message={uiText("Preparing preview...")} background="card" />;
   }
   return <DocumentWebPreview key={props.uri} uri={props.uri} />;
 }
 
 function DocumentWebPreview(props: { readonly uri: string }) {
+  const uiText = useUiText();
   const insets = useSafeAreaInsets();
   const columnMetrics = useNativeColumnLayoutMetrics();
   // iOS headers float over this column, so content starts below them.
@@ -49,7 +52,7 @@ function DocumentWebPreview(props: { readonly uri: string }) {
           <PdfPreview key={linkedPdf} uri={linkedPdf} />
           <SafeAreaView edges={["bottom"]} className="border-t border-border px-4 py-2">
             <ControlPill
-              label="Back to document"
+              label={uiText("Back to document")}
               variant="pill"
               onPress={() => setLinkedPdf(null)}
             />
@@ -98,7 +101,9 @@ function DocumentWebPreview(props: { readonly uri: string }) {
           {loadProgress > 0 && loadProgress < 1 ? <LoadingStrip progress={loadProgress} /> : null}
           {loadError ? (
             <View className="border-b border-border bg-card px-4 py-2">
-              <Text className="text-xs font-t3-bold text-foreground">Preview failed</Text>
+              <Text className="text-xs font-t3-bold text-foreground">
+                {uiText("Preview failed")}
+              </Text>
               <Text className="mt-0.5 text-xs leading-snug text-foreground-muted">{loadError}</Text>
             </View>
           ) : null}

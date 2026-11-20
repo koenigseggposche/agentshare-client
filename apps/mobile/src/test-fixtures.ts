@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   presentThreadShell,
   type EnvironmentThreadShell,
@@ -15,6 +17,7 @@ const DEFAULT_TIMESTAMP = "2026-01-01T00:00:00.000Z";
 
 export function makeRawThreadShell(
   input: Partial<OrchestrationV2ThreadShell> = {},
+  uiText: UiTranslator = uiTranslators.en,
 ): OrchestrationV2ThreadShell {
   const id = input.id ?? ThreadId.make("thread-test");
   const providerInstanceId = input.providerInstanceId ?? ProviderInstanceId.make("codex");
@@ -22,7 +25,7 @@ export function makeRawThreadShell(
   return {
     id,
     projectId: ProjectId.make("project-test"),
-    title: "Thread",
+    title: uiText("Thread"),
     providerInstanceId,
     modelSelection: { instanceId: providerInstanceId, model: "gpt-5.4" },
     runtimeMode: "full-access",
@@ -55,18 +58,22 @@ export function makeRawThreadShell(
 
 export function makeThreadShellFixture(
   overrides: Partial<EnvironmentThreadShell> = {},
+  uiText: UiTranslator = uiTranslators.en,
 ): EnvironmentThreadShell {
   const environmentId = overrides.environmentId ?? EnvironmentId.make("environment-test");
-  const raw = makeRawThreadShell({
-    id: overrides.id,
-    projectId: overrides.projectId,
-    title: overrides.title,
-    providerInstanceId: overrides.providerInstanceId,
-    modelSelection: overrides.modelSelection,
-    runtimeMode: overrides.runtimeMode,
-    interactionMode: overrides.interactionMode,
-    branch: overrides.branch,
-    worktreePath: overrides.worktreePath,
-  });
+  const raw = makeRawThreadShell(
+    {
+      id: overrides.id,
+      projectId: overrides.projectId,
+      title: overrides.title,
+      providerInstanceId: overrides.providerInstanceId,
+      modelSelection: overrides.modelSelection,
+      runtimeMode: overrides.runtimeMode,
+      interactionMode: overrides.interactionMode,
+      branch: overrides.branch,
+      worktreePath: overrides.worktreePath,
+    },
+    uiText,
+  );
   return { ...presentThreadShell(environmentId, raw), ...overrides };
 }

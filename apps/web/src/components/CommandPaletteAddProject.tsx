@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import {
   type AddProjectRemoteSource,
   type NewProjectPublishTarget,
@@ -80,6 +81,7 @@ export function NewProjectPublishHostPicker(props: {
   readonly value: SourceControlProviderKind;
   readonly onValueChange: (kind: SourceControlProviderKind) => void;
 }) {
+  const uiText = useUiText();
   const [open, setOpen] = useState(false);
   return (
     <span
@@ -101,7 +103,7 @@ export function NewProjectPublishHostPicker(props: {
           if (kind !== null) props.onValueChange(kind);
         }}
       >
-        <SelectTrigger size="xs" variant="ghost" aria-label="Host for the new repository">
+        <SelectTrigger size="xs" variant="ghost" aria-label={uiText("Host for the new repository")}>
           <SelectValue>
             {(kind: SourceControlProviderKind) => sourceControlClients.get(kind).label}
           </SelectValue>
@@ -128,6 +130,7 @@ export function NewProjectSummary(props: {
   readonly projectsRoot: string | null;
   readonly environmentLabel: string | null;
 }) {
+  const uiText = useUiText();
   return (
     <div className="p-2 pb-0">
       <div className="flex min-h-8 items-center gap-2 rounded-sm px-2 py-1.5">
@@ -154,7 +157,7 @@ export function NewProjectSummary(props: {
               ? null
               : props.language === "zh"
                 ? `（${props.environmentLabel}）`
-                : ` on ${props.environmentLabel}`}
+                : uiText(" on {0}", [props.environmentLabel])}
           </span>
         </span>
       </div>

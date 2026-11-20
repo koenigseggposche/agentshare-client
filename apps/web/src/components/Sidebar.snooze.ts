@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { readUiTranslator } from "../i18n/uiText";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { EnvironmentId } from "@t3tools/contracts";
 import type { TimestampFormat } from "@t3tools/contracts/settings";
 import {
@@ -29,6 +32,7 @@ export function pickSnoozePreset(
   id: string,
   timestampFormat: TimestampFormat,
   environmentId: EnvironmentId,
+  uiText: UiTranslator = uiTranslators.en,
 ): SnoozePreset | undefined {
   const picked = pickSharedSnoozePreset({
     shown,
@@ -39,8 +43,8 @@ export function pickSnoozePreset(
   if (!picked) {
     toastManager.add({
       type: "warning",
-      title: "Could not snooze thread",
-      description: "That snooze time has passed. Choose another time.",
+      title: uiText("Could not snooze thread"),
+      description: uiText("That snooze time has passed. Choose another time."),
     });
   }
   return picked;
@@ -52,6 +56,7 @@ function snoozeOptions(timestampFormat: TimestampFormat, environmentId: Environm
   )?.snoozePresets;
   return {
     ...(presets ? { presets } : {}),
-    formatTime: (date: Date) => formatShortTimestamp(date.toISOString(), timestampFormat),
+    formatTime: (date: Date) =>
+      formatShortTimestamp(date.toISOString(), timestampFormat, readUiTranslator().language),
   };
 }

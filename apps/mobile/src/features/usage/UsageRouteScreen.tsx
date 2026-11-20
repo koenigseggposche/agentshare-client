@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { Button } from "../../components/ui/Button";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { ChatGptUsageSummary } from "./ChatGptUsageSummary";
@@ -85,6 +87,7 @@ function UsageScreen(props: {
   readonly workspace?: boolean;
   readonly tabParam: string | undefined;
 }) {
+  const uiText = useUiText();
   const insets = useSafeAreaInsets();
   const [selection, setSelection] = useState(() => ({
     params: props.tabParam,
@@ -204,7 +207,7 @@ function UsageScreen(props: {
   const environmentActions = [
     {
       id: "all",
-      title: "All environments",
+      title: uiText("All environments"),
       subtitle: undefined,
       state: selectedEnvironmentIds === null ? ("on" as const) : ("off" as const),
     },
@@ -227,7 +230,7 @@ function UsageScreen(props: {
     setSelectedEnvironmentIds((selected) => toggleUsageEnvironment(selected, environments, id));
   };
   const environmentMenu = {
-    title: "Filter usage environments",
+    title: uiText("Filter usage environments"),
     icon:
       selectedEnvironmentIds === null
         ? ("line.3.horizontal.decrease.circle" as const)
@@ -243,7 +246,7 @@ function UsageScreen(props: {
 
   return (
     <SettingsScreen
-      title="Usage"
+      title={uiText("Usage")}
       menus={showEnvironmentFilter ? [environmentMenu] : undefined}
       workspaceRoot={props.workspace}
     >
@@ -256,12 +259,12 @@ function UsageScreen(props: {
               showEnvironmentFilter
                 ? [
                     withNativeGlassHeaderItem({
-                      accessibilityLabel: "Filter usage environments",
+                      accessibilityLabel: uiText("Filter usage environments"),
                       icon: { name: filterIcon, type: "sfSymbol" },
                       label: "",
                       type: "menu",
                       menu: {
-                        title: "Environments",
+                        title: uiText("Environments"),
                         items: environmentActions.map((action) => ({
                           type: "action" as const,
                           label: action.title,
@@ -299,7 +302,7 @@ function UsageScreen(props: {
                 <View className="flex-1" />
               ) : (
                 <SegmentedControl
-                  options={WINDOW_OPTIONS}
+                  options={translateUiLabels(WINDOW_OPTIONS, uiText)}
                   selected={windowDays}
                   onSelect={selectWindow}
                   size="compact"
@@ -307,7 +310,7 @@ function UsageScreen(props: {
                 />
               )}
               <SegmentedControl
-                options={VIEW_OPTIONS}
+                options={translateUiLabels(VIEW_OPTIONS, uiText)}
                 selected={view}
                 onSelect={setView}
                 size="compact"
@@ -317,7 +320,7 @@ function UsageScreen(props: {
             </View>
           ) : (
             <SegmentedControl
-              options={VIEW_OPTIONS}
+              options={translateUiLabels(VIEW_OPTIONS, uiText)}
               selected={view}
               onSelect={setView}
               role="tab"
@@ -347,7 +350,7 @@ function UsageScreen(props: {
               <>
                 {wide ? null : (
                   <SegmentedControl
-                    options={WINDOW_OPTIONS}
+                    options={translateUiLabels(WINDOW_OPTIONS, uiText)}
                     selected={windowDays}
                     onSelect={selectWindow}
                     size="compact"
@@ -356,19 +359,19 @@ function UsageScreen(props: {
                 <ChatGptUsageSummary selectedEnvironmentIds={selectedEnvironmentIds} />
                 {merged.duplicateSources.length > 0 ? (
                   <Text className="text-sm text-foreground-muted">
-                    Counted once across environments sharing a transcript directory:{" "}
+                    {uiText("Counted once across environments sharing a transcript directory:")}{" "}
                     {merged.duplicateSources.join(", ")}
                   </Text>
                 ) : null}
                 {isPending ? (
                   <Text className="py-16 text-center text-base text-foreground-muted">
-                    Scanning provider transcripts…
+                    {uiText("Scanning provider transcripts…")}
                   </Text>
                 ) : selectedEnvironments.length === 0 ? (
                   <Text className="py-16 text-center text-base text-foreground-muted">
                     {environments.length === 0
-                      ? "Connect an environment to see usage."
-                      : "Select an environment to see usage."}
+                      ? uiText("Connect an environment to see usage.")
+                      : uiText("Select an environment to see usage.")}
                   </Text>
                 ) : !canReadDiagnostics ? (
                   <View className="gap-2 py-16">
@@ -483,8 +486,9 @@ function CursorEnableAction({
   readonly onEnabled: () => void;
   readonly buttonText?: string;
 }) {
+  const uiText = useUiText();
   const updateSettings = useAtomCommand(serverEnvironment.updateSettings, {
-    label: "enable Cursor account usage",
+    label: uiText("enable Cursor account usage"),
   });
   const [pending, setPending] = useState(false);
   const enable = async () => {
@@ -499,7 +503,7 @@ function CursorEnableAction({
     <Button
       label={buttonText}
       tone="primary"
-      accessibilityLabel={`Enable Cursor usage from ${label}`}
+      accessibilityLabel={uiText("Enable Cursor usage from {0}", [label])}
       accessibilityHint={CURSOR_KEYCHAIN_COPY}
       disabled={pending}
       onPress={() => void enable()}
@@ -521,6 +525,7 @@ function CursorEnableRow({
   readonly bordered: boolean;
   readonly onEnabled: () => void;
 }) {
+  const uiText = useUiText();
   const colors = useProviderColors();
   return (
     <View
@@ -532,7 +537,8 @@ function CursorEnableRow({
       <View className="min-w-0 flex-1 flex-row items-center gap-2">
         <View className="size-2.5 rounded-full" style={{ backgroundColor: colors.cursor }} />
         <Text className="shrink text-lg text-foreground">
-          Cursor{showEnvironment ? ` · ${label}` : ""}
+          {uiText("Cursor")}
+          {showEnvironment ? ` · ${label}` : ""}
         </Text>
       </View>
       <CursorEnableAction environmentId={environmentId} label={label} onEnabled={onEnabled} />
@@ -547,11 +553,12 @@ function CursorEnableLimits({
   readonly environments: readonly EnvironmentUsageStatus[];
   readonly onEnabled: () => void;
 }) {
+  const uiText = useUiText();
   return (
     <View className="gap-3">
       <View className="flex-row items-center gap-2 px-1">
         <ProviderIcon provider="cursor" size={18} />
-        <Text className="text-base font-t3-medium text-foreground">Cursor</Text>
+        <Text className="text-base font-t3-medium text-foreground">{uiText("Cursor")}</Text>
       </View>
       <View className="items-start gap-3 rounded-[24px] border-continuous bg-grouped-card p-4">
         <Text className="text-xs text-foreground-muted">{CURSOR_KEYCHAIN_COPY}</Text>
@@ -586,6 +593,7 @@ function ChartCard(props: {
   /** Grows the chart past `height` to match a taller neighbouring column. */
   readonly fill?: boolean;
 }) {
+  const uiText = useUiText();
   const { merged, metric } = props;
   const colors = useProviderColors();
   const hasActivity = props.daily.some((period) => period.totalTokens > 0);
@@ -595,7 +603,9 @@ function ChartCard(props: {
     <UsageDailyChart days={props.days} daily={props.daily} metric={metric} height={height} />
   ) : (
     <View style={{ height }} className="items-center justify-center">
-      <Text className="text-base text-foreground-muted">No activity in this window.</Text>
+      <Text className="text-base text-foreground-muted">
+        {uiText("No activity in this window.")}
+      </Text>
     </View>
   );
 
@@ -654,19 +664,20 @@ function ChartCard(props: {
 }
 
 function UsageSummary(props: { readonly merged: MergedUsage; readonly metric: UsageChartMetric }) {
+  const uiText = useUiText();
   const { merged, metric } = props;
   return (
     <View className="gap-0.5">
       <Text className="text-sm text-foreground-muted">
-        {metric === "cost" ? "Raw token cost" : "Processed tokens"}
+        {metric === "cost" ? uiText("Raw token cost") : uiText("Processed tokens")}
       </Text>
       <Text className="text-4xl font-t3-bold tabular-nums text-foreground">
         {metric === "cost" ? `${formatUsd(merged.costUsd)}*` : formatTokens(merged.totalTokens)}
       </Text>
       <Text className="text-sm text-foreground-muted">
         {metric === "cost"
-          ? "* if billed at full API rate"
-          : `Across ${formatCount(merged.sessions)} sessions`}
+          ? uiText("* if billed at full API rate")
+          : uiText("Across {0} sessions", [formatCount(merged.sessions)])}
       </Text>
     </View>
   );
@@ -681,6 +692,7 @@ function ProviderSection(props: {
   /** Drops the share bar so the list fits beside the chart. */
   readonly compact: boolean;
 }) {
+  const uiText = useUiText();
   const { merged, metric } = props;
   const colors = useProviderColors();
   if (merged.providers.length === 0 && props.cursorAccessEnvironments.length === 0) return null;
@@ -708,7 +720,7 @@ function ProviderSection(props: {
   );
 
   return (
-    <SettingsSection title="Providers">
+    <SettingsSection title={uiText("Providers")}>
       {rows.map((row, index) => {
         if (row.kind === "enable") {
           return (
@@ -769,8 +781,14 @@ function ProviderSection(props: {
             )}
             <Text className="text-sm text-foreground-muted">
               {metric === "cost"
-                ? `${formatPercent(share)} of cost · ${formatTokens(provider.totalTokens)} tokens`
-                : `${formatPercent(share)} of tokens · ${formatUsd(provider.costUsd)}`}
+                ? uiText("{0} of cost · {1} tokens", [
+                    formatPercent(share),
+                    formatTokens(provider.totalTokens),
+                  ])
+                : uiText("{0} of tokens · {1}", [
+                    formatPercent(share),
+                    formatUsd(provider.costUsd),
+                  ])}
             </Text>
           </View>
         );
@@ -784,6 +802,7 @@ function TotalsSection(props: {
   readonly isPast24Hours: boolean;
   readonly columns: number;
 }) {
+  const uiText = useUiText();
   const { merged } = props;
   const activePeriods = (props.isPast24Hours ? merged.hourly : merged.daily).filter(
     (period) => period.totalTokens > 0,
@@ -793,17 +812,17 @@ function TotalsSection(props: {
   const cachedShare = observedInput === 0 ? 0 : merged.cachedInputTokens / observedInput;
 
   return (
-    <SettingsSection title="Totals">
+    <SettingsSection title={uiText("Totals")}>
       <View className="flex-row flex-wrap">
         <MetricCell
           columns={props.columns}
-          label="Processed tokens"
+          label={uiText("Processed tokens")}
           value={formatTokens(merged.totalTokens)}
           detail={`${formatTokens(periodAverage)} per active ${props.isPast24Hours ? "hour" : "day"}`}
         />
         <MetricCell
           columns={props.columns}
-          label="Cache savings"
+          label={uiText("Cache savings")}
           value={formatUsd(merged.costQuality.cacheSavingsUsd)}
           detail={
             merged.costUsd > 0
@@ -813,25 +832,25 @@ function TotalsSection(props: {
         />
         <MetricCell
           columns={props.columns}
-          label="Cached input"
+          label={uiText("Cached input")}
           value={formatTokens(merged.cachedInputTokens)}
           detail={`${formatPercent(cachedShare)} of observed input`}
         />
         <MetricCell
           columns={props.columns}
-          label="Uncached input"
+          label={uiText("Uncached input")}
           value={formatTokens(merged.uncachedInputTokens)}
           detail={`${formatTokens(merged.cacheCreationTokens)} cache writes`}
         />
         <MetricCell
           columns={props.columns}
-          label="Output"
+          label={uiText("Output")}
           value={formatTokens(merged.outputTokens)}
           detail={`incl. ${formatTokens(merged.reasoningTokens)} reasoning`}
         />
         <MetricCell
           columns={props.columns}
-          label="Unpriced"
+          label={uiText("Unpriced")}
           value={formatPercent(merged.costQuality.unpricedShare)}
           detail="of records, excluded from cost"
         />
@@ -841,33 +860,34 @@ function TotalsSection(props: {
 }
 
 function CostSection(props: { readonly merged: MergedUsage; readonly wide: boolean }) {
+  const uiText = useUiText();
   const { categoryCost, speedCost } = props.merged;
   const colors = useUsageMixColors();
   const byType = [
-    { label: "Input", value: categoryCost.input, color: colors.input },
-    { label: "Cache read", value: categoryCost.cacheRead, color: colors.cacheRead },
-    { label: "Cache write", value: categoryCost.cacheWrite, color: colors.cacheWrite },
-    { label: "Output", value: categoryCost.output, color: colors.output },
+    { label: uiText("Input"), value: categoryCost.input, color: colors.input },
+    { label: uiText("Cache read"), value: categoryCost.cacheRead, color: colors.cacheRead },
+    { label: uiText("Cache write"), value: categoryCost.cacheWrite, color: colors.cacheWrite },
+    { label: uiText("Output"), value: categoryCost.output, color: colors.output },
     // Reported cost with no rates to split it, or from older servers. Below a
     // cent it is rounding, not usage.
     {
-      label: "Other",
+      label: uiText("Other"),
       value: categoryCost.unsplit >= 0.005 ? categoryCost.unsplit : 0,
       color: colors.other,
     },
   ];
   const bySpeed = [
-    { label: "Standard", value: speedCost.standard, color: colors.standard },
-    { label: "Fast", value: speedCost.fast, color: colors.fast },
-    { label: "Ultrafast", value: speedCost.ultrafast, color: colors.ultrafast },
+    { label: uiText("Standard"), value: speedCost.standard, color: colors.standard },
+    { label: uiText("Fast"), value: speedCost.fast, color: colors.fast },
+    { label: uiText("Ultrafast"), value: speedCost.ultrafast, color: colors.ultrafast },
   ];
   if (props.merged.costUsd <= 0) return null;
 
   return (
-    <SettingsSection title="Cost">
+    <SettingsSection title={uiText("Cost")}>
       <View className={props.wide ? "flex-row" : undefined}>
         <View className={props.wide ? "min-w-0 flex-1" : undefined}>
-          <ShareBar label="By type" segments={byType} />
+          <ShareBar label={uiText("By type")} segments={byType} />
         </View>
         {speedCost.fast + speedCost.ultrafast > 0 ? (
           <View
@@ -878,7 +898,7 @@ function CostSection(props: { readonly merged: MergedUsage; readonly wide: boole
             }
           >
             <ShareBar
-              label="By speed"
+              label={uiText("By speed")}
               segments={bySpeed}
               aside={`${formatUsd(speedCost.premium)} premium`}
             />
@@ -947,6 +967,7 @@ function ModelsSection(props: {
   readonly metric: UsageChartMetric;
   readonly columns: 1 | 2;
 }) {
+  const uiText = useUiText();
   const { merged, metric } = props;
   const colors = useProviderColors();
   if (merged.models.length === 0) return null;
@@ -959,7 +980,7 @@ function ModelsSection(props: {
   );
 
   return (
-    <SettingsSection title="By model">
+    <SettingsSection title={uiText("By model")}>
       <View className="flex-row flex-wrap">
         {ordered.map((model, index) => (
           <View
@@ -981,19 +1002,23 @@ function ModelsSection(props: {
               </Text>
               <Text className="text-sm text-foreground-muted">
                 {metric === "tokens"
-                  ? `${formatPercent(model.tokenShare)} of tokens · ${
-                      isModelCostUnknown(model) ? "no known rates" : formatUsd(model.costUsd)
-                    }`
+                  ? uiText("{0} of tokens · {1}", [
+                      formatPercent(model.tokenShare),
+                      isModelCostUnknown(model) ? "no known rates" : formatUsd(model.costUsd),
+                    ])
                   : isModelCostUnknown(model)
-                    ? `no known rates · ${formatTokens(model.totalTokens)} tokens`
-                    : `${formatPercent(model.costShare)} of cost · ${formatTokens(model.totalTokens)} tokens`}
+                    ? uiText("no known rates · {0} tokens", [formatTokens(model.totalTokens)])
+                    : uiText("{0} of cost · {1} tokens", [
+                        formatPercent(model.costShare),
+                        formatTokens(model.totalTokens),
+                      ])}
               </Text>
             </View>
             <Text className="text-base tabular-nums text-foreground">
               {metric === "tokens"
                 ? formatTokens(model.totalTokens)
                 : isModelCostUnknown(model)
-                  ? "Unpriced"
+                  ? uiText("Unpriced")
                   : formatUsd(model.costUsd)}
             </Text>
           </View>

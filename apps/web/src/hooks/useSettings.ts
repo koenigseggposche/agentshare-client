@@ -1,3 +1,10 @@
+import { useUiText } from "../i18n/uiText";
+import {
+  getClientSettingsSnapshot,
+  replaceClientSettingsSnapshot,
+  subscribeClientSettingsSnapshot,
+  resetClientSettingsSnapshot,
+} from "../i18n/clientSettingsStore";
 import { useRef, useSyncExternalStore, use } from "react";
 import { useSyncExternalStoreWithSelector } from "use-sync-external-store/with-selector";
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
@@ -66,35 +73,18 @@ const CLIENT_SETTINGS_PERSISTENCE_ERROR_SCOPE = "[CLIENT_SETTINGS]";
 
 type UnifiedSettingsPatch = ServerSettingsPatch & ClientSettingsPatch;
 
-const clientSettingsListeners = new Set<() => void>();
 const clientSettingsHydrationListeners = new Set<() => void>();
 type ClientSettingsHydrationStatus = "pending" | "ready" | "failed" | "retrying";
-let clientSettingsSnapshot = DEFAULT_CLIENT_SETTINGS;
 let clientSettingsHydrationStatus: ClientSettingsHydrationStatus = "pending";
 let clientSettingsHydrationPromise: Promise<void> | null = null;
 let clientSettingsHydrationGeneration = 0;
 let clientSettingsPersistenceQueue: Promise<void> = Promise.resolve();
 let deferredClientSettingsPatchCount = 0;
 
-function emitClientSettingsChange() {
-  for (const listener of clientSettingsListeners) {
-    listener();
-  }
-}
-
 function emitClientSettingsHydrationChange() {
   for (const listener of clientSettingsHydrationListeners) {
     listener();
   }
-}
-
-function getClientSettingsSnapshot(): ClientSettings {
-  return clientSettingsSnapshot;
-}
-
-function replaceClientSettingsSnapshot(settings: ClientSettings): void {
-  clientSettingsSnapshot = settings;
-  emitClientSettingsChange();
 }
 
 function setClientSettingsHydrationStatus(nextStatus: ClientSettingsHydrationStatus): void {
@@ -106,11 +96,9 @@ function setClientSettingsHydrationStatus(nextStatus: ClientSettingsHydrationSta
 }
 
 export function subscribeClientSettings(listener: () => void): () => void {
-  clientSettingsListeners.add(listener);
+  const unsubscribe = subscribeClientSettingsSnapshot(listener);
   void hydrateClientSettings().catch(() => undefined);
-  return () => {
-    clientSettingsListeners.delete(listener);
-  };
+  return unsubscribe;
 }
 
 export function getClientSettingsHydratedSnapshot(): boolean {
@@ -348,7 +336,7 @@ function migrateModelPreferences(): void {
     modelPreferencesMigrationTargetsAtom,
   )) {
     if (attemptedMigrationGenerations.get(environmentId) === generation) continue;
-    const patch = modelPreferencesMigrationPatch(settings, clientSettingsSnapshot);
+    const patch = modelPreferencesMigrationPatch(settings, getClientSettingsSnapshot());
     if (!patch) continue;
     attemptedMigrationGenerations.set(environmentId, generation);
     void runAtomCommand(
@@ -433,6 +421,7 @@ export async function prepareModelPreferencesPatch(
 }
 
 export function useUpdateEnvironmentModelPreferences(environmentId: EnvironmentId | null) {
+  const uiText = useUiText();
   const settings = useAtomValue(
     environmentId ? serverEnvironment.settingsValueAtom(environmentId) : noEnvironmentSettingsAtom,
   );
@@ -445,8 +434,8 @@ export function useUpdateEnvironmentModelPreferences(environmentId: EnvironmentI
     } catch {
       toastManager.add({
         type: "error",
-        title: "Model preferences not saved",
-        description: "Could not load saved model preferences. Try again.",
+        title: uiText("Model preferences not saved"),
+        description: uiText("Could not load saved model preferences. Try again."),
       });
       return;
     }
@@ -456,6 +445,7 @@ export function useUpdateEnvironmentModelPreferences(environmentId: EnvironmentI
 
 /** Send the desired state so two clients adding a favorite do not cancel each other. */
 export function useToggleEnvironmentModelFavorite(environmentId: EnvironmentId | null) {
+  const uiText = useUiText();
   const registry = use(RegistryContext);
   const pendingFavorites = useRef(
     new Map<string, { favorite: boolean; settings: ServerSettings; pending: boolean }>(),
@@ -472,8 +462,8 @@ export function useToggleEnvironmentModelFavorite(environmentId: EnvironmentId |
       } catch {
         toastManager.add({
           type: "error",
-          title: "Favorites not saved",
-          description: "Could not load saved model preferences. Try again.",
+          title: uiText("Favorites not saved"),
+          description: uiText("Could not load saved model preferences. Try again."),
         });
         return;
       }
@@ -582,6 +572,7 @@ function useSharedSettingsSyncTargetIds(includePending = false): ReadonlyArray<E
 }
 
 function useUpdateSettingsTarget(environmentId: EnvironmentId | null) {
+  const uiText = useUiText();
   useEnvironmentScope(environmentId, AuthSettingsWriteScope);
   const persist = useAtomCommand(serverEnvironment.updateSettings, {
     label: "server settings update",
@@ -601,8 +592,13 @@ function useUpdateSettingsTarget(environmentId: EnvironmentId | null) {
       const error = squashAtomCommandFailure(result);
       toastManager.add({
         type: "error",
-        title: "Setting not saved",
-        description: `Could not save on ${label}: ${error instanceof Error ? error.message : "The save failed. Try reconnecting and saving again."}`,
+        title: uiText("Setting not saved"),
+        description: uiText("Could not save on {0}: {1}", [
+          label,
+          error instanceof Error
+            ? error.message
+            : "The save failed. Try reconnecting and saving again.",
+        ]),
       });
     }
     return result;
@@ -623,8 +619,11 @@ function useUpdateSettingsTarget(environmentId: EnvironmentId | null) {
       options?.onFailed?.();
       toastManager.add({
         type: "warning",
-        title: "Setting not saved",
-        description: `This connection lacks permission to change settings on ${environments.find((target) => target.environmentId === environmentId)?.label ?? "the selected environment"}.`,
+        title: uiText("Setting not saved"),
+        description: uiText("This connection lacks permission to change settings on {0}.", [
+          environments.find((target) => target.environmentId === environmentId)?.label ??
+            "the selected environment",
+        ]),
       });
     }
     if (Object.keys(serverPatch).length > 0 && canWriteServerPatch) {
@@ -634,7 +633,7 @@ function useUpdateSettingsTarget(environmentId: EnvironmentId | null) {
         options?.onFailed?.();
         return toastManager.add({
           type: "warning",
-          title: "Setting not saved",
+          title: uiText("Setting not saved"),
           description,
         });
       };
@@ -717,7 +716,10 @@ function useUpdateSettingsTarget(environmentId: EnvironmentId | null) {
               .map(({ label }) => label);
             toastManager.add({
               type: "error",
-              title: saved.length > 0 ? "Setting saved on some environments" : "Setting not saved",
+              title:
+                saved.length > 0
+                  ? uiText("Setting saved on some environments")
+                  : uiText("Setting not saved"),
               description: [
                 ...failures,
                 ...(saved.length > 0 ? [`Saved on ${saved.join(", ")}.`] : []),
@@ -749,18 +751,17 @@ export function updateClientSettings(patch: ClientSettingsPatch): Promise<void> 
 
 export function __resetClientSettingsPersistenceForTests(): void {
   clientSettingsHydrationGeneration += 1;
-  clientSettingsSnapshot = DEFAULT_CLIENT_SETTINGS;
+  resetClientSettingsSnapshot();
   clientSettingsHydrationStatus = "pending";
   clientSettingsHydrationPromise = null;
   clientSettingsPersistenceQueue = Promise.resolve();
   deferredClientSettingsPatchCount = 0;
-  clientSettingsListeners.clear();
   clientSettingsHydrationListeners.clear();
 }
 
 export function __setClientSettingsForTests(settings: ClientSettings): void {
   clientSettingsHydrationGeneration += 1;
-  clientSettingsSnapshot = settings;
+  replaceClientSettingsSnapshot(settings);
   clientSettingsHydrationStatus = "ready";
   clientSettingsHydrationPromise = null;
 }

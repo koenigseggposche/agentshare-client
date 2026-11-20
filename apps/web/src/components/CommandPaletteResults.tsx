@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { type ResolvedKeybindingsConfig } from "@t3tools/contracts";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { ChevronRightIcon } from "lucide-react";
@@ -35,12 +36,13 @@ interface CommandPaletteResultsProps {
 }
 
 function CommandPaletteEmptyState(props: { emptyStateMessage?: string; isActionsOnly: boolean }) {
+  const uiText = useUiText();
   return (
     <div className="py-10 text-center text-sm text-muted-foreground">
       {props.emptyStateMessage ??
         (props.isActionsOnly
-          ? "No matching actions."
-          : "No matching commands, projects, or threads.")}
+          ? uiText("No matching actions.")
+          : uiText("No matching commands, projects, or threads."))}
     </div>
   );
 }

@@ -1,3 +1,7 @@
+import { readUiText } from "../i18n/uiText";
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { readUiTranslator } from "../i18n/uiText";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import * as Data from "effect/Data";
 import * as Effect from "effect/Effect";
 import * as Option from "effect/Option";
@@ -59,7 +63,10 @@ const ensureRelayClientAvailable = Effect.fn("linkEnvironment.ensureRelayClientA
     if (status.status === "available") return;
     if (status.status === "unsupported") {
       return yield* new CloudEnvironmentLinkError({
-        message: `T3 Code cannot install the relay client automatically on ${status.platform}-${status.arch}.`,
+        message: readUiText("T3 Code cannot install the relay client automatically on {0}-{1}.", [
+          status.platform,
+          status.arch,
+        ]),
       });
     }
 
@@ -69,7 +76,7 @@ const ensureRelayClientAvailable = Effect.fn("linkEnvironment.ensureRelayClientA
     });
     if (!confirmed) {
       return yield* new CloudEnvironmentLinkError({
-        message: "Relay client installation was cancelled.",
+        message: readUiText("Relay client installation was cancelled."),
       });
     }
 
@@ -87,7 +94,7 @@ const ensureRelayClientAvailable = Effect.fn("linkEnvironment.ensureRelayClientA
       );
     if (Option.isNone(installed) || installed.value.type !== "complete") {
       return yield* new CloudEnvironmentLinkError({
-        message: "The relay client install completed without a final status.",
+        message: readUiText("The relay client install completed without a final status."),
       });
     }
     const installedStatus = installed.value.status;
@@ -95,8 +102,11 @@ const ensureRelayClientAvailable = Effect.fn("linkEnvironment.ensureRelayClientA
       return yield* new CloudEnvironmentLinkError({
         message:
           installedStatus.status === "unsupported"
-            ? `T3 Code cannot install the relay client automatically on ${installedStatus.platform}-${installedStatus.arch}.`
-            : "The relay client is still unavailable after installation.",
+            ? readUiText("T3 Code cannot install the relay client automatically on {0}-{1}.", [
+                installedStatus.platform,
+                installedStatus.arch,
+              ])
+            : readUiText("The relay client is still unavailable after installation."),
       });
     }
   },
@@ -157,19 +167,22 @@ function endpointOrigin(httpBaseUrl: string) {
 const MANAGED_ENDPOINT_PROVIDER_KIND =
   "cloudflare_tunnel" satisfies RelayManagedEndpointProviderKind;
 
-function ensureLinkedEnvironmentMatches(input: {
-  readonly expectedEnvironmentId: string;
-  readonly expectedProviderKind: RelayManagedEndpointProviderKind;
-  readonly link: RelayEnvironmentLinkResponse;
-}): Effect.Effect<void, CloudEnvironmentLinkError> {
+function ensureLinkedEnvironmentMatches(
+  input: {
+    readonly expectedEnvironmentId: string;
+    readonly expectedProviderKind: RelayManagedEndpointProviderKind;
+    readonly link: RelayEnvironmentLinkResponse;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): Effect.Effect<void, CloudEnvironmentLinkError> {
   if (input.link.environmentId !== input.expectedEnvironmentId) {
     return new CloudEnvironmentLinkError({
-      message: "Relay returned credentials for a different environment.",
+      message: uiText("Relay returned credentials for a different environment."),
     });
   }
   if (input.link.endpoint.providerKind !== input.expectedProviderKind) {
     return new CloudEnvironmentLinkError({
-      message: "Relay returned credentials for a different endpoint provider.",
+      message: uiText("Relay returned credentials for a different endpoint provider."),
     });
   }
   return Effect.void;
@@ -271,7 +284,7 @@ export const linkPrimaryEnvironmentToCloud: (input: {
   const configuredRelayUrl = relayUrl();
   if (!configuredRelayUrl) {
     return yield* new CloudEnvironmentLinkError({
-      message: "T3CODE_RELAY_URL is not configured.",
+      message: readUiText("T3CODE_RELAY_URL is not configured."),
     });
   }
   const managedTunnelsEnabled = (input.mode ?? "managed") === "managed";
@@ -330,11 +343,14 @@ export const linkPrimaryEnvironmentToCloud: (input: {
         decodedRelayClientError(`${configuredRelayUrl}/v1/client/environment-links failed`),
       ),
     );
-  yield* ensureLinkedEnvironmentMatches({
-    expectedEnvironmentId: input.target.environmentId,
-    expectedProviderKind: providerKind,
-    link,
-  });
+  yield* ensureLinkedEnvironmentMatches(
+    {
+      expectedEnvironmentId: input.target.environmentId,
+      expectedProviderKind: providerKind,
+      link,
+    },
+    readUiTranslator(),
+  );
 
   yield* environmentClient.connect
     .relayConfig({

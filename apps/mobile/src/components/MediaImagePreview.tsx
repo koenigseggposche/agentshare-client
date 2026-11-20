@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { createContext, useContext, useState } from "react";
 import { Pressable, View } from "react-native";
 import ImageViewing from "react-native-image-viewing";
@@ -18,6 +19,7 @@ type MediaImagePreviewProps = {
 const ImagePreviewContext = createContext<MediaImagePreviewProps | null>(null);
 
 function ImagePreviewHeader(header: { readonly imageIndex: number }) {
+  const uiText = useUiText();
   const props = useContext(ImagePreviewContext)!;
   const source = props.source.gallery?.[header.imageIndex] ?? props.source;
   const insets = useSafeAreaInsets();
@@ -26,12 +28,12 @@ function ImagePreviewHeader(header: { readonly imageIndex: number }) {
     <View className="bg-black/70" style={{ paddingTop: insets.top }}>
       <View className="flex-row items-center gap-2 px-3">
         <AppText className="flex-1 text-base text-white" numberOfLines={2}>
-          {source.name ?? "Image"}
+          {source.name ?? uiText("Image")}
         </AppText>
         <MediaActionsMenu media={mediaActions} inModal />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close image"
+          accessibilityLabel={uiText("Close image")}
           onPress={props.onRequestClose}
           className="min-h-11 min-w-11 items-center justify-center"
         >

@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { translateUiLabels, uiTranslators } from "@t3tools/shared/uiMessages";
 export const CODE_BLOCK_LANGUAGES = [
   { id: "", label: "Plain text" },
   { id: "asm", label: "Assembly" },
@@ -74,11 +76,21 @@ export function withInfoStringLanguage(info: string, language: string): string {
   return rest.trim() ? `${leading}text${rest}` : "";
 }
 
-export function codeLanguageEntry(language: string): CodeBlockLanguage | null {
+export function codeLanguageEntry(
+  language: string,
+  uiText: UiTranslator = uiTranslators.en,
+): CodeBlockLanguage | null {
   const id = LANGUAGE_ALIASES[language.toLowerCase()] ?? language;
-  return CODE_BLOCK_LANGUAGES.find((entry) => entry.id === id.toLowerCase()) ?? null;
+  return (
+    translateUiLabels(CODE_BLOCK_LANGUAGES, uiText).find(
+      (entry) => entry.id === id.toLowerCase(),
+    ) ?? null
+  );
 }
 
-export function codeLanguageLabel(language: string): string {
-  return codeLanguageEntry(language)?.label ?? language;
+export function codeLanguageLabel(
+  language: string,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
+  return codeLanguageEntry(language, uiText)?.label ?? language;
 }

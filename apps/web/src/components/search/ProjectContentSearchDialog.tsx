@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { Spinner } from "~/components/ui/spinner";
 import { AuthFilesystemReadScope, type ProjectContentMatch } from "@t3tools/contracts";
 
@@ -79,19 +80,20 @@ function SearchOptionButton(props: {
 }
 
 function EmptyContentSearchDialog() {
+  const uiText = useUiText();
   return (
     <CommandPaletteContent
-      aria-label="Search project contents"
+      aria-label={uiText("Search project contents")}
       escapeLabel="Back"
       footerActionLabel="Open file"
-      inputProps={{ disabled: true, placeholder: "Search project contents…" }}
+      inputProps={{ disabled: true, placeholder: uiText("Search project contents…") }}
       mode="none"
       panelSize="fill"
       testId="project-content-search"
       value=""
     >
       <p className="m-auto px-6 text-center text-muted-foreground text-sm">
-        Open a project to search its files.
+        {uiText("Open a project to search its files.")}
       </p>
     </CommandPaletteContent>
   );
@@ -105,6 +107,7 @@ function OpenContentSearchDialog(props: {
   readonly onOpenChange: (open: boolean) => void;
   readonly target: ActiveProjectTarget;
 }) {
+  const uiText = useUiText();
   const { target } = props;
   const { resolvedTheme } = useTheme();
   const renderedAppearance = useRenderedAppearance();
@@ -163,7 +166,7 @@ function OpenContentSearchDialog(props: {
 
   return (
     <CommandPaletteContent
-      aria-label={`Search file contents in ${target.projectName}`}
+      aria-label={uiText("Search file contents in {0}", [target.projectName])}
       escapeLabel="Back"
       footerActionLabel="Open file"
       inputAccessory={
@@ -171,23 +174,23 @@ function OpenContentSearchDialog(props: {
           <SearchOptionButton
             active={caseSensitive}
             disabled={!search.canReadFiles}
-            label="Match case"
+            label={uiText("Match case")}
             onClick={() => setCaseSensitive((current) => !current)}
           >
-            Aa
+            {uiText("Aa")}
           </SearchOptionButton>
           <SearchOptionButton
             active={wholeWord}
             disabled={!search.canReadFiles}
-            label="Match whole word"
+            label={uiText("Match whole word")}
             onClick={() => setWholeWord((current) => !current)}
           >
-            <span className="underline decoration-2 underline-offset-2">ab</span>
+            <span className="underline decoration-2 underline-offset-2">{uiText("ab")}</span>
           </SearchOptionButton>
           <SearchOptionButton
             active={useRegex}
             disabled={!search.canReadFiles}
-            label="Use regular expression"
+            label={uiText("Use regular expression")}
             onClick={() => setUseRegex((current) => !current)}
           >
             .*
@@ -197,7 +200,7 @@ function OpenContentSearchDialog(props: {
       inputProps={{
         className: "pe-30",
         disabled: !search.canReadFiles,
-        placeholder: `Search in ${target.projectName}`,
+        placeholder: uiText("Search in {0}", [target.projectName]),
         onKeyDown: (event) => {
           if (event.key === "ArrowDown" && matches.length > 0) {
             event.preventDefault();
@@ -228,14 +231,19 @@ function OpenContentSearchDialog(props: {
         <div className="flex h-9 shrink-0 items-center border-b px-3 text-xs text-muted-foreground">
           {search.isPending ? (
             <span className="flex items-center gap-2">
-              <Spinner size="sm" /> Searching…
+              <Spinner size="sm" />
+              {uiText(" Searching…")}
             </span>
           ) : search.error ? (
             <span className="text-destructive">{search.error}</span>
           ) : search.invalidRegex ? (
-            <span className="text-destructive">Invalid regular expression</span>
+            <span className="text-destructive">{uiText("Invalid regular expression")}</span>
           ) : (
-            `${matches.length.toLocaleString()}${search.truncated ? "+" : ""} results in ${fileCount.toLocaleString()} files`
+            uiText("{0}{1} results in {2} files", [
+              matches.length.toLocaleString(uiText.language),
+              search.truncated ? "+" : "",
+              fileCount.toLocaleString(uiText.language),
+            ])
           )}
         </div>
       ) : null}
@@ -243,12 +251,12 @@ function OpenContentSearchDialog(props: {
       {matches.length === 0 ? (
         <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
           {search.isCheckingAccess
-            ? "Checking file access…"
+            ? uiText("Checking file access…")
             : !search.canReadFiles
               ? search.error
               : search.hasQuery && !search.isPending && !search.error
-                ? "No results found."
-                : "Type to search across your project."}
+                ? uiText("No results found.")
+                : uiText("Type to search across your project.")}
         </div>
       ) : (
         <ScrollArea className="min-h-0 flex-1" scrollFade>

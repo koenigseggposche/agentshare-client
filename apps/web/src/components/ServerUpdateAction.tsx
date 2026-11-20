@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import {
   AuthEnvironmentMaintainScope,
@@ -109,6 +110,7 @@ export type ServerUpdateOutcome =
 
 /** Toasts its success or failure unless `quiet`; never rejects. */
 export function useServerUpdate() {
+  const uiText = useUiText();
   const updateServer = useAtomCommand(serverEnvironment.updateServer, { reportFailure: false });
   return async (
     target: ServerUpdateTarget,
@@ -120,7 +122,7 @@ export function useServerUpdate() {
       if (!quiet) {
         toastManager.add({
           type: "error",
-          title: `${serverLabel} not updated`,
+          title: uiText("{0} not updated", [serverLabel]),
           description: denial,
         });
       }
@@ -149,7 +151,7 @@ export function useServerUpdate() {
       if (!quiet) {
         toastManager.add({
           type: "error",
-          title: `${serverLabel} update failed`,
+          title: uiText("{0} update failed", [serverLabel]),
           description: message,
         });
       }
@@ -158,11 +160,11 @@ export function useServerUpdate() {
     if (!quiet) {
       toastManager.add({
         type: "success",
-        title: `${serverLabel} updated`,
+        title: uiText("{0} updated", [serverLabel]),
         description:
           selfUpdate === "desktop-managed"
-            ? `Desktop app relaunched on ${result.value.targetVersion}.`
-            : `Reconnected on t3@${result.value.targetVersion}.`,
+            ? uiText("Desktop app relaunched on {0}.", [result.value.targetVersion])
+            : uiText("Reconnected on t3@{0}.", [result.value.targetVersion]),
       });
     }
     return { status: "updated" };
@@ -269,6 +271,7 @@ export function ServerUpdateAction({
   className,
   appearance = "button",
 }: ServerUpdateTarget & UpdateButtonProps) {
+  const uiText = useUiText();
   const isDesktopAppUpdate = selfUpdate === "desktop-managed";
   const serverVersion = useServerConfigs().get(environmentId)?.environment.serverVersion;
   const sessionStateAtom = environmentSession.sessionStateAtom(environmentId);
@@ -281,17 +284,25 @@ export function ServerUpdateAction({
       toastManager.add({
         type: "success",
         title:
-          installation?.kind === "npm-global" ? "Update command copied" : "Relaunch command copied",
+          installation?.kind === "npm-global"
+            ? uiText("Update command copied")
+            : uiText("Relaunch command copied"),
         description:
           installation?.kind === "npm-global"
-            ? `Run \`${command}\` on ${serverLabel}, then restart t3 with your usual options.`
-            : `Stop t3 on ${serverLabel}, then relaunch with \`${command}\` using the same subcommand and options. This does not update an installed t3 command.`,
+            ? uiText("Run `{0}` on {1}, then restart t3 with your usual options.", [
+                command,
+                serverLabel,
+              ])
+            : uiText(
+                "Stop t3 on {0}, then relaunch with `{1}` using the same subcommand and options. This does not update an installed t3 command.",
+                [serverLabel, command],
+              ),
       });
     },
     onError: (error) => {
       toastManager.add({
         type: "error",
-        title: "Could not copy update command",
+        title: uiText("Could not copy update command"),
         description: error.message,
       });
     },
@@ -338,7 +349,7 @@ export function ServerUpdateAction({
   if (selfUpdate === "desktop-managed" && !desktopAppUpdate) {
     return (
       <span className="text-muted-foreground text-xs">
-        Update the desktop app on that machine to update this server.
+        {uiText("Update the desktop app on that machine to update this server.")}
       </span>
     );
   }
@@ -369,7 +380,7 @@ export function ServerUpdateAction({
               size="icon-xs"
               variant="ghost-muted"
               className={className}
-              aria-label={`${actionLabel} for ${serverLabel}`}
+              aria-label={uiText("{0} for {1}", [actionLabel, serverLabel])}
               disabled={manualCommand === null && !canUpdate}
               onClick={onClick}
             />
@@ -409,6 +420,7 @@ export function OutdatedServerUpdateAction({
   readonly targetVersion: string;
   readonly label?: string;
 }) {
+  const uiText = useUiText();
   const update = useAtomCommand(updateOutdatedServer, { reportFailure: false });
   const handleUpdate = async () => {
     if (pendingUpdateEnvironmentIds.has(environmentId)) return;
@@ -423,15 +435,15 @@ export function OutdatedServerUpdateAction({
       if (isAtomCommandInterrupted(result)) return;
       toastManager.add({
         type: "error",
-        title: `${serverLabel} update failed`,
+        title: uiText("{0} update failed", [serverLabel]),
         description: updateFailureMessage(squashAtomCommandFailure(result)),
       });
       return;
     }
     toastManager.add({
       type: "success",
-      title: `${serverLabel} updated`,
-      description: `Reconnected on t3@${result.value.targetVersion}.`,
+      title: uiText("{0} updated", [serverLabel]),
+      description: uiText("Reconnected on t3@{0}.", [result.value.targetVersion]),
     });
   };
   if (fromVersion !== undefined && crossesReleaseTrack(fromVersion, targetVersion)) {

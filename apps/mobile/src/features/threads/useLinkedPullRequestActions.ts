@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import {
   pullRequestLinkProject,
   resolveLinkPullRequestInput,
@@ -34,6 +36,7 @@ export function useLinkedPullRequestActions(input: {
   readonly project: EnvironmentProject | null;
   readonly runtime: EnvironmentRuntimeState | null;
 }) {
+  const uiText = useUiText();
   const { thread, project, runtime } = input;
   const terminology = sourceControlClients.get(project?.repositoryIdentity?.provider).changeRequest;
   const capabilities = runtime?.serverConfig?.environment.capabilities;
@@ -61,7 +64,7 @@ export function useLinkedPullRequestActions(input: {
     const result = await pending;
     if (result._tag === "Success" || isAtomCommandInterrupted(result)) return;
     const cause = squashAtomCommandFailure(result);
-    Dialog.alert(failureTitle, cause instanceof Error ? cause.message : "Try again.");
+    Dialog.alert(failureTitle, cause instanceof Error ? cause.message : readUiText("Try again."));
   };
 
   const setLinked = (
@@ -90,11 +93,13 @@ export function useLinkedPullRequestActions(input: {
   const promptLink = () => {
     const { singular } = terminology;
     Dialog.prompt({
-      title: `Link ${singular}`,
-      message: `Paste a ${singular} URL, or enter 123 / #123 for this thread's repository.`,
-      placeholder: `${capitalizeTerm(singular)} URL or #42`,
+      title: readUiText("Link {0}", [singular]),
+      message: readUiText("Paste a {0} URL, or enter 123 / #123 for this thread's repository.", [
+        singular,
+      ]),
+      placeholder: readUiText("{0} URL or #42", [capitalizeTerm(singular)]),
       initialValue: "",
-      confirmText: "Link",
+      confirmText: readUiText("Link"),
       onConfirm: (reference) => {
         const resolved = resolveLinkPullRequestInput({
           reference,
@@ -118,13 +123,13 @@ export function useLinkedPullRequestActions(input: {
     const open = link.snapshot === null || link.snapshot.state === "open";
     const watching = link.watch !== undefined;
     return [
-      { id: "copy", title: "Copy link", image: "link" },
-      { id: "browser", title: "Open in browser", image: "safari" },
+      { id: "copy", title: uiText("Copy link"), image: "link" },
+      { id: "browser", title: uiText("Open in browser"), image: "safari" },
       ...((watching ? canWatch : canStartWatch) && open
         ? [
             {
               id: "watch",
-              title: watching ? "Stop watching" : "Watch for changes",
+              title: watching ? uiText("Stop watching") : uiText("Watch for changes"),
               image: watching ? "eye.slash" : "eye",
             },
           ]
@@ -133,7 +138,10 @@ export function useLinkedPullRequestActions(input: {
         ? [
             {
               id: "unlink",
-              title: link.source === "stack" ? "Dismiss from thread" : "Unlink from thread",
+              title:
+                link.source === "stack"
+                  ? uiText("Dismiss from thread")
+                  : uiText("Unlink from thread"),
               image: "xmark",
               attributes: { destructive: true },
             },
@@ -151,7 +159,10 @@ export function useLinkedPullRequestActions(input: {
             sourceControlClients.findByChangeRequestUrl(link.url) ??
             sourceControlClients.get(undefined)
           ).changeRequest;
-          Dialog.alert(`Unable to open ${shortLabel}`, `The ${singular} could not be opened.`);
+          Dialog.alert(
+            readUiText("Unable to open {0}", [shortLabel]),
+            readUiText("The {0} could not be opened.", [singular]),
+          );
         }
       });
     else if (action === "watch" && thread !== null)

@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   ANTIGRAVITY_DEFAULT_MODEL,
   type ProviderInstanceId,
@@ -113,6 +114,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
   effortColumn?: ReactNode;
   footer?: ReactNode;
 }) {
+  const uiText = useUiText();
   const composerFloatingLayerProps = useComposerMenuProps();
   const [uncontrolledIsMenuOpen, setUncontrolledIsMenuOpen] = useState(false);
   const isMenuOpen = props.open ?? uncontrolledIsMenuOpen;
@@ -398,7 +400,7 @@ export const ProviderModelPicker = memo(function ProviderModelPicker(props: {
           {props.triggerSuffix}
           {selectedModel?.isUnavailable && !selectedEntries && props.triggerLabel === undefined ? (
             <Badge variant="outline" size="sm">
-              Unavailable
+              {uiText("Unavailable")}
             </Badge>
           ) : null}
         </span>

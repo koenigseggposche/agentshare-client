@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type {
   ModelSelection,
   ProviderInstanceId,
@@ -45,6 +46,7 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
   onToggleInteractionMode: () => void;
   onRuntimeModeChange: (mode: RuntimeMode) => void;
 }) {
+  const uiText = useUiText();
   const size = props.size ?? "sm";
   const accessDisplay = props.accessDisplay ?? "label";
   const composerFloatingLayerProps = useComposerMenuProps();
@@ -93,7 +95,7 @@ export const ComposerFooterModeControls = memo(function ComposerFooterModeContro
           data-composer-control-label
           className={size === "xs" ? "sr-only" : "sr-only sm:not-sr-only"}
         >
-          {props.interactionMode === "plan" ? "Plan" : "Build"}
+          {props.interactionMode === "plan" ? uiText("Plan") : uiText("Build")}
         </span>
       </TooltipTrigger>
       <TooltipPopup side="top">{interactionModeTooltip}</TooltipPopup>

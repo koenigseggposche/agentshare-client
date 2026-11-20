@@ -1,3 +1,4 @@
+import { useUiText } from "../../../../i18n/uiText";
 import { Platform, ScrollView, type StyleProp, type TextStyle, View } from "react-native";
 
 import { AppText as Text } from "../../../../components/ui/AppText";
@@ -19,6 +20,7 @@ export function AppearancePreviewSeparator() {
 }
 
 export function TextAppearancePreview(props: { readonly fontSize: number }) {
+  const uiText = useUiText();
   const sizes = resolveMarkdownFontSizes(props.fontSize);
 
   return (
@@ -27,19 +29,20 @@ export function TextAppearancePreview(props: { readonly fontSize: number }) {
         className="text-foreground"
         style={{ fontSize: sizes.m, lineHeight: sizes.bodyLineHeight }}
       >
-        The quick brown fox jumps over the lazy dog.
+        {uiText("The quick brown fox jumps over the lazy dog.")}
       </Text>
       <Text
         className="text-foreground-muted"
         style={{ fontSize: sizes.s, lineHeight: Math.round(sizes.s * 1.4) }}
       >
-        Messages, labels, and headings scale with this size.
+        {uiText("Messages, labels, and headings scale with this size.")}
       </Text>
     </View>
   );
 }
 
 export function TerminalAppearancePreview(props: { readonly fontSize: number }) {
+  const uiText = useUiText();
   const { themeAppearance: scheme, themeId } = useAppearancePreferences();
   const theme = getMobileTerminalTheme(themeId, scheme);
   const lineHeight = Math.round(props.fontSize * 1.6);
@@ -57,35 +60,35 @@ export function TerminalAppearancePreview(props: { readonly fontSize: number }) 
     <View className="p-4">
       <Text style={span(theme.foreground)}>
         <Text style={span(theme.palette[2])}>→ </Text>
-        <Text style={span(theme.palette[6])}>t3code </Text>
-        <Text style={span(theme.palette[4])}>git:(</Text>
-        <Text style={span(theme.palette[1])}>main</Text>
+        <Text style={span(theme.palette[6])}>{uiText("t3code ")}</Text>
+        <Text style={span(theme.palette[4])}>{uiText("git:(")}</Text>
+        <Text style={span(theme.palette[1])}>{uiText("main")}</Text>
         <Text style={span(theme.palette[4])}>)</Text>
         <Text style={span(theme.palette[3])}> ✗</Text>
-        <Text style={span(theme.foreground)}> vpr dev</Text>
+        <Text style={span(theme.foreground)}>{uiText(" vpr dev")}</Text>
       </Text>
       <Text style={span(theme.foreground)}>
-        <Text style={span(theme.palette[2])}>VITE v7.1.1</Text>
-        <Text style={span(theme.mutedForeground)}> ready in</Text>
+        <Text style={span(theme.palette[2])}>{uiText("VITE v7.1.1")}</Text>
+        <Text style={span(theme.mutedForeground)}>{uiText(" ready in")}</Text>
         <Text style={span(theme.foreground)}> 1.24s</Text>
       </Text>
       <Text style={span(theme.foreground)}>
         <Text style={span(theme.palette[2])}>→ </Text>
-        <Text style={span(theme.mutedForeground)}>Local: </Text>
+        <Text style={span(theme.mutedForeground)}>{uiText("Local: ")}</Text>
         <Text style={span(theme.palette[6], { textDecorationLine: "underline" })}>
           http://127.0.0.1:5173/
         </Text>
       </Text>
       <Text style={span(theme.foreground)}>
-        <Text style={span(theme.palette[2])}>✓ 85 passed</Text>
-        <Text style={span(theme.palette[3])}> △ 2 warnings</Text>
-        <Text style={span(theme.palette[1])}> ✗ 0 failed</Text>
+        <Text style={span(theme.palette[2])}>{uiText("✓ 85 passed")}</Text>
+        <Text style={span(theme.palette[3])}>{uiText(" △ 2 warnings")}</Text>
+        <Text style={span(theme.palette[1])}>{uiText(" ✗ 0 failed")}</Text>
       </Text>
       <Text style={span(theme.foreground)}>
         <Text style={span(theme.background, { backgroundColor: theme.palette[2] })}>
-          {" READY "}
+          {uiText(" READY ")}
         </Text>
-        <Text style={span(theme.mutedForeground)}> watching for changes</Text>{" "}
+        <Text style={span(theme.mutedForeground)}>{uiText(" watching for changes")}</Text>{" "}
         <Text style={span(theme.cursorForeground)}>▏</Text>
       </Text>
     </View>

@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import type { EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
 
 export interface FloatingStatusAction {
@@ -68,8 +69,8 @@ export function connectionFloatingStatus(input: {
         tone: "reconnecting",
         label:
           input.connectionError === null
-            ? `Reconnecting to ${environmentLabel}...`
-            : `Failed to connect. Retrying ${environmentLabel}...`,
+            ? readUiText("Reconnecting to {0}...", [environmentLabel])
+            : readUiText("Failed to connect. Retrying {0}...", [environmentLabel]),
         onPress: input.onReconnect,
       };
     case "offline":

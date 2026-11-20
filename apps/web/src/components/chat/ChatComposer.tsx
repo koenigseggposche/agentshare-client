@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useComposerTypingGuard } from "./useComposerTypingGuard";
 import { insertAttachmentReferencesForDraft } from "./composerAttachmentReferences";
 import { DESKTOP_PASTE_AS_TEXT_EVENT } from "../../lib/desktopPasteAsText";
@@ -504,6 +505,7 @@ const NO_PROVIDER_SKILLS: ServerProvider["skills"] = [];
 const NO_PROVIDER_SLASH_COMMANDS: ServerProvider["slashCommands"] = [];
 
 export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps) {
+  const uiText = useUiText();
   const placeholderLabels =
     composerPlaceholderLabels[useClientSettings((settings) => settings.uiLanguage)];
   const {
@@ -1339,11 +1341,15 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       ...composerPreviewAnnotations
         .filter((a) => wanted.has(previewAnnotationContextId(a.id)))
         .map((annotation) =>
-          previewAnnotationContextRecord(annotation, {
-            screenshotContextId: composerImages.some((image) => image.id === annotation.id)
-              ? annotation.id
-              : undefined,
-          }),
+          previewAnnotationContextRecord(
+            annotation,
+            {
+              screenshotContextId: composerImages.some((image) => image.id === annotation.id)
+                ? annotation.id
+                : undefined,
+            },
+            uiText,
+          ),
         ),
       ...[...composerImages, ...composerFiles]
         .filter((attachment) =>
@@ -2087,8 +2093,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       event?.preventDefault();
       toastManager.add({
         type: "info",
-        title: "Still compressing a pasted image.",
-        description: "Send again once its thumbnail appears.",
+        title: uiText("Still compressing a pasted image."),
+        description: uiText("Send again once its thumbnail appears."),
       });
       return;
     }
@@ -2096,8 +2102,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       event?.preventDefault();
       toastManager.add({
         type: "info",
-        title: "Still bringing attached context into this message.",
-        description: "Send again once its chip resolves.",
+        title: uiText("Still bringing attached context into this message."),
+        description: uiText("Send again once its chip resolves."),
       });
       return;
     }
@@ -2388,7 +2394,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                       variant="ghost"
                       onClick={() => handleRuntimeModeChange(runtimeModeCeilingFallback)}
                     >
-                      Switch to {runtimeModeConfig[runtimeModeCeilingFallback].label}
+                      {uiText("Switch to ")}
+                      {runtimeModeConfig[runtimeModeCeilingFallback].label}
                     </Button>
                   ),
                 }),
@@ -2528,7 +2535,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     if (target === "remote") {
       toastManager.add({
         type: "error",
-        title: "Folders can only be referenced on a server running on this computer",
+        title: uiText("Folders can only be referenced on a server running on this computer"),
       });
       return;
     }
@@ -2537,8 +2544,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       if (path === null) {
         toastManager.add({
           type: "error",
-          title: `Couldn't get the path of "${folder.name}"`,
-          description: "Type the folder path with @ instead.",
+          title: uiText('Couldn\'t get the path of "{0}"', [folder.name]),
+          description: uiText("Type the folder path with @ instead."),
         });
         continue;
       }
@@ -2548,8 +2555,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       if (!inserted) {
         toastManager.add({
           type: "error",
-          title: "Unable to add folder",
-          description: "The composer is busy; try again once it is ready.",
+          title: uiText("Unable to add folder"),
+          description: uiText("The composer is busy; try again once it is ready."),
         });
         break;
       }
@@ -2622,8 +2629,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     onInsertRejected: () => {
       toastManager.add({
         type: "error",
-        title: "Unable to add to chat",
-        description: "The composer is busy; try again once it is ready.",
+        title: uiText("Unable to add to chat"),
+        description: uiText("The composer is busy; try again once it is ready."),
       });
     },
   });
@@ -2635,7 +2642,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       pendingDraftWork.begin(targetKey);
       const loadingToast = toastManager.add({
         type: "loading",
-        title: "Loading thread context…",
+        title: uiText("Loading thread context…"),
         timeout: 0,
         data: { threadRef: routeThreadRef, hideCopyButton: true },
       });
@@ -2670,12 +2677,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         const error = squashAtomCommandFailure(importResult);
         toastManager.add({
           type: "error",
-          title: "Unable to read the dropped thread",
+          title: uiText("Unable to read the dropped thread"),
           description:
             isEnvironmentRequestInvalidError(error) &&
             error.reason === "thread_transcript_too_large"
-              ? "This thread exceeds the attachment size limit. Try a shorter thread."
-              : "Check that its environment is connected and up to date, then try again.",
+              ? uiText("This thread exceeds the attachment size limit. Try a shorter thread.")
+              : uiText("Check that its environment is connected and up to date, then try again."),
         });
       }
       toastManager.close(loadingToast);
@@ -2719,8 +2726,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       if (!inserted) {
         toastManager.add({
           type: "error",
-          title: "Unable to add thread",
-          description: "The composer is busy; try again once it is ready.",
+          title: uiText("Unable to add thread"),
+          description: uiText("The composer is busy; try again once it is ready."),
         });
         return;
       }
@@ -3263,10 +3270,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                   )}
                   onPointerDown={(event) => event.preventDefault()}
                   onClick={expandMobileComposerStable}
-                  aria-label="Expand composer"
+                  aria-label={uiText("Expand composer")}
                 >
                   {prompt.trim() ||
-                    (showProviderUnavailable ? "Enable a provider in Settings" : "Ask anything...")}
+                    (showProviderUnavailable
+                      ? uiText("Enable a provider in Settings")
+                      : uiText("Ask anything..."))}
                 </button>
                 {collapsedComposerImagePreviews}
                 <button
@@ -3340,10 +3349,10 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                 {composerSuggestionsVisible && composerMenuItems.length === 0
                   ? isComposerMenuLoading
                     ? composerTriggerKind === "pull-request"
-                      ? "Finding pull request..."
+                      ? uiText("Finding pull request...")
                       : composerTriggerKind === "skill" || composerTriggerKind === "slash-command"
-                        ? "Searching workspace skills..."
-                        : "Searching workspace files..."
+                        ? uiText("Searching workspace skills...")
+                        : uiText("Searching workspace files...")
                     : composerMenuEmptyState
                   : ""}
               </div>

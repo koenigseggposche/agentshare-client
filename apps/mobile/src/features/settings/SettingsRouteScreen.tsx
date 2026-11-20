@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   navigationCustomizationAvailable,
   overflowNavigationTabs,
@@ -109,6 +110,7 @@ interface SettingsListSection {
 }
 
 function ConfiguredSettingsRouteScreen() {
+  const uiText = useUiText();
   const language = useWorkbenchLanguage();
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const navigation = useNavigation();
@@ -128,7 +130,7 @@ function ConfiguredSettingsRouteScreen() {
         {
           id: "account",
           icon: "person.crop.circle",
-          label: "T3 Account",
+          label: uiText("T3 Account"),
           value: accountLabel,
           disabled: !isLoaded,
           onPress: () => navigation.navigate("SettingsAuth"),
@@ -183,15 +185,7 @@ function SettingsList(props: { readonly connections: readonly SettingsListRow[] 
       { rows: overflowRows },
       {
         title: t("连接", "Connections"),
-        rows: [
-          {
-            id: "SettingsAgentShare",
-            icon: "person.crop.circle",
-            label: "AgentShare",
-            target: "SettingsAgentShare",
-          } satisfies SettingsListRow,
-          ...props.connections,
-        ],
+        rows: [...props.connections],
       },
       ...indexSections,
     ],
@@ -269,6 +263,26 @@ function useSettingsIndexSections(): SettingsListSection[] {
   // The same pages and groups as Settings on web, minus what mobile has no setting for.
   return [
     {
+      title: t("账户", "Account"),
+      rows: [
+        page("SettingsAccount", "person.crop.circle", t("账号与安全", "Account and security")),
+        page("SettingsWallet", "chart.bar.xaxis", t("钱包与账单", "Wallet and records")),
+      ],
+    },
+    {
+      title: t("模型与工具", "Models and tools"),
+      rows: [
+        serverPage(
+          "SettingsProviderAccounts",
+          "person.crop.circle",
+          t("模型连接", "Model connections"),
+        ),
+        serverPage("SettingsLocalModels", "internaldrive", t("本地模型", "Local models")),
+        serverPage("SettingsModelSharing", "globe", t("模型分享", "Model sharing")),
+        serverPage("SettingsCodingTools", "terminal", t("编程工具", "Coding tools")),
+      ],
+    },
+    {
       rows: [
         page("SettingsOrganization", "gearshape", t("通用", "General")),
         page("SettingsAppearance", "paintbrush", t("外观", "Appearance")),
@@ -285,7 +299,6 @@ function useSettingsIndexSections(): SettingsListSection[] {
     {
       title: t("助手", "Agents"),
       rows: [
-        serverPage("SettingsProviderAccounts", "person.crop.circle", t("模型服务", "Providers")),
         serverPage("SettingsThreads", "text.bubble", t("会话", "Threads")),
         page("SettingsScheduledTasks", "clock", t("定时任务", "Scheduled tasks")),
       ],

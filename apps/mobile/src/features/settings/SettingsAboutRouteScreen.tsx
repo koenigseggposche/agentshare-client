@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import { ScreenScrollView as ScrollView } from "../../components/ui/ScreenScrollView";
 import Constants from "expo-constants";
@@ -20,10 +22,11 @@ import { SettingsSection } from "./components/SettingsSection";
 import { SettingsScreen } from "./components/SettingsScreen";
 
 export function SettingsAboutRouteScreen() {
+  const uiText = useUiText();
   const insets = useSafeAreaInsets();
 
   return (
-    <SettingsScreen title="About">
+    <SettingsScreen title={uiText("About")}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
@@ -38,6 +41,7 @@ export function SettingsAboutRouteScreen() {
 }
 
 function AppSettingsSection() {
+  const uiText = useUiText();
   const [checkState, setCheckState] = useState<{
     readonly state: AppUpdateCheckState;
     // "Up to date" is a confirmation that fades back to idle.
@@ -64,15 +68,18 @@ function AppSettingsSection() {
     updateInFlight.current = true;
     // Failures arrive through onFailure; the settled result only matters for unlocking.
     await settlePromise(() =>
-      runAppUpdateCheck({
-        applyMode: "immediate",
-        onFailure: (message) => Dialog.alert("Update failed", message),
-        onStateChange: (state) =>
-          setCheckState({
-            state,
-            settledUntil: state === "current" ? Date.now() + 3000 : null,
-          }),
-      }),
+      runAppUpdateCheck(
+        {
+          applyMode: "immediate",
+          onFailure: (message) => Dialog.alert(readUiText("Update failed"), message),
+          onStateChange: (state) =>
+            setCheckState({
+              state,
+              settledUntil: state === "current" ? Date.now() + 3000 : null,
+            }),
+        },
+        uiText,
+      ),
     );
     updateInFlight.current = false;
   }
@@ -108,7 +115,7 @@ function AppSettingsSection() {
         type="monochrome"
         weight="regular"
       />
-      <Text className="flex-1 text-lg text-foreground">Version</Text>
+      <Text className="flex-1 text-lg text-foreground">{uiText("Version")}</Text>
       <View className="items-end">
         <Text className="text-lg text-foreground-muted">{versionLabel}</Text>
         {statusLabel ? (
@@ -119,12 +126,16 @@ function AppSettingsSection() {
   );
 
   return (
-    <SettingsSection title="App">
-      <SettingsRow icon="internaldrive" label="Client Storage" target="SettingsClientStorage" />
-      <SettingsRow icon="stethoscope" label="Diagnostics" target="SettingsDiagnostics" />
+    <SettingsSection title={uiText("App")}>
+      <SettingsRow
+        icon="internaldrive"
+        label={uiText("Client Storage")}
+        target="SettingsClientStorage"
+      />
+      <SettingsRow icon="stethoscope" label={uiText("Diagnostics")} target="SettingsDiagnostics" />
       <SettingsRow
         icon="doc.on.doc"
-        label="Open source licenses"
+        label={uiText("Open source licenses")}
         target="SettingsOpenSourceLicenses"
       />
       <SettingsRow
@@ -134,7 +145,7 @@ function AppSettingsSection() {
       />
       {updateCheckAvailable ? (
         <Pressable
-          accessibilityLabel={`Version ${versionLabel}`}
+          accessibilityLabel={uiText("Version {0}", [versionLabel])}
           accessibilityRole="text"
           disabled={busy}
           onPress={handleVersionPress}

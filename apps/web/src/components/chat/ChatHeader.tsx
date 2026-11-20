@@ -1,3 +1,5 @@
+import { useUiText } from "../../i18n/uiText";
+import { ProjectCodingTerminal } from "./ProjectCodingTerminal";
 import {
   AuthOrchestrationOperateScope,
   type EnvironmentId,
@@ -50,6 +52,7 @@ interface ChatHeaderProps {
   activeThreadLinkOrigin?: string | null | undefined;
   isServerThread: boolean;
   activeProject: EnvironmentProject | null;
+  worktreePath?: string | null;
   parentThreadLink: { threadId: ThreadId; title: string } | null;
   onOpenThread: (threadId: ThreadId) => void;
   rightPanelOpen: boolean;
@@ -77,6 +80,7 @@ export const ChatHeader = memo(function ChatHeader({
   activeThreadLinkOrigin,
   isServerThread,
   activeProject,
+  worktreePath,
   parentThreadLink,
   onOpenThread,
   rightPanelOpen,
@@ -84,6 +88,7 @@ export const ChatHeader = memo(function ChatHeader({
   onOpenProjectSettings,
   onFindInThread,
 }: ChatHeaderProps) {
+  const uiText = useUiText();
   const isChinese = useClientSettings((settings) => settings.uiLanguage) === "zh";
   const activeProjectName = activeProject?.isScratch
     ? isChinese
@@ -191,7 +196,7 @@ export const ChatHeader = memo(function ChatHeader({
       originalTitle: renamingTitle ?? activeThreadTitle,
     });
     if (resolution.action === "reject-empty") {
-      toastManager.add({ type: "warning", title: "Thread title cannot be empty" });
+      toastManager.add({ type: "warning", title: uiText("Thread title cannot be empty") });
       return;
     }
     if (resolution.action === "noop") return;
@@ -203,8 +208,8 @@ export const ChatHeader = memo(function ChatHeader({
         const error = squashAtomCommandFailure(result);
         toastManager.add({
           type: "error",
-          title: "Failed to rename thread",
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: uiText("Failed to rename thread"),
+          description: error instanceof Error ? error.message : uiText("An error occurred."),
         });
       }
     });
@@ -269,7 +274,7 @@ export const ChatHeader = memo(function ChatHeader({
       const api = readLocalApi();
       if (!api) return;
       void api.contextMenu
-        .show([{ id: "project-settings", label: "Project settings", icon: "settings" }], {
+        .show([{ id: "project-settings", label: uiText("Project settings"), icon: "settings" }], {
           x: event.clientX,
           y: event.clientY,
         })
@@ -369,7 +374,7 @@ export const ChatHeader = memo(function ChatHeader({
             <input
               autoFocus
               dir="auto"
-              aria-label="Thread title"
+              aria-label={uiText("Thread title")}
               className="min-w-0 flex-1 rounded-sm bg-transparent text-sm font-medium text-foreground outline-none ring-1 ring-inset ring-ring/50 focus:ring-ring"
               defaultValue={renamingTitle}
               onBlur={(event) => {
@@ -393,7 +398,7 @@ export const ChatHeader = memo(function ChatHeader({
                   <button
                     ref={titleButtonRef}
                     type="button"
-                    aria-label={`Thread actions for ${activeThreadTitle}`}
+                    aria-label={uiText("Thread actions for {0}", [activeThreadTitle])}
                     aria-haspopup="menu"
                     onClick={openMenuFromTitle}
                     onDoubleClick={canOperateThread ? handleTitleDoubleClick : undefined}
@@ -432,15 +437,24 @@ export const ChatHeader = memo(function ChatHeader({
           {renamingTitle === null && activeThreadLinkOrigin ? (
             <Tooltip>
               <TooltipTrigger render={<Badge variant="info" size="sm" />}>
-                From {activeThreadLinkOrigin}
+                {uiText("From ")}
+                {activeThreadLinkOrigin}
               </TooltipTrigger>
               <TooltipPopup side="top">
-                Started by an agent on {activeThreadLinkOrigin} through a linked environment.
+                {uiText("Started by an agent on ")}
+                {activeThreadLinkOrigin}
+                {uiText(" through a linked environment.")}
               </TooltipPopup>
             </Tooltip>
           ) : null}
         </WorkspaceBreadcrumbItem>
       </WorkspaceBreadcrumb>
+      {activeProjectCwd ? (
+        <ProjectCodingTerminal
+          environmentId={activeThreadEnvironmentId}
+          directory={worktreePath ?? activeProjectCwd}
+        />
+      ) : null}
       {isServerThread ? <GuestShareIndicator threadRef={activeThreadRef} /> : null}
     </div>
   );

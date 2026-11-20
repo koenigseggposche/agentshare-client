@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { EnvironmentId, UnifiedSettings } from "@t3tools/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { PlusIcon } from "lucide-react";
@@ -34,9 +35,10 @@ export function UsageProviderSettings({
   readonly cursorKeychainUsageEnabled: boolean;
   readonly readOnly: boolean;
 }) {
+  const uiText = useUiText();
   const updateSettings = useUpdateEnvironmentSettings(environmentId);
   const updateCursorSettings = useAtomCommand(serverEnvironment.updateSettings, {
-    label: "update Cursor account usage",
+    label: uiText("update Cursor account usage"),
   });
   const refreshProviders = useAtomCommand(serverEnvironment.refreshProviders, {
     reportFailure: false,
@@ -67,7 +69,7 @@ export function UsageProviderSettings({
           !readOnly ? (
             <Button size="xs" variant="outline" onClick={() => setAdding(true)}>
               <PlusIcon className="size-3" aria-hidden />
-              Add hub
+              {uiText("Add hub")}
             </Button>
           ) : null
         }
@@ -75,11 +77,13 @@ export function UsageProviderSettings({
         {platform?.os === "darwin" ? (
           <SettingsRow
             id="cursor-keychain-usage"
-            title="Cursor account usage"
-            description="Read your existing Cursor CLI login from macOS Keychain to show account history and monthly limits. macOS may ask you to allow access."
+            title={uiText("Cursor account usage")}
+            description={uiText(
+              "Read your existing Cursor CLI login from macOS Keychain to show account history and monthly limits. macOS may ask you to allow access.",
+            )}
             control={
               <Switch
-                aria-label="Cursor account usage"
+                aria-label={uiText("Cursor account usage")}
                 checked={cursorKeychainUsageEnabled}
                 disabled={readOnly || updatingCursor}
                 onCheckedChange={(enabled) => void setCursorUsageEnabled(enabled)}
@@ -88,7 +92,7 @@ export function UsageProviderSettings({
           />
         ) : null}
         {entries.length === 0 ? (
-          <SettingsRow title="No hubs configured." />
+          <SettingsRow title={uiText("No hubs configured.")} />
         ) : (
           entries.map(([id, source]) => {
             const label = source.label?.trim() || source.url;
@@ -98,7 +102,8 @@ export function UsageProviderSettings({
                 title={label}
                 description={
                   <span className="break-all">
-                    CLI Proxy{source.enabled ? "" : " · Disabled"}
+                    {uiText("CLI Proxy")}
+                    {source.enabled ? "" : uiText(" · Disabled")}
                     {label !== source.url ? ` · ${source.url}` : ""}
                   </span>
                 }
@@ -135,24 +140,30 @@ function RemoveUsageProviderButton({
   readonly label: string;
   readonly onConfirm: () => void;
 }) {
+  const uiText = useUiText();
   const [open, setOpen] = useState(false);
   return (
     <>
       <Button size="xs" variant="ghost" onClick={() => setOpen(true)}>
-        Remove
+        {uiText("Remove")}
       </Button>
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogPopup>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {label}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {uiText("Remove ")}
+              {label}?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              The hub's management key is deleted from this server. Its accounts leave the Limits
-              view; the hub itself is untouched. Add it again with the URL and key to bring them
-              back.
+              {uiText(
+                "The hub's management key is deleted from this server. Its accounts leave the Limits view; the hub itself is untouched. Add it again with the URL and key to bring them back.",
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+            <AlertDialogClose render={<Button variant="outline" />}>
+              {uiText("Cancel")}
+            </AlertDialogClose>
             <Button
               variant="destructive"
               onClick={() => {
@@ -160,7 +171,7 @@ function RemoveUsageProviderButton({
                 onConfirm();
               }}
             >
-              Remove hub
+              {uiText("Remove hub")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>

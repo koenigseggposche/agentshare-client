@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useMemo } from "react";
 import { AppBar } from "../../components/ui/AppBar";
 import { ScreenHeaderButton } from "../../components/ui/ScreenHeaderButton";
@@ -19,6 +20,7 @@ export function ThreadHeader(
     readonly onOpenFilesInspector: () => void;
   },
 ) {
+  const uiText = useUiText();
   const goBack = useWorkspaceBackNavigation("threads");
   const { layout, panes, toggleAuxiliaryPane, composerKeyboardActive } =
     useAdaptiveWorkspaceLayout();
@@ -28,7 +30,7 @@ export function ThreadHeader(
     const actions: AppBarAction[] = [];
     if (props.onReturnToThread) {
       actions.push({
-        accessibilityLabel: "Return to chat",
+        accessibilityLabel: uiText("Return to chat"),
         icon: "chevron.left",
         onPress: props.onReturnToThread,
       });
@@ -36,7 +38,7 @@ export function ThreadHeader(
     if (props.hasThreadCwd) {
       const filesVisible = props.inspectorMode === "files" && panes.auxiliaryPaneVisible;
       actions.push({
-        accessibilityLabel: filesVisible ? "Close files" : "Open files",
+        accessibilityLabel: filesVisible ? uiText("Close files") : uiText("Open files"),
         selected: filesVisible,
         icon: "folder",
         onPress: filesVisible ? toggleAuxiliaryPane : props.onOpenFilesInspector,
@@ -44,25 +46,26 @@ export function ThreadHeader(
     }
     if (props.hasWorkspaceRoot && props.gitControls.canOpenTerminal) {
       actions.push({
-        accessibilityLabel: "Open terminal",
+        accessibilityLabel: uiText("Open terminal"),
         icon: "terminal",
         onPress: () => onOpenTerminal(null),
       });
     }
     actions.push({
-      accessibilityLabel: "Open git controls",
+      accessibilityLabel: uiText("Open git controls"),
       icon: "point.topleft.down.curvedto.point.bottomright.up",
       onPress: props.onOpenGitInspector,
     });
     if (onMergeBack) {
       actions.push({
-        accessibilityLabel: "Merge back to source",
+        accessibilityLabel: uiText("Merge back to source"),
         icon: PullRequestGlyph.merged,
         onPress: onMergeBack,
       });
     }
     return actions;
   }, [
+    uiText,
     props.inspectorMode,
     panes.auxiliaryPaneVisible,
     props.onOpenFilesInspector,
@@ -88,8 +91,8 @@ export function ThreadHeader(
             <ScreenHeaderButton
               accessibilityLabel={
                 props.inspectorMode !== null && panes.auxiliaryPaneVisible
-                  ? "Hide inspector"
-                  : "Show inspector"
+                  ? uiText("Hide inspector")
+                  : uiText("Show inspector")
               }
               icon="sidebar.right"
               selected={props.inspectorMode !== null && panes.auxiliaryPaneVisible}

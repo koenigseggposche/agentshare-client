@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useLoadBalancedEnvironment } from "../../hooks/useLoadBalancedEnvironment";
 import { useLogicalProjectEnvironments } from "../../hooks/useLogicalProjectEnvironments";
 import { useScratchProject } from "../../hooks/useScratchProject";
@@ -48,6 +49,7 @@ interface DraftEnvironmentRoutingInput {
  * project on the target machine.
  */
 export function useDraftEnvironmentRouting(input: DraftEnvironmentRoutingInput) {
+  const uiText = useUiText();
   const {
     draftId,
     draftThread,
@@ -138,9 +140,10 @@ export function useDraftEnvironmentRouting(input: DraftEnvironmentRoutingInput) 
       toastManager.add({
         type: "warning",
         id: "load-balancing-attachments",
-        title: "Keep attachments on this machine",
-        description:
+        title: uiText("Keep attachments on this machine"),
+        description: uiText(
           "Remove attachments before choosing automatic routing, then attach them on the selected machine.",
+        ),
       });
       return;
     }

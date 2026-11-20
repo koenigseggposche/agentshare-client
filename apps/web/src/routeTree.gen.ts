@@ -23,6 +23,7 @@ import { Route as ChatPullRequestsRouteImport } from './routes/_chat.pull-reques
 import { Route as ChatNewRouteImport } from './routes/_chat.new'
 import { Route as ThreadsEnvironmentIdThreadIdRouteImport } from './routes/threads.$environmentId.$threadId'
 import { Route as ChatSettingsWorktreesRouteImport } from './routes/_chat.settings.worktrees'
+import { Route as ChatSettingsWalletRouteImport } from './routes/_chat.settings.wallet'
 import { Route as ChatSettingsThreadsRouteImport } from './routes/_chat.settings.threads'
 import { Route as ChatSettingsStorageRouteImport } from './routes/_chat.settings.storage'
 import { Route as ChatSettingsSourceControlRouteImport } from './routes/_chat.settings.source-control'
@@ -32,7 +33,9 @@ import { Route as ChatSettingsScheduledTasksRouteImport } from './routes/_chat.s
 import { Route as ChatSettingsProvidersRouteImport } from './routes/_chat.settings.providers'
 import { Route as ChatSettingsProjectsRouteImport } from './routes/_chat.settings.projects'
 import { Route as ChatSettingsOpenSourceLicensesRouteImport } from './routes/_chat.settings.open-source-licenses'
+import { Route as ChatSettingsModelSharingRouteImport } from './routes/_chat.settings.model-sharing'
 import { Route as ChatSettingsMaintenanceRouteImport } from './routes/_chat.settings.maintenance'
+import { Route as ChatSettingsLocalModelsRouteImport } from './routes/_chat.settings.local-models'
 import { Route as ChatSettingsLabsRouteImport } from './routes/_chat.settings.labs'
 import { Route as ChatSettingsKeybindingsRouteImport } from './routes/_chat.settings.keybindings'
 import { Route as ChatSettingsIntegrationsRouteImport } from './routes/_chat.settings.integrations'
@@ -41,12 +44,13 @@ import { Route as ChatSettingsDiffsRouteImport } from './routes/_chat.settings.d
 import { Route as ChatSettingsDiagnosticsRouteImport } from './routes/_chat.settings.diagnostics'
 import { Route as ChatSettingsDevicesRouteImport } from './routes/_chat.settings.devices'
 import { Route as ChatSettingsConnectionsRouteImport } from './routes/_chat.settings.connections'
+import { Route as ChatSettingsCodingToolsRouteImport } from './routes/_chat.settings.coding-tools'
 import { Route as ChatSettingsChatRouteImport } from './routes/_chat.settings.chat'
 import { Route as ChatSettingsBrowserRouteImport } from './routes/_chat.settings.browser'
 import { Route as ChatSettingsBetaRouteImport } from './routes/_chat.settings.beta'
 import { Route as ChatSettingsArchivedRouteImport } from './routes/_chat.settings.archived'
 import { Route as ChatSettingsAppearanceRouteImport } from './routes/_chat.settings.appearance'
-import { Route as ChatSettingsAgentshareRouteImport } from './routes/_chat.settings.agentshare'
+import { Route as ChatSettingsAccountRouteImport } from './routes/_chat.settings.account'
 import { Route as ChatSettingsAccessRouteImport } from './routes/_chat.settings.access'
 import { Route as ChatSettingsAboutRouteImport } from './routes/_chat.settings.about'
 import { Route as ChatDraftDraftIdRouteImport } from './routes/_chat.draft.$draftId'
@@ -122,6 +126,11 @@ const ChatSettingsWorktreesRoute = ChatSettingsWorktreesRouteImport.update({
   path: '/worktrees',
   getParentRoute: () => ChatSettingsRoute,
 } as any)
+const ChatSettingsWalletRoute = ChatSettingsWalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => ChatSettingsRoute,
+} as any)
 const ChatSettingsThreadsRoute = ChatSettingsThreadsRouteImport.update({
   id: '/threads',
   path: '/threads',
@@ -170,9 +179,20 @@ const ChatSettingsOpenSourceLicensesRoute =
     path: '/open-source-licenses',
     getParentRoute: () => ChatSettingsRoute,
   } as any)
+const ChatSettingsModelSharingRoute =
+  ChatSettingsModelSharingRouteImport.update({
+    id: '/model-sharing',
+    path: '/model-sharing',
+    getParentRoute: () => ChatSettingsRoute,
+  } as any)
 const ChatSettingsMaintenanceRoute = ChatSettingsMaintenanceRouteImport.update({
   id: '/maintenance',
   path: '/maintenance',
+  getParentRoute: () => ChatSettingsRoute,
+} as any)
+const ChatSettingsLocalModelsRoute = ChatSettingsLocalModelsRouteImport.update({
+  id: '/local-models',
+  path: '/local-models',
   getParentRoute: () => ChatSettingsRoute,
 } as any)
 const ChatSettingsLabsRoute = ChatSettingsLabsRouteImport.update({
@@ -216,6 +236,11 @@ const ChatSettingsConnectionsRoute = ChatSettingsConnectionsRouteImport.update({
   path: '/connections',
   getParentRoute: () => ChatSettingsRoute,
 } as any)
+const ChatSettingsCodingToolsRoute = ChatSettingsCodingToolsRouteImport.update({
+  id: '/coding-tools',
+  path: '/coding-tools',
+  getParentRoute: () => ChatSettingsRoute,
+} as any)
 const ChatSettingsChatRoute = ChatSettingsChatRouteImport.update({
   id: '/chat',
   path: '/chat',
@@ -241,9 +266,9 @@ const ChatSettingsAppearanceRoute = ChatSettingsAppearanceRouteImport.update({
   path: '/appearance',
   getParentRoute: () => ChatSettingsRoute,
 } as any)
-const ChatSettingsAgentshareRoute = ChatSettingsAgentshareRouteImport.update({
-  id: '/agentshare',
-  path: '/agentshare',
+const ChatSettingsAccountRoute = ChatSettingsAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => ChatSettingsRoute,
 } as any)
 const ChatSettingsAccessRoute = ChatSettingsAccessRouteImport.update({
@@ -284,12 +309,13 @@ export interface FileRoutesByFullPath {
   '/draft/$draftId': typeof ChatDraftDraftIdRoute
   '/settings/about': typeof ChatSettingsAboutRoute
   '/settings/access': typeof ChatSettingsAccessRoute
-  '/settings/agentshare': typeof ChatSettingsAgentshareRoute
+  '/settings/account': typeof ChatSettingsAccountRoute
   '/settings/appearance': typeof ChatSettingsAppearanceRoute
   '/settings/archived': typeof ChatSettingsArchivedRoute
   '/settings/beta': typeof ChatSettingsBetaRoute
   '/settings/browser': typeof ChatSettingsBrowserRoute
   '/settings/chat': typeof ChatSettingsChatRoute
+  '/settings/coding-tools': typeof ChatSettingsCodingToolsRoute
   '/settings/connections': typeof ChatSettingsConnectionsRoute
   '/settings/devices': typeof ChatSettingsDevicesRoute
   '/settings/diagnostics': typeof ChatSettingsDiagnosticsRoute
@@ -298,7 +324,9 @@ export interface FileRoutesByFullPath {
   '/settings/integrations': typeof ChatSettingsIntegrationsRoute
   '/settings/keybindings': typeof ChatSettingsKeybindingsRoute
   '/settings/labs': typeof ChatSettingsLabsRoute
+  '/settings/local-models': typeof ChatSettingsLocalModelsRoute
   '/settings/maintenance': typeof ChatSettingsMaintenanceRoute
+  '/settings/model-sharing': typeof ChatSettingsModelSharingRoute
   '/settings/open-source-licenses': typeof ChatSettingsOpenSourceLicensesRoute
   '/settings/projects': typeof ChatSettingsProjectsRoute
   '/settings/providers': typeof ChatSettingsProvidersRoute
@@ -308,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/settings/source-control': typeof ChatSettingsSourceControlRoute
   '/settings/storage': typeof ChatSettingsStorageRoute
   '/settings/threads': typeof ChatSettingsThreadsRoute
+  '/settings/wallet': typeof ChatSettingsWalletRoute
   '/settings/worktrees': typeof ChatSettingsWorktreesRoute
   '/threads/$environmentId/$threadId': typeof ThreadsEnvironmentIdThreadIdRoute
 }
@@ -327,12 +356,13 @@ export interface FileRoutesByTo {
   '/draft/$draftId': typeof ChatDraftDraftIdRoute
   '/settings/about': typeof ChatSettingsAboutRoute
   '/settings/access': typeof ChatSettingsAccessRoute
-  '/settings/agentshare': typeof ChatSettingsAgentshareRoute
+  '/settings/account': typeof ChatSettingsAccountRoute
   '/settings/appearance': typeof ChatSettingsAppearanceRoute
   '/settings/archived': typeof ChatSettingsArchivedRoute
   '/settings/beta': typeof ChatSettingsBetaRoute
   '/settings/browser': typeof ChatSettingsBrowserRoute
   '/settings/chat': typeof ChatSettingsChatRoute
+  '/settings/coding-tools': typeof ChatSettingsCodingToolsRoute
   '/settings/connections': typeof ChatSettingsConnectionsRoute
   '/settings/devices': typeof ChatSettingsDevicesRoute
   '/settings/diagnostics': typeof ChatSettingsDiagnosticsRoute
@@ -341,7 +371,9 @@ export interface FileRoutesByTo {
   '/settings/integrations': typeof ChatSettingsIntegrationsRoute
   '/settings/keybindings': typeof ChatSettingsKeybindingsRoute
   '/settings/labs': typeof ChatSettingsLabsRoute
+  '/settings/local-models': typeof ChatSettingsLocalModelsRoute
   '/settings/maintenance': typeof ChatSettingsMaintenanceRoute
+  '/settings/model-sharing': typeof ChatSettingsModelSharingRoute
   '/settings/open-source-licenses': typeof ChatSettingsOpenSourceLicensesRoute
   '/settings/projects': typeof ChatSettingsProjectsRoute
   '/settings/providers': typeof ChatSettingsProvidersRoute
@@ -351,6 +383,7 @@ export interface FileRoutesByTo {
   '/settings/source-control': typeof ChatSettingsSourceControlRoute
   '/settings/storage': typeof ChatSettingsStorageRoute
   '/settings/threads': typeof ChatSettingsThreadsRoute
+  '/settings/wallet': typeof ChatSettingsWalletRoute
   '/settings/worktrees': typeof ChatSettingsWorktreesRoute
   '/threads/$environmentId/$threadId': typeof ThreadsEnvironmentIdThreadIdRoute
 }
@@ -372,12 +405,13 @@ export interface FileRoutesById {
   '/_chat/draft/$draftId': typeof ChatDraftDraftIdRoute
   '/_chat/settings/about': typeof ChatSettingsAboutRoute
   '/_chat/settings/access': typeof ChatSettingsAccessRoute
-  '/_chat/settings/agentshare': typeof ChatSettingsAgentshareRoute
+  '/_chat/settings/account': typeof ChatSettingsAccountRoute
   '/_chat/settings/appearance': typeof ChatSettingsAppearanceRoute
   '/_chat/settings/archived': typeof ChatSettingsArchivedRoute
   '/_chat/settings/beta': typeof ChatSettingsBetaRoute
   '/_chat/settings/browser': typeof ChatSettingsBrowserRoute
   '/_chat/settings/chat': typeof ChatSettingsChatRoute
+  '/_chat/settings/coding-tools': typeof ChatSettingsCodingToolsRoute
   '/_chat/settings/connections': typeof ChatSettingsConnectionsRoute
   '/_chat/settings/devices': typeof ChatSettingsDevicesRoute
   '/_chat/settings/diagnostics': typeof ChatSettingsDiagnosticsRoute
@@ -386,7 +420,9 @@ export interface FileRoutesById {
   '/_chat/settings/integrations': typeof ChatSettingsIntegrationsRoute
   '/_chat/settings/keybindings': typeof ChatSettingsKeybindingsRoute
   '/_chat/settings/labs': typeof ChatSettingsLabsRoute
+  '/_chat/settings/local-models': typeof ChatSettingsLocalModelsRoute
   '/_chat/settings/maintenance': typeof ChatSettingsMaintenanceRoute
+  '/_chat/settings/model-sharing': typeof ChatSettingsModelSharingRoute
   '/_chat/settings/open-source-licenses': typeof ChatSettingsOpenSourceLicensesRoute
   '/_chat/settings/projects': typeof ChatSettingsProjectsRoute
   '/_chat/settings/providers': typeof ChatSettingsProvidersRoute
@@ -396,6 +432,7 @@ export interface FileRoutesById {
   '/_chat/settings/source-control': typeof ChatSettingsSourceControlRoute
   '/_chat/settings/storage': typeof ChatSettingsStorageRoute
   '/_chat/settings/threads': typeof ChatSettingsThreadsRoute
+  '/_chat/settings/wallet': typeof ChatSettingsWalletRoute
   '/_chat/settings/worktrees': typeof ChatSettingsWorktreesRoute
   '/threads/$environmentId/$threadId': typeof ThreadsEnvironmentIdThreadIdRoute
 }
@@ -417,12 +454,13 @@ export interface FileRouteTypes {
     | '/draft/$draftId'
     | '/settings/about'
     | '/settings/access'
-    | '/settings/agentshare'
+    | '/settings/account'
     | '/settings/appearance'
     | '/settings/archived'
     | '/settings/beta'
     | '/settings/browser'
     | '/settings/chat'
+    | '/settings/coding-tools'
     | '/settings/connections'
     | '/settings/devices'
     | '/settings/diagnostics'
@@ -431,7 +469,9 @@ export interface FileRouteTypes {
     | '/settings/integrations'
     | '/settings/keybindings'
     | '/settings/labs'
+    | '/settings/local-models'
     | '/settings/maintenance'
+    | '/settings/model-sharing'
     | '/settings/open-source-licenses'
     | '/settings/projects'
     | '/settings/providers'
@@ -441,6 +481,7 @@ export interface FileRouteTypes {
     | '/settings/source-control'
     | '/settings/storage'
     | '/settings/threads'
+    | '/settings/wallet'
     | '/settings/worktrees'
     | '/threads/$environmentId/$threadId'
   fileRoutesByTo: FileRoutesByTo
@@ -460,12 +501,13 @@ export interface FileRouteTypes {
     | '/draft/$draftId'
     | '/settings/about'
     | '/settings/access'
-    | '/settings/agentshare'
+    | '/settings/account'
     | '/settings/appearance'
     | '/settings/archived'
     | '/settings/beta'
     | '/settings/browser'
     | '/settings/chat'
+    | '/settings/coding-tools'
     | '/settings/connections'
     | '/settings/devices'
     | '/settings/diagnostics'
@@ -474,7 +516,9 @@ export interface FileRouteTypes {
     | '/settings/integrations'
     | '/settings/keybindings'
     | '/settings/labs'
+    | '/settings/local-models'
     | '/settings/maintenance'
+    | '/settings/model-sharing'
     | '/settings/open-source-licenses'
     | '/settings/projects'
     | '/settings/providers'
@@ -484,6 +528,7 @@ export interface FileRouteTypes {
     | '/settings/source-control'
     | '/settings/storage'
     | '/settings/threads'
+    | '/settings/wallet'
     | '/settings/worktrees'
     | '/threads/$environmentId/$threadId'
   id:
@@ -504,12 +549,13 @@ export interface FileRouteTypes {
     | '/_chat/draft/$draftId'
     | '/_chat/settings/about'
     | '/_chat/settings/access'
-    | '/_chat/settings/agentshare'
+    | '/_chat/settings/account'
     | '/_chat/settings/appearance'
     | '/_chat/settings/archived'
     | '/_chat/settings/beta'
     | '/_chat/settings/browser'
     | '/_chat/settings/chat'
+    | '/_chat/settings/coding-tools'
     | '/_chat/settings/connections'
     | '/_chat/settings/devices'
     | '/_chat/settings/diagnostics'
@@ -518,7 +564,9 @@ export interface FileRouteTypes {
     | '/_chat/settings/integrations'
     | '/_chat/settings/keybindings'
     | '/_chat/settings/labs'
+    | '/_chat/settings/local-models'
     | '/_chat/settings/maintenance'
+    | '/_chat/settings/model-sharing'
     | '/_chat/settings/open-source-licenses'
     | '/_chat/settings/projects'
     | '/_chat/settings/providers'
@@ -528,6 +576,7 @@ export interface FileRouteTypes {
     | '/_chat/settings/source-control'
     | '/_chat/settings/storage'
     | '/_chat/settings/threads'
+    | '/_chat/settings/wallet'
     | '/_chat/settings/worktrees'
     | '/threads/$environmentId/$threadId'
   fileRoutesById: FileRoutesById
@@ -643,6 +692,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatSettingsWorktreesRouteImport
       parentRoute: typeof ChatSettingsRoute
     }
+    '/_chat/settings/wallet': {
+      id: '/_chat/settings/wallet'
+      path: '/wallet'
+      fullPath: '/settings/wallet'
+      preLoaderRoute: typeof ChatSettingsWalletRouteImport
+      parentRoute: typeof ChatSettingsRoute
+    }
     '/_chat/settings/threads': {
       id: '/_chat/settings/threads'
       path: '/threads'
@@ -706,11 +762,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatSettingsOpenSourceLicensesRouteImport
       parentRoute: typeof ChatSettingsRoute
     }
+    '/_chat/settings/model-sharing': {
+      id: '/_chat/settings/model-sharing'
+      path: '/model-sharing'
+      fullPath: '/settings/model-sharing'
+      preLoaderRoute: typeof ChatSettingsModelSharingRouteImport
+      parentRoute: typeof ChatSettingsRoute
+    }
     '/_chat/settings/maintenance': {
       id: '/_chat/settings/maintenance'
       path: '/maintenance'
       fullPath: '/settings/maintenance'
       preLoaderRoute: typeof ChatSettingsMaintenanceRouteImport
+      parentRoute: typeof ChatSettingsRoute
+    }
+    '/_chat/settings/local-models': {
+      id: '/_chat/settings/local-models'
+      path: '/local-models'
+      fullPath: '/settings/local-models'
+      preLoaderRoute: typeof ChatSettingsLocalModelsRouteImport
       parentRoute: typeof ChatSettingsRoute
     }
     '/_chat/settings/labs': {
@@ -769,6 +839,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatSettingsConnectionsRouteImport
       parentRoute: typeof ChatSettingsRoute
     }
+    '/_chat/settings/coding-tools': {
+      id: '/_chat/settings/coding-tools'
+      path: '/coding-tools'
+      fullPath: '/settings/coding-tools'
+      preLoaderRoute: typeof ChatSettingsCodingToolsRouteImport
+      parentRoute: typeof ChatSettingsRoute
+    }
     '/_chat/settings/chat': {
       id: '/_chat/settings/chat'
       path: '/chat'
@@ -804,11 +881,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatSettingsAppearanceRouteImport
       parentRoute: typeof ChatSettingsRoute
     }
-    '/_chat/settings/agentshare': {
-      id: '/_chat/settings/agentshare'
-      path: '/agentshare'
-      fullPath: '/settings/agentshare'
-      preLoaderRoute: typeof ChatSettingsAgentshareRouteImport
+    '/_chat/settings/account': {
+      id: '/_chat/settings/account'
+      path: '/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof ChatSettingsAccountRouteImport
       parentRoute: typeof ChatSettingsRoute
     }
     '/_chat/settings/access': {
@@ -845,12 +922,13 @@ declare module '@tanstack/react-router' {
 interface ChatSettingsRouteChildren {
   ChatSettingsAboutRoute: typeof ChatSettingsAboutRoute
   ChatSettingsAccessRoute: typeof ChatSettingsAccessRoute
-  ChatSettingsAgentshareRoute: typeof ChatSettingsAgentshareRoute
+  ChatSettingsAccountRoute: typeof ChatSettingsAccountRoute
   ChatSettingsAppearanceRoute: typeof ChatSettingsAppearanceRoute
   ChatSettingsArchivedRoute: typeof ChatSettingsArchivedRoute
   ChatSettingsBetaRoute: typeof ChatSettingsBetaRoute
   ChatSettingsBrowserRoute: typeof ChatSettingsBrowserRoute
   ChatSettingsChatRoute: typeof ChatSettingsChatRoute
+  ChatSettingsCodingToolsRoute: typeof ChatSettingsCodingToolsRoute
   ChatSettingsConnectionsRoute: typeof ChatSettingsConnectionsRoute
   ChatSettingsDevicesRoute: typeof ChatSettingsDevicesRoute
   ChatSettingsDiagnosticsRoute: typeof ChatSettingsDiagnosticsRoute
@@ -859,7 +937,9 @@ interface ChatSettingsRouteChildren {
   ChatSettingsIntegrationsRoute: typeof ChatSettingsIntegrationsRoute
   ChatSettingsKeybindingsRoute: typeof ChatSettingsKeybindingsRoute
   ChatSettingsLabsRoute: typeof ChatSettingsLabsRoute
+  ChatSettingsLocalModelsRoute: typeof ChatSettingsLocalModelsRoute
   ChatSettingsMaintenanceRoute: typeof ChatSettingsMaintenanceRoute
+  ChatSettingsModelSharingRoute: typeof ChatSettingsModelSharingRoute
   ChatSettingsOpenSourceLicensesRoute: typeof ChatSettingsOpenSourceLicensesRoute
   ChatSettingsProjectsRoute: typeof ChatSettingsProjectsRoute
   ChatSettingsProvidersRoute: typeof ChatSettingsProvidersRoute
@@ -869,18 +949,20 @@ interface ChatSettingsRouteChildren {
   ChatSettingsSourceControlRoute: typeof ChatSettingsSourceControlRoute
   ChatSettingsStorageRoute: typeof ChatSettingsStorageRoute
   ChatSettingsThreadsRoute: typeof ChatSettingsThreadsRoute
+  ChatSettingsWalletRoute: typeof ChatSettingsWalletRoute
   ChatSettingsWorktreesRoute: typeof ChatSettingsWorktreesRoute
 }
 
 const ChatSettingsRouteChildren: ChatSettingsRouteChildren = {
   ChatSettingsAboutRoute: ChatSettingsAboutRoute,
   ChatSettingsAccessRoute: ChatSettingsAccessRoute,
-  ChatSettingsAgentshareRoute: ChatSettingsAgentshareRoute,
+  ChatSettingsAccountRoute: ChatSettingsAccountRoute,
   ChatSettingsAppearanceRoute: ChatSettingsAppearanceRoute,
   ChatSettingsArchivedRoute: ChatSettingsArchivedRoute,
   ChatSettingsBetaRoute: ChatSettingsBetaRoute,
   ChatSettingsBrowserRoute: ChatSettingsBrowserRoute,
   ChatSettingsChatRoute: ChatSettingsChatRoute,
+  ChatSettingsCodingToolsRoute: ChatSettingsCodingToolsRoute,
   ChatSettingsConnectionsRoute: ChatSettingsConnectionsRoute,
   ChatSettingsDevicesRoute: ChatSettingsDevicesRoute,
   ChatSettingsDiagnosticsRoute: ChatSettingsDiagnosticsRoute,
@@ -889,7 +971,9 @@ const ChatSettingsRouteChildren: ChatSettingsRouteChildren = {
   ChatSettingsIntegrationsRoute: ChatSettingsIntegrationsRoute,
   ChatSettingsKeybindingsRoute: ChatSettingsKeybindingsRoute,
   ChatSettingsLabsRoute: ChatSettingsLabsRoute,
+  ChatSettingsLocalModelsRoute: ChatSettingsLocalModelsRoute,
   ChatSettingsMaintenanceRoute: ChatSettingsMaintenanceRoute,
+  ChatSettingsModelSharingRoute: ChatSettingsModelSharingRoute,
   ChatSettingsOpenSourceLicensesRoute: ChatSettingsOpenSourceLicensesRoute,
   ChatSettingsProjectsRoute: ChatSettingsProjectsRoute,
   ChatSettingsProvidersRoute: ChatSettingsProvidersRoute,
@@ -899,6 +983,7 @@ const ChatSettingsRouteChildren: ChatSettingsRouteChildren = {
   ChatSettingsSourceControlRoute: ChatSettingsSourceControlRoute,
   ChatSettingsStorageRoute: ChatSettingsStorageRoute,
   ChatSettingsThreadsRoute: ChatSettingsThreadsRoute,
+  ChatSettingsWalletRoute: ChatSettingsWalletRoute,
   ChatSettingsWorktreesRoute: ChatSettingsWorktreesRoute,
 }
 

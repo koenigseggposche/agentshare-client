@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { ScreenScrollView as ScrollView } from "../../components/ui/ScreenScrollView";
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { AsyncResult } from "effect/reactivity";
@@ -34,6 +36,7 @@ const ENTER_BEHAVIOR_OPTIONS: ReadonlyArray<{
 ];
 
 export function SettingsKeyboardRouteScreen() {
+  const uiText = useUiText();
   const back = useSettingsPageBack();
   const insets = useSafeAreaInsets();
   const preferencesResult = useAtomValue(mobilePreferencesAtom);
@@ -48,7 +51,7 @@ export function SettingsKeyboardRouteScreen() {
       {Platform.OS === "android" ? (
         <>
           <NativeStackScreenOptions options={{ headerShown: false }} />
-          <AppBar embedded title="Keyboard" onBack={back} />
+          <AppBar embedded title={uiText("Keyboard")} onBack={back} />
         </>
       ) : null}
       <ScrollView
@@ -58,8 +61,8 @@ export function SettingsKeyboardRouteScreen() {
         contentContainerClassName="gap-3 px-5 pt-4"
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 18) + 18 }}
       >
-        <SettingsSection title="Return key">
-          {ENTER_BEHAVIOR_OPTIONS.map((option, index) => (
+        <SettingsSection title={uiText("Return key")}>
+          {translateUiLabels(ENTER_BEHAVIOR_OPTIONS, uiText).map((option, index) => (
             <SettingsChoiceRow
               key={option.behavior}
               label={option.label}
@@ -72,7 +75,7 @@ export function SettingsKeyboardRouteScreen() {
           ))}
         </SettingsSection>
         <Text className="px-2 text-sm text-foreground-muted">
-          Applies to the composer when a hardware keyboard is connected.
+          {uiText("Applies to the composer when a hardware keyboard is connected.")}
         </Text>
       </ScrollView>
     </View>

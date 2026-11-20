@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
 import { useNavigation } from "@react-navigation/native";
 
@@ -26,8 +27,8 @@ export function useOpenThreadPullRequests() {
     }).then((opened) => {
       if (!opened)
         Dialog.alert(
-          `Unable to open ${pr.changeRequest.shortLabel}`,
-          `The ${pr.changeRequest.singular} could not be opened.`,
+          readUiText("Unable to open {0}", [pr.changeRequest.shortLabel]),
+          readUiText("The {0} could not be opened.", [pr.changeRequest.singular]),
         );
     });
   };

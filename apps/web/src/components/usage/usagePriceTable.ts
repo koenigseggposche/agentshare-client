@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { translateUiLabels, uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   parseUsagePriceForm,
   usagePriceForm,
@@ -35,35 +37,46 @@ function modelAlias(target: UsagePriceTarget, model: string) {
   return target.aliases && Object.hasOwn(target.aliases, model) ? target.aliases[model] : undefined;
 }
 
-export function usageAliasCell(targets: readonly UsagePriceTarget[], model: string) {
+export function usageAliasCell(
+  targets: readonly UsagePriceTarget[],
+  model: string,
+  uiText: UiTranslator = uiTranslators.en,
+) {
   if (targets.some((target) => target.aliases === null))
-    return { value: "", placeholder: "Unavailable" };
+    return { value: "", placeholder: uiText("Unavailable") };
   const values = targets.map((target) => modelAlias(target, model) ?? "");
-  if (values.some((value) => value !== values[0])) return { value: "", placeholder: "Mixed" };
-  return { value: values[0] ?? "", placeholder: "None" };
+  if (values.some((value) => value !== values[0]))
+    return { value: "", placeholder: uiText("Mixed") };
+  return { value: values[0] ?? "", placeholder: uiText("None") };
 }
 
 export function usagePriceCell(
   targets: readonly UsagePriceTarget[],
   model: string,
   field: UsagePriceField,
+  uiText: UiTranslator = uiTranslators.en,
 ) {
-  const optional = USAGE_PRICE_FIELDS.find((entry) => entry.key === field)!.optional;
+  const optional = translateUiLabels(USAGE_PRICE_FIELDS, uiText).find(
+    (entry) => entry.key === field,
+  )!.optional;
   const values = targets.map((target) =>
     modelPrice(target, model) ? usagePriceForm(model, modelPrice(target, model))[field] : null,
   );
   if (targets.some((target) => target.prices === null))
-    return { value: "", placeholder: "Unavailable" };
-  if (values.some((value) => value !== values[0])) return { value: "", placeholder: "Mixed" };
+    return { value: "", placeholder: uiText("Unavailable") };
+  if (values.some((value) => value !== values[0]))
+    return { value: "", placeholder: uiText("Mixed") };
   return {
     value: values[0] ?? "",
-    placeholder: values[0] === null ? "Automatic" : optional ? "Input rate" : "0.00",
+    placeholder:
+      values[0] === null ? uiText("Automatic") : optional ? uiText("Input rate") : "0.00",
   };
 }
 
 export function usagePriceTableChanges(
   target: UsagePriceTarget,
   drafts: readonly UsagePriceDraft[],
+  uiText: UiTranslator = uiTranslators.en,
 ) {
   const changes: UsagePriceChange[] = [];
   const errors = new Map<string, string>();
@@ -103,9 +116,9 @@ export function usagePriceTableChanges(
     }
     const original = usagePriceForm(model, modelPrice(target, model));
     const form = { ...original, ...draft.values };
-    const parsed = parseUsagePriceForm(form);
+    const parsed = parseUsagePriceForm(form, uiText);
     if (parsed === null) {
-      const missing = USAGE_PRICE_FIELDS.find(
+      const missing = translateUiLabels(USAGE_PRICE_FIELDS, uiText).find(
         (field) => !field.optional && form[field.key].trim() === "",
       );
       errors.set(
@@ -119,7 +132,11 @@ export function usagePriceTableChanges(
       continue;
     }
     const next = usagePriceForm(model, parsed.price);
-    if (USAGE_PRICE_FIELDS.some((field) => original[field.key] !== next[field.key]))
+    if (
+      translateUiLabels(USAGE_PRICE_FIELDS, uiText).some(
+        (field) => original[field.key] !== next[field.key],
+      )
+    )
       changes.push(parsed);
   }
   // Check the final batch so clearing a mapping and reversing it in one save stays valid.
@@ -148,10 +165,11 @@ export function usagePriceTableChanges(
 export function usagePriceTableErrors(
   targets: readonly UsagePriceTarget[],
   drafts: readonly UsagePriceDraft[],
+  uiText: UiTranslator = uiTranslators.en,
 ) {
   return new Map(
     targets
       .filter((target) => target.unavailable === null && target.prices !== null)
-      .flatMap((target) => [...usagePriceTableChanges(target, drafts).errors]),
+      .flatMap((target) => [...usagePriceTableChanges(target, drafts, uiText).errors]),
   );
 }

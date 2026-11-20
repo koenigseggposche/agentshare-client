@@ -1,3 +1,4 @@
+import { localizeApplicationMenu } from "./menuLanguage.ts";
 import * as Clock from "effect/Clock";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -547,15 +548,18 @@ export const make = Effect.gen(function* () {
         contents.focus();
 
         const menuTemplate: Electron.MenuItemConstructorOptions[] = [];
+        const suggestions = new Set<Electron.MenuItemConstructorOptions>();
 
         if (params.misspelledWord) {
           for (const suggestion of params.dictionarySuggestions.slice(0, 5)) {
-            menuTemplate.push({
+            const item: Electron.MenuItemConstructorOptions = {
               label: suggestion,
               click: () => {
                 if (!contents.isDestroyed()) contents.replaceMisspelling(suggestion);
               },
-            });
+            };
+            suggestions.add(item);
+            menuTemplate.push(item);
           }
           if (params.dictionarySuggestions.length === 0) {
             menuTemplate.push({ label: "No suggestions", enabled: false });
@@ -597,10 +601,19 @@ export const make = Effect.gen(function* () {
         );
 
         void runPromise(
-          electronMenu.popupTemplate({
-            window: ownerWindow,
-            template: menuTemplate,
-            ...(params.frame ? { frame: params.frame } : {}),
+          Effect.gen(function* () {
+            const settings = yield* clientSettings.get.pipe(Effect.orElseSucceed(Option.none));
+            const language = Option.isSome(settings)
+              ? settings.value.uiLanguage
+              : DEFAULT_CLIENT_SETTINGS.uiLanguage;
+            if (contents.isDestroyed() || ownerWindow.isDestroyed()) return;
+            yield* electronMenu.popupTemplate({
+              window: ownerWindow,
+              template: menuTemplate.flatMap((item) =>
+                suggestions.has(item) ? [item] : localizeApplicationMenu([item], language),
+              ),
+              ...(params.frame ? { frame: params.frame } : {}),
+            });
           }),
         );
       });

@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import {
   type DesktopBridge,
   type DesktopUpdateState,
@@ -120,6 +123,7 @@ export function SidebarUpdateArchitectureWarning() {
 }
 
 function SidebarUpdateArchitectureWarningContent() {
+  const uiText = useUiText();
   const state = useDesktopUpdateState();
   const visible = shouldShowArm64IntelBuildWarning(state);
   const description = state && visible ? getArm64IntelBuildWarningDescription(state) : null;
@@ -129,7 +133,7 @@ function SidebarUpdateArchitectureWarningContent() {
   return (
     <Alert variant="warning">
       <TriangleAlertIcon />
-      <AlertTitle>Intel build on Apple Silicon</AlertTitle>
+      <AlertTitle>{uiText("Intel build on Apple Silicon")}</AlertTitle>
       <AlertDescription>{description}</AlertDescription>
     </Alert>
   );
@@ -145,11 +149,12 @@ export async function downloadLocalUpdate(
     notifyDownloaded,
     reportError = toastUpdateError,
   }: { readonly notifyDownloaded: boolean; readonly reportError?: ReportLocalUpdateError },
+  uiText: UiTranslator = uiTranslators.en,
 ): Promise<boolean> {
   try {
     const result = await bridge.downloadUpdate();
     if (result.completed && notifyDownloaded) {
-      showDesktopUpdateDownloadedToast(bridge, result.state);
+      showDesktopUpdateDownloadedToast(bridge, result.state, uiText);
     }
     const actionError = shouldToastDesktopUpdateActionResult(result)
       ? getDesktopUpdateActionError(result)
@@ -169,11 +174,12 @@ export async function installLocalUpdate(
   bridge: DesktopBridge,
   reportError: ReportLocalUpdateError = toastUpdateError,
   expectedVersion?: string,
+  uiText: UiTranslator = uiTranslators.en,
 ): Promise<boolean> {
   try {
     const result = await bridge.installUpdate(expectedVersion);
     if (!result.accepted) {
-      showDesktopUpdateDownloadedToast(bridge, result.state);
+      showDesktopUpdateDownloadedToast(bridge, result.state, uiText);
       return false;
     }
     const actionError = shouldToastDesktopUpdateActionResult(result)
@@ -196,6 +202,7 @@ export function SidebarUpdatePill() {
 }
 
 function SidebarUpdateControl() {
+  const uiText = useUiText();
   const state = useDesktopUpdateState();
   // The desktop updates this machine, whose policy the primary environment reports.
   const updatesDenial = managedUpdatesDenial(usePrimaryManagedPolicy());
@@ -246,7 +253,9 @@ function SidebarUpdateControl() {
     showCheckIcon,
   });
   const idleTooltip =
-    !showUpdateDetails && !showCheckIcon ? getDesktopUpdateIdleTooltip(state, updatesDenial) : null;
+    !showUpdateDetails && !showCheckIcon
+      ? getDesktopUpdateIdleTooltip(state, updatesDenial, uiText)
+      : null;
   const tooltip = runsEverything
     ? everything.summary
     : showUpdateDetails
@@ -290,7 +299,7 @@ function SidebarUpdateControl() {
     setIsActionPending(true);
 
     if (action === "download") {
-      void downloadLocalUpdate(bridge, { notifyDownloaded: true }).finally(() =>
+      void downloadLocalUpdate(bridge, { notifyDownloaded: true }, uiText).finally(() =>
         setIsActionPending(false),
       );
       return;
@@ -307,8 +316,9 @@ function SidebarUpdateControl() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Could not confirm update",
-            description: error instanceof Error ? error.message : "Update confirmation failed.",
+            title: uiText("Could not confirm update"),
+            description:
+              error instanceof Error ? error.message : uiText("Update confirmation failed."),
           }),
         );
         return;
@@ -317,7 +327,9 @@ function SidebarUpdateControl() {
         setIsActionPending(false);
         return;
       }
-      void installLocalUpdate(bridge).finally(() => setIsActionPending(false));
+      void installLocalUpdate(bridge, undefined, undefined, uiText).finally(() =>
+        setIsActionPending(false),
+      );
       return;
     }
 
@@ -332,11 +344,11 @@ function SidebarUpdateControl() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Could not check for updates",
+            title: uiText("Could not check for updates"),
             description:
               updatesDenial ??
               result.state.message ??
-              "Automatic updates are not available in this build.",
+              uiText("Automatic updates are not available in this build."),
           }),
         );
       })
@@ -344,8 +356,8 @@ function SidebarUpdateControl() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Could not check for updates",
-            description: error instanceof Error ? error.message : "Update check failed.",
+            title: uiText("Could not check for updates"),
+            description: error instanceof Error ? error.message : uiText("Update check failed."),
           }),
         );
       })
@@ -361,11 +373,14 @@ function SidebarUpdateControl() {
         ...(bridge && action === "download"
           ? {
               downloadLocal: (reportError) =>
-                downloadLocalUpdate(bridge, { notifyDownloaded: false, reportError }),
+                downloadLocalUpdate(bridge, { notifyDownloaded: false, reportError }, uiText),
             }
           : {}),
         ...(bridge && action !== "none"
-          ? { installLocal: (reportError) => installLocalUpdate(bridge, reportError) }
+          ? {
+              installLocal: (reportError) =>
+                installLocalUpdate(bridge, reportError, undefined, uiText),
+            }
           : {}),
       }),
     );
@@ -374,8 +389,9 @@ function SidebarUpdateControl() {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Could not update everything",
-          description: error instanceof Error ? error.message : "An unexpected error occurred.",
+          title: uiText("Could not update everything"),
+          description:
+            error instanceof Error ? error.message : uiText("An unexpected error occurred."),
         }),
       );
     }
@@ -437,7 +453,9 @@ function SidebarUpdateControl() {
                     failures: [],
                     restarting: [],
                   });
-                  if (!(await installLocalUpdate(window.desktopBridge!))) {
+                  if (
+                    !(await installLocalUpdate(window.desktopBridge!, undefined, undefined, uiText))
+                  ) {
                     clearSavedUpdateEverythingResult();
                   }
                 },
@@ -551,7 +569,7 @@ function SidebarUpdateControl() {
         {showReleaseNotesPopover && state ? (
           <PopoverPopup
             align="center"
-            aria-label="Update release notes"
+            aria-label={uiText("Update release notes")}
             initialFocus={false}
             onKeyDownCapture={(event) => {
               if (

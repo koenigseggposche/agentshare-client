@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   alternateComposerDispatchAction,
   type ActiveTurnComposerAction,
@@ -24,16 +26,19 @@ const ACTION_LABEL: Record<ActiveTurnComposerAction, string> = {
   restart: "Restart",
 };
 
-export function resolveComposerSendPresentation(input: {
-  readonly editingQueuedMessage: boolean;
-  readonly running: boolean;
-  readonly canSteer: boolean;
-  readonly followUpBehavior: FollowUpBehavior;
-  readonly deliveryDeferred: boolean;
-}): ComposerSendPresentation {
+export function resolveComposerSendPresentation(
+  input: {
+    readonly editingQueuedMessage: boolean;
+    readonly running: boolean;
+    readonly canSteer: boolean;
+    readonly followUpBehavior: FollowUpBehavior;
+    readonly deliveryDeferred: boolean;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): ComposerSendPresentation {
   if (input.editingQueuedMessage) {
     return {
-      label: "Update queued message",
+      label: uiText("Update queued message"),
       icon: "checkmark",
       action: null,
       alternate: null,
@@ -42,7 +47,7 @@ export function resolveComposerSendPresentation(input: {
   }
   if (!input.running) {
     return {
-      label: input.deliveryDeferred ? "Queue" : "Send",
+      label: input.deliveryDeferred ? uiText("Queue") : uiText("Send"),
       icon: input.deliveryDeferred ? "tray.and.arrow.up" : "arrow.up",
       action: null,
       alternate: null,

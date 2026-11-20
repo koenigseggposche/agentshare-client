@@ -1,7 +1,15 @@
+import { translateUiMessage } from "@t3tools/shared/uiMessages";
 import type { SettingsSearchItem } from "./settingsSearch";
 
 const chineseLabels: Readonly<Record<string, string>> = {
-  AgentShare: "AgentShare",
+  Account: "账户",
+  "Account and security": "账号与安全",
+  "Wallet and records": "钱包与账单",
+  "Local models": "本地模型",
+  "Model sharing": "模型分享",
+  "Coding tools": "编程工具",
+  "Models and tools": "模型与工具",
+  "Interface language": "界面语言",
   Settings: "设置",
   Diagnostics: "诊断",
   Projects: "项目",
@@ -12,6 +20,7 @@ const chineseLabels: Readonly<Record<string, string>> = {
   Keybindings: "快捷键",
   SnapShots: "截图",
   Providers: "模型连接",
+  "Model connections": "模型连接",
   Threads: "会话",
   Browser: "浏览器",
   Devices: "设备",
@@ -55,7 +64,7 @@ const chineseLabels: Readonly<Record<string, string>> = {
 };
 
 export function settingsLabel(label: string, language: "zh" | "en"): string {
-  return language === "zh" ? (chineseLabels[label] ?? label) : label;
+  return language === "zh" ? (chineseLabels[label] ?? translateUiMessage(language, label)) : label;
 }
 
 export function localizedSettingsSearchItems(

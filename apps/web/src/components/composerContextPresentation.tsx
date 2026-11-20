@@ -1,3 +1,5 @@
+import { readUiTranslator } from "../i18n/uiText";
+import { useUiText } from "../i18n/uiText";
 import ChatMarkdown from "./ChatMarkdown";
 import { isSvgAttachment } from "@t3tools/shared/image";
 import { ReadOnlySourcePreview } from "./files/AttachmentFilePreview";
@@ -225,6 +227,7 @@ function FileContextChip(props: {
   record: ComposerFileAttachment;
   upload: AttachmentUploadState | undefined;
 }) {
+  const uiText = useUiText();
   const actions = use(ComposerContextActionsContext);
   const { resolvedTheme } = useTheme();
   const needsReattach = composerFileNeedsReattach(props.record);
@@ -258,7 +261,9 @@ function FileContextChip(props: {
       }
       tooltip={
         needsReattach
-          ? `${props.record.name} was not saved with this draft. Attach it again to send it.`
+          ? uiText("{0} was not saved with this draft. Attach it again to send it.", [
+              props.record.name,
+            ])
           : attachmentTooltip(props.record, props.upload)
       }
     />
@@ -322,6 +327,7 @@ function ComposerPreviewAnnotationDetails({
   annotation: PreviewAnnotationPayload;
   screenshot: ComposerImageAttachment | undefined;
 }) {
+  const uiText = useUiText();
   const summary = previewAnnotationTooltip(annotation);
   const screenshotUrl = annotation.screenshot?.dataUrl || screenshot?.previewUrl;
   return (
@@ -334,7 +340,7 @@ function ComposerPreviewAnnotationDetails({
         />
       ) : (
         <div className="border-border/70 border-b bg-muted/40 px-3 py-2 text-secondary-label text-xs">
-          Screenshot unavailable
+          {uiText("Screenshot unavailable")}
         </div>
       )}
       <div className="whitespace-pre-wrap wrap-break-word px-3 py-2.5 text-sm text-foreground">
@@ -360,10 +366,11 @@ function ComposerThreadContextChip(props: { record: ThreadContextRecord }) {
 }
 
 function UnresolvedContextChip(props: { label: string }) {
+  const uiText = useUiText();
   return (
     <UnresolvedChip
       label={props.label}
-      tooltip="This context is no longer available. Remove it or attach it again."
+      tooltip={uiText("This context is no longer available. Remove it or attach it again.")}
     />
   );
 }
@@ -456,7 +463,7 @@ const composerContextPresentationRegistry = createContextPresentationRegistry<
         entry.kind === "preview-annotation" ? (
           <ContextChip
             icon={<MousePointerClickIcon />}
-            label={previewAnnotationContextLabel(entry.record)}
+            label={previewAnnotationContextLabel(entry.record, readUiTranslator())}
             kindLabel="Preview annotation"
             details={
               <ComposerPreviewAnnotationDetails

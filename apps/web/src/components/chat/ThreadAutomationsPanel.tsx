@@ -1,3 +1,5 @@
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
+import { readUiText, useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import { ThreadDetailsControl } from "./ThreadDetailsControl";
 import { useNavigate } from "@tanstack/react-router";
@@ -37,21 +39,21 @@ const STATUS_DOT_CLASS: Record<ScheduledTask["lastRunStatus"], string> = {
   failed: "bg-destructive",
 };
 
-function taskScheduleLine(task: ScheduledTask) {
+function taskScheduleLine(task: ScheduledTask, uiText: UiTranslator = uiTranslators.en) {
   return (
     <>
-      {scheduleLabel(task.schedule)}
+      {scheduleLabel(task.schedule, uiText)}
       {task.blockedByPolicy !== undefined ? (
         ` · ${task.blockedByPolicy}`
       ) : task.enabled && task.nextRunAt !== null ? (
         <>
-          {" · next "}
+          {readUiText(" · next ")}
           <ScheduledRelativeLabel value={task.nextRunAt} />
         </>
       ) : task.enabled ? (
         ""
       ) : (
-        " · paused"
+        readUiText(" · paused")
       )}
     </>
   );
@@ -61,6 +63,7 @@ export function ThreadAutomationsPanel(props: {
   readonly environmentId: EnvironmentId;
   readonly threadId: ThreadId;
 }) {
+  const uiText = useUiText();
   const canOperate = useAtomValue(
     serverEnvironment.runScheduledTaskNow.permissionAtom(props.environmentId),
   );
@@ -68,10 +71,10 @@ export function ThreadAutomationsPanel(props: {
     serverEnvironment.scheduledTasksLive({ environmentId: props.environmentId, input: {} }),
   );
   const setTaskEnabled = useAtomCommand(serverEnvironment.setScheduledTaskEnabled, {
-    label: "thread automation toggle",
+    label: uiText("thread automation toggle"),
   });
   const runTaskNow = useAtomCommand(serverEnvironment.runScheduledTaskNow, {
-    label: "thread automation run now",
+    label: uiText("thread automation run now"),
   });
   const navigate = useNavigate();
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
@@ -129,7 +132,7 @@ export function ThreadAutomationsPanel(props: {
   return (
     <ThreadDetailsSection
       headingId="thread-details-automations-heading"
-      title="Automations"
+      title={uiText("Automations")}
       data-thread-automations-panel
       actions={
         <Tooltip>
@@ -139,7 +142,7 @@ export function ThreadAutomationsPanel(props: {
                 size="icon-xs"
                 variant="ghost"
                 part="icon"
-                aria-label="Manage scheduled tasks"
+                aria-label={uiText("Manage scheduled tasks")}
                 onClick={() =>
                   void navigate({
                     to: "/settings/scheduled-tasks",
@@ -151,7 +154,7 @@ export function ThreadAutomationsPanel(props: {
               </ThreadDetailsControl>
             }
           />
-          <TooltipPopup>Manage scheduled tasks</TooltipPopup>
+          <TooltipPopup>{uiText("Manage scheduled tasks")}</TooltipPopup>
         </Tooltip>
       }
     >
@@ -179,11 +182,13 @@ export function ThreadAutomationsPanel(props: {
                 <span className="block truncate text-sm font-medium text-foreground/80">
                   {task.title}
                 </span>
-                <p className="truncate text-2xs text-muted-foreground">{taskScheduleLine(task)}</p>
+                <p className="truncate text-2xs text-muted-foreground">
+                  {taskScheduleLine(task, uiText)}
+                </p>
               </TooltipTrigger>
               <TooltipPopup side="left">
                 <p className="font-medium">{task.title}</p>
-                <p className="text-muted-foreground">{taskScheduleLine(task)}</p>
+                <p className="text-muted-foreground">{taskScheduleLine(task, uiText)}</p>
               </TooltipPopup>
             </Tooltip>
             <Tooltip>
@@ -193,7 +198,7 @@ export function ThreadAutomationsPanel(props: {
                     size="icon-xs"
                     variant="ghost"
                     part="icon"
-                    aria-label={`Edit ${task.title}`}
+                    aria-label={uiText("Edit {0}", [task.title])}
                     onClick={() =>
                       void navigate({
                         to: "/settings/scheduled-tasks",
@@ -205,7 +210,7 @@ export function ThreadAutomationsPanel(props: {
                   </ThreadDetailsControl>
                 }
               />
-              <TooltipPopup>Edit automation</TooltipPopup>
+              <TooltipPopup>{uiText("Edit automation")}</TooltipPopup>
             </Tooltip>
             {/* Webhook tasks need a request from their URL. */}
             {task.schedule.type === "webhook" ? null : (
@@ -216,7 +221,7 @@ export function ThreadAutomationsPanel(props: {
                       size="icon-xs"
                       variant="ghost"
                       part="icon"
-                      aria-label={`Run ${task.title} now`}
+                      aria-label={uiText("Run {0} now", [task.title])}
                       disabled={
                         !canOperate || busyTaskId !== null || task.lastRunStatus === "running"
                       }
@@ -226,13 +231,17 @@ export function ThreadAutomationsPanel(props: {
                     </ThreadDetailsControl>
                   }
                 />
-                <TooltipPopup>Run now</TooltipPopup>
+                <TooltipPopup>{uiText("Run now")}</TooltipPopup>
               </Tooltip>
             )}
             <Switch
               checked={task.enabled}
               disabled={!canOperate || busyTaskId !== null}
-              aria-label={task.enabled ? `Pause ${task.title}` : `Resume ${task.title}`}
+              aria-label={
+                task.enabled
+                  ? uiText("Pause {0}", [task.title])
+                  : uiText("Resume {0}", [task.title])
+              }
               onCheckedChange={(enabled) => void toggleEnabled(task, enabled)}
             />
           </li>
@@ -241,7 +250,8 @@ export function ThreadAutomationsPanel(props: {
       {/* Kept last: the details card treats a section whose last child is empty as empty. */}
       {tasksQuery.error !== null ? (
         <p className="px-2.5 py-1.5 text-2xs text-destructive">
-          Could not load automations: {tasksQuery.error}
+          {uiText("Could not load automations: ")}
+          {tasksQuery.error}
         </p>
       ) : null}
     </ThreadDetailsSection>

@@ -1,3 +1,4 @@
+import { useUiText } from "../../../i18n/uiText";
 import type {
   DiffLineAnnotation,
   FileDiffContentsLoader,
@@ -140,6 +141,7 @@ export function GuideExcerpt({
   loadDiffFiles: FileDiffContentsLoader;
   onOpenFile: (path: string) => void;
 }) {
+  const uiText = useUiText();
   // Keep selections outside ExcerptDiff to survive head reloads.
   const [draft, setDraft] = useState<ExcerptDraft | null>(null);
   const slice = excerptSlice(file, excerpt);
@@ -165,16 +167,19 @@ export function GuideExcerpt({
         />
       ) : loading ? (
         <p className="rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground">
-          Loading {excerpt.path}...
+          {uiText("Loading ")}
+          {excerpt.path}...
         </p>
       ) : (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground">
           <span className="min-w-0 truncate">
-            <span className="font-mono text-foreground">{excerpt.path}</span> lines {excerpt.start}-
-            {excerpt.end} are not in the loaded diff.
+            <span className="font-mono text-foreground">{excerpt.path}</span>
+            {uiText(" lines ")}
+            {excerpt.start}-{excerpt.end}
+            {uiText(" are not in the loaded diff.")}
           </span>
           <Button size="xs" variant="outline" onClick={() => onOpenFile(excerpt.path)}>
-            Open in Code
+            {uiText("Open in Code")}
           </Button>
         </div>
       )}
@@ -203,6 +208,7 @@ function ExcerptDiff({
   commenting: ExcerptCommenting | null;
   onOpenFile: (path: string) => void;
 }) {
+  const uiText = useUiText();
   const resolvedTheme = useRenderedAppearance();
   const loadExcerptFiles = excerptLoader(excerpt, slice.rows, loadDiffFiles);
 
@@ -324,13 +330,15 @@ function ExcerptDiff({
                 rangeLabel={`${excerpt.path}:${getReviewPositionAnchor(draft.position).line}`}
                 text=""
                 placeholder={
-                  commenting.canComment ? "Add a comment…" : "Ask the agent about these lines…"
+                  commenting.canComment
+                    ? uiText("Add a comment…")
+                    : uiText("Ask the agent about these lines…")
                 }
                 submitLabel={commenting.canComment ? "Add to review" : "Ask agent"}
                 {...(commenting.canComment && onAskAgent !== null
                   ? {
                       secondaryAction: {
-                        label: "Ask agent",
+                        label: uiText("Ask agent"),
                         onAction: (text: string) => askAgent(text),
                       },
                     }
@@ -357,13 +365,16 @@ function ExcerptDiff({
         renderHeaderMetadata={() => (
           <span className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="tabular-nums">
-              {excerpt.side === "old" ? "removed code, " : ""}showing {slice.shown} of {slice.total}{" "}
-              diff lines
+              {excerpt.side === "old" ? uiText("removed code, ") : ""}
+              {uiText("showing ")}
+              {slice.shown}
+              {uiText(" of ")}
+              {slice.total} {uiText("diff lines")}
             </span>
             <Button
               size="icon-xs"
               variant="ghost-muted"
-              aria-label={`Open ${excerpt.path} in Code`}
+              aria-label={uiText("Open {0} in Code", [excerpt.path])}
               onClick={() => onOpenFile(excerpt.path)}
             >
               <ArrowUpRightIcon aria-hidden />

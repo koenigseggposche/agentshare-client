@@ -1,3 +1,4 @@
+import { publishUiLanguage } from "./uiLanguage.ts";
 import { ClientSettingsSchema, type ClientSettings } from "@t3tools/contracts";
 import { fromLenientJson } from "@t3tools/shared/schemaJson";
 import { resolveSymlinkTarget } from "@t3tools/shared/symlink";
@@ -194,6 +195,11 @@ export const make = Effect.gen(function* () {
 
   return DesktopClientSettings.of({
     get: readClientSettings(fileSystem, environment.clientSettingsPath).pipe(
+      Effect.tap((settings) =>
+        Effect.sync(() => {
+          if (Option.isSome(settings)) publishUiLanguage(settings.value.uiLanguage);
+        }),
+      ),
       Effect.withSpan("desktop.clientSettings.get"),
     ),
     set: Effect.fn("desktop.clientSettings.set")(function (settings) {
@@ -206,7 +212,7 @@ export const make = Effect.gen(function* () {
             settingsPath: environment.clientSettingsPath,
             settings,
             suffix,
-          }),
+          }).pipe(Effect.tap(() => Effect.sync(() => publishUiLanguage(settings.uiLanguage)))),
         ),
       );
     }),

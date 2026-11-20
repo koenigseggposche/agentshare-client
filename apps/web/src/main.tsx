@@ -1,3 +1,4 @@
+import { readUiTranslator } from "./i18n/uiText";
 import React from "react";
 import ReactDOM from "react-dom/client";
 
@@ -10,7 +11,7 @@ import { startAppServices } from "./appInit";
 import { AppRoot } from "./AppRoot";
 import { clearChunkReloadGuard, reloadOnceForChunkLoadError } from "./lib/chunkReloadGuard";
 
-const router = startAppServices();
+const router = startAppServices(readUiTranslator());
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
 

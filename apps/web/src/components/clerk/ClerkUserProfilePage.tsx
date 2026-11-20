@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { RefreshIcon } from "~/components/ui/refresh-icon";
 
 import type { ReactNode } from "react";
@@ -48,6 +49,7 @@ export function ClerkUserProfileRefreshButton({
   readonly isPending: boolean;
   readonly onClick: () => void;
 }) {
+  const uiText = useUiText();
   return (
     <Button
       size="sm"
@@ -57,7 +59,7 @@ export function ClerkUserProfileRefreshButton({
       onClick={onClick}
     >
       <RefreshIcon aria-hidden="true" size="sm" refreshing={isPending} />
-      Refresh
+      {uiText("Refresh")}
     </Button>
   );
 }

@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import type { ThreadMoveDestination } from "../threads/threadOrder";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
 import * as ThreadUndo from "@t3tools/client-runtime/state/thread-undo";
@@ -79,7 +81,7 @@ function actionFailureTitle(action: ThreadListAction): string {
 
 function checkThreadOperationPermission(thread: EnvironmentThreadShell, title: string): boolean {
   if (readEnvironmentScope(thread.environmentId, AuthOrchestrationOperateScope)) return true;
-  Dialog.alert(title, "This connection cannot change threads.");
+  Dialog.alert(title, readUiText("This connection cannot change threads."));
   return false;
 }
 
@@ -113,14 +115,16 @@ function useThreadActionExecutor(
       ) {
         Dialog.alert(
           actionFailureTitle(action),
-          "This environment's server does not support settling yet. Update the server to use Settle.",
+          readUiText(
+            "This environment's server does not support settling yet. Update the server to use Settle.",
+          ),
         );
         return false;
       }
       if (action === "archive" && !threadCanArchive(thread.runtime)) {
         Dialog.alert(
           actionFailureTitle(action),
-          "This thread is working. Interrupt it first, then try again.",
+          readUiText("This thread is working. Interrupt it first, then try again."),
         );
         return false;
       }
@@ -181,7 +185,7 @@ function confirmThreadDeletion(
   Dialog.confirm({
     title,
     message,
-    confirmText: "Delete",
+    confirmText: readUiText("Delete"),
     destructive: true,
     onConfirm: () => {
       void executeAction("delete", thread);
@@ -209,6 +213,7 @@ export function useThreadListActions(): {
   readonly renameThread: (thread: EnvironmentThreadShell) => void;
   readonly regenerateThreadTitle: (thread: EnvironmentThreadShell) => Promise<boolean>;
 } {
+  const uiText = useUiText();
   const executeAction = useThreadActionExecutor();
   const snoozeMutation = useAtomCommand(threadEnvironment.snooze, { reportFailure: false });
   const unsnoozeMutation = useAtomCommand(threadEnvironment.unsnooze, { reportFailure: false });
@@ -256,8 +261,10 @@ export function useThreadListActions(): {
                   if (result._tag === "Failure") {
                     const error = Cause.squash(result.cause);
                     Dialog.alert(
-                      "Could not restore snooze",
-                      error instanceof Error ? error.message : "The thread could not be snoozed.",
+                      readUiText("Could not restore snooze"),
+                      error instanceof Error
+                        ? error.message
+                        : readUiText("The thread could not be snoozed."),
                     );
                     return false;
                   }
@@ -269,8 +276,8 @@ export function useThreadListActions(): {
           );
         } catch (error) {
           Dialog.alert(
-            "Could not undo thread action",
-            error instanceof Error ? error.message : "Try again.",
+            readUiText("Could not undo thread action"),
+            error instanceof Error ? error.message : readUiText("Try again."),
           );
         }
       },
@@ -300,19 +307,23 @@ export function useThreadListActions(): {
     const succeeded = await (async () => {
       if (!environmentConfigLoaded(thread.environmentId)) {
         Dialog.alert(
-          "Could not snooze thread",
-          "This environment's server does not support snoozing yet. Update the server to use Snooze.",
+          readUiText("Could not snooze thread"),
+          readUiText(
+            "This environment's server does not support snoozing yet. Update the server to use Snooze.",
+          ),
         );
         return false;
       }
       if (!canSnooze(thread, { now: new Date().toISOString() })) {
         Dialog.alert(
-          "Could not snooze thread",
+          readUiText("Could not snooze thread"),
           thread.hasPendingApprovals ||
             thread.hasPendingUserInput ||
             thread.pendingSubagentRequest != null
-            ? "This thread is waiting on you. Respond to the pending request before snoozing it."
-            : "This thread is still starting a turn. Try again once it's running.",
+            ? readUiText(
+                "This thread is waiting on you. Respond to the pending request before snoozing it.",
+              )
+            : readUiText("This thread is still starting a turn. Try again once it's running."),
         );
         return false;
       }
@@ -335,10 +346,10 @@ export function useThreadListActions(): {
         claim.finish();
         const error = Cause.squash(result.cause);
         Dialog.alert(
-          "Could not snooze thread",
+          readUiText("Could not snooze thread"),
           error instanceof Error && error.message.trim().length > 0
             ? error.message
-            : "The thread could not be snoozed.",
+            : readUiText("The thread could not be snoozed."),
         );
         return false;
       }
@@ -358,8 +369,10 @@ export function useThreadListActions(): {
     const succeeded = await (async () => {
       if (!environmentConfigLoaded(thread.environmentId)) {
         Dialog.alert(
-          "Could not wake thread",
-          "This environment's server does not support snoozing yet. Update the server to wake this thread.",
+          readUiText("Could not wake thread"),
+          readUiText(
+            "This environment's server does not support snoozing yet. Update the server to wake this thread.",
+          ),
         );
         return false;
       }
@@ -378,10 +391,10 @@ export function useThreadListActions(): {
       if (result._tag === "Failure") {
         const error = Cause.squash(result.cause);
         Dialog.alert(
-          "Could not wake thread",
+          readUiText("Could not wake thread"),
           error instanceof Error && error.message.trim().length > 0
             ? error.message
-            : "The thread could not be woken.",
+            : readUiText("The thread could not be woken."),
         );
         return false;
       }
@@ -396,8 +409,10 @@ export function useThreadListActions(): {
     if (!checkThreadOperationPermission(thread, "Could not pin thread")) return false;
     if (!environmentConfigLoaded(thread.environmentId)) {
       Dialog.alert(
-        "Could not pin thread",
-        "This environment's server does not support pinning yet. Update the server to use Pin.",
+        readUiText("Could not pin thread"),
+        readUiText(
+          "This environment's server does not support pinning yet. Update the server to use Pin.",
+        ),
       );
       return false;
     }
@@ -425,10 +440,10 @@ export function useThreadListActions(): {
     if (result._tag === "Failure") {
       const error = Cause.squash(result.cause);
       Dialog.alert(
-        "Could not pin thread",
+        readUiText("Could not pin thread"),
         error instanceof Error && error.message.trim().length > 0
           ? error.message
-          : "The thread could not be pinned.",
+          : readUiText("The thread could not be pinned."),
       );
       return false;
     }
@@ -438,8 +453,10 @@ export function useThreadListActions(): {
     if (!checkThreadOperationPermission(thread, "Could not unpin thread")) return false;
     if (!environmentConfigLoaded(thread.environmentId)) {
       Dialog.alert(
-        "Could not unpin thread",
-        "This environment's server does not support pinning yet. Update the server to use Pin.",
+        readUiText("Could not unpin thread"),
+        readUiText(
+          "This environment's server does not support pinning yet. Update the server to use Pin.",
+        ),
       );
       return false;
     }
@@ -459,10 +476,10 @@ export function useThreadListActions(): {
       claim.finish();
       const error = Cause.squash(result.cause);
       Dialog.alert(
-        "Could not unpin thread",
+        readUiText("Could not unpin thread"),
         error instanceof Error && error.message.trim().length > 0
           ? error.message
-          : "The thread could not be unpinned.",
+          : readUiText("The thread could not be unpinned."),
       );
       return false;
     }
@@ -472,8 +489,10 @@ export function useThreadListActions(): {
   const setThreadAutoSettle = async (thread: EnvironmentThreadShell, enabled: boolean) => {
     if (!environmentSupportsAutoSettleOptOut(thread.environmentId)) {
       Dialog.alert(
-        "Could not update auto-settle",
-        "This environment's server does not support turning auto-settle off per thread yet. Update the server to use it.",
+        readUiText("Could not update auto-settle"),
+        readUiText(
+          "This environment's server does not support turning auto-settle off per thread yet. Update the server to use it.",
+        ),
       );
       return false;
     }
@@ -485,10 +504,10 @@ export function useThreadListActions(): {
     if (result._tag === "Failure") {
       const error = Cause.squash(result.cause);
       Dialog.alert(
-        "Could not update auto-settle",
+        readUiText("Could not update auto-settle"),
         error instanceof Error && error.message.trim().length > 0
           ? error.message
-          : "The auto-settle setting could not be changed.",
+          : readUiText("The auto-settle setting could not be changed."),
       );
       return false;
     }
@@ -502,8 +521,10 @@ export function useThreadListActions(): {
     }
     if (!environmentConfigLoaded(thread.environmentId)) {
       Dialog.alert(
-        "Could not regenerate title",
-        "This environment's server does not support title regeneration yet. Update the server to regenerate thread titles.",
+        readUiText("Could not regenerate title"),
+        readUiText(
+          "This environment's server does not support title regeneration yet. Update the server to regenerate thread titles.",
+        ),
       );
       return false;
     }
@@ -518,10 +539,10 @@ export function useThreadListActions(): {
       if (result._tag === "Failure") {
         const error = Cause.squash(result.cause);
         Dialog.alert(
-          "Could not regenerate title",
+          readUiText("Could not regenerate title"),
           error instanceof Error && error.message.trim().length > 0
             ? error.message
-            : "The thread title could not be regenerated.",
+            : readUiText("The thread title could not be regenerated."),
         );
         return false;
       }
@@ -534,7 +555,10 @@ export function useThreadListActions(): {
     const commit = (title: string) => {
       const resolution = resolveThreadTitleRename({ title, originalTitle: thread.title });
       if (resolution.action === "reject-empty") {
-        Dialog.alert("Could not rename thread", "Thread title cannot be empty.");
+        Dialog.alert(
+          readUiText("Could not rename thread"),
+          readUiText("Thread title cannot be empty."),
+        );
         return;
       }
       if (resolution.action === "noop") return;
@@ -546,18 +570,18 @@ export function useThreadListActions(): {
         if (result._tag === "Success") return;
         const error = Cause.squash(result.cause);
         Dialog.alert(
-          "Could not rename thread",
+          readUiText("Could not rename thread"),
           error instanceof Error && error.message.trim().length > 0
             ? error.message
-            : "The thread could not be renamed.",
+            : readUiText("The thread could not be renamed."),
         );
       });
     };
 
     Dialog.prompt({
-      title: "Rename thread",
+      title: uiText("Rename thread"),
       initialValue: thread.title,
-      confirmText: "Rename",
+      confirmText: readUiText("Rename"),
       onConfirm: commit,
     });
   };
@@ -598,8 +622,10 @@ export function useThreadListActions(): {
 
     if (!configs.has(thread.environmentId)) {
       Dialog.alert(
-        "Could not move thread",
-        "This environment's server does not support reordering these threads. Update the server to arrange them.",
+        readUiText("Could not move thread"),
+        readUiText(
+          "This environment's server does not support reordering these threads. Update the server to arrange them.",
+        ),
       );
       return false;
     }
@@ -660,7 +686,7 @@ export function useThreadListActions(): {
             input: { threadId: thread.id, ...(orderKey === undefined ? {} : { orderKey }) },
           });
           if (result._tag === "Failure") {
-            Dialog.alert("Could not pin thread", String(Cause.squash(result.cause)));
+            Dialog.alert(readUiText("Could not pin thread"), String(Cause.squash(result.cause)));
             return false;
           }
         } else {
@@ -689,10 +715,10 @@ export function useThreadListActions(): {
         if (result._tag === "Failure") {
           const error = Cause.squash(result.cause);
           Dialog.alert(
-            "Could not move thread",
+            readUiText("Could not move thread"),
             error instanceof Error && error.message.trim().length > 0
               ? error.message
-              : "The thread could not be moved.",
+              : readUiText("The thread could not be moved."),
           );
           return false;
         }

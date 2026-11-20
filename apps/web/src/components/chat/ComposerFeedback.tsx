@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { readUiText } from "../../i18n/uiText";
 import {
   codexFeedbackNotice,
   type CodexFeedbackSubmission,
@@ -12,6 +15,7 @@ import type { ComposerBannerStackItem } from "./ComposerBannerStack";
 export function feedbackBannerItem(
   submission: CodexFeedbackSubmission,
   onDismiss: () => void,
+  uiText: UiTranslator = uiTranslators.en,
 ): ComposerBannerStackItem | null {
   const notice = codexFeedbackNotice(submission);
   if (!notice) return null;
@@ -31,14 +35,15 @@ export function feedbackBannerItem(
               (error: unknown) => {
                 toastManager.add({
                   type: "error",
-                  title: "Could not copy thread ID",
-                  description: error instanceof Error ? error.message : "An error occurred.",
+                  title: uiText("Could not copy thread ID"),
+                  description:
+                    error instanceof Error ? error.message : uiText("An error occurred."),
                 });
               },
             );
           }}
         >
-          Copy ID
+          {readUiText("Copy ID")}
         </Button>
       ) : undefined,
     ...(submission.status !== "uploading"

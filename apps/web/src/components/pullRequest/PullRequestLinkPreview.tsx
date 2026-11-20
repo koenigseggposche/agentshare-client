@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card";
 import { isAtomCommandInterrupted } from "@t3tools/client-runtime/state/runtime";
 import type { EnvironmentId, PullRequestRef } from "@t3tools/contracts";
@@ -46,6 +47,7 @@ export function PullRequestLinkPreview({
   onOpenFallback?: (url: string) => Promise<void>;
   fallback?: ReactNode;
 }) {
+  const uiText = useUiText();
   const [open, setOpen] = useState(false);
   const previewActionsRef = useRef<PreviewCardPrimitive.Root.Actions | null>(null);
   const [resolvingClick, setResolvingClick] = useState(false);
@@ -90,7 +92,7 @@ export function PullRequestLinkPreview({
   const state =
     preview === null
       ? null
-      : resolvePullRequestState({ state: preview.state, isDraft: preview.isDraft });
+      : resolvePullRequestState({ state: preview.state, isDraft: preview.isDraft }, uiText);
   const authorLabel =
     preview?.author === null
       ? "ghost"
@@ -139,7 +141,8 @@ export function PullRequestLinkPreview({
                   <span className="min-w-0 truncate">{authorLabel}</span>
                   <span aria-hidden>·</span>
                   <span className="shrink-0">
-                    opened <RelativeTime timestamp={preview.createdAt} />
+                    {uiText("opened ")}
+                    <RelativeTime timestamp={preview.createdAt} />
                   </span>
                 </div>
               </div>

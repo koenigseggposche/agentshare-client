@@ -1,3 +1,6 @@
+import { readUiText } from "../../i18n/uiText";
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { type LiveActivity } from "expo-widgets";
 import {
   configureAndroidAgentNotifications,
@@ -424,11 +427,14 @@ function environmentPublishesAgentActivity(environmentId: EnvironmentId): boolea
   );
 }
 
-export function armAgentAwarenessLiveActivityForLocalWork(input: {
-  readonly environmentId: EnvironmentId;
-  readonly threadTitle: string;
-  readonly projectTitle: string;
-}): void {
+export function armAgentAwarenessLiveActivityForLocalWork(
+  input: {
+    readonly environmentId: EnvironmentId;
+    readonly threadTitle: string;
+    readonly projectTitle: string;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): void {
   if (!canRegisterRemoteLiveActivities() || !relayTokenProvider) {
     return;
   }
@@ -441,14 +447,17 @@ export function armAgentAwarenessLiveActivityForLocalWork(input: {
       if (preferences?.liveActivitiesEnabled === false) {
         return;
       }
-      armAgentAwarenessLiveActivityForLocalWorkNow(input);
+      armAgentAwarenessLiveActivityForLocalWorkNow(input, uiText);
     });
 }
 
-function armAgentAwarenessLiveActivityForLocalWorkNow(input: {
-  readonly threadTitle: string;
-  readonly projectTitle: string;
-}): void {
+function armAgentAwarenessLiveActivityForLocalWorkNow(
+  input: {
+    readonly threadTitle: string;
+    readonly projectTitle: string;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): void {
   try {
     if (getAgentLiveActivities().length > 0) {
       return;
@@ -456,8 +465,8 @@ function armAgentAwarenessLiveActivityForLocalWorkNow(input: {
     const nowIso = new Date(Date.now()).toISOString();
     const activity = startAgentLiveActivity(
       {
-        title: "T3 Code",
-        subtitle: "Agent work in progress",
+        title: uiText("T3 Code"),
+        subtitle: uiText("Agent work in progress"),
         activeCount: 1,
         updatedAt: nowIso,
         activities: [
@@ -668,7 +677,7 @@ const registerDevice = Effect.fn("remoteRegistration.registerDevice")(function* 
       deviceId,
       label:
         Constants.deviceName?.trim() ||
-        (Platform.OS === "android" ? "Android device" : "iOS device"),
+        (Platform.OS === "android" ? readUiText("Android device") : readUiText("iOS device")),
       ...(Platform.OS === "android"
         ? { platform: "android" as const, androidApiLevel: Number(Platform.Version) }
         : { platform: "ios" as const, iosMajorVersion: iosMajorVersion() }),

@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useNavigation } from "@react-navigation/native";
 import { useEffect } from "react";
 import { BackHandler, Keyboard } from "react-native";
@@ -14,6 +15,7 @@ export function PullRequestToolbar(props: {
   readonly filters: PullRequestFilterMenu | null;
   readonly onRequestVisibility?: () => void;
 }) {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const { filters } = props;
   const workspace = useWorkspaceTabs()!;
@@ -54,17 +56,17 @@ export function PullRequestToolbar(props: {
   }, [searching, closeSearch, navigation, isTabActive]);
   return (
     <AppBar
-      title="AgentShare"
+      title={uiText("AgentShare")}
       titleContent={
         <WorkspaceBrandTitle
-          accessibilityLabel="AgentShare, Pull requests"
+          accessibilityLabel={uiText("AgentShare, Pull requests")}
           onOpenEnvironments={() => openSettings(navigation, "SettingsEnvironments")}
         />
       }
       search={{
         value: tab.query,
         onChangeText: (query) => dispatch({ type: "query", tab: "pullRequests", query }),
-        placeholder: "Search pull requests",
+        placeholder: uiText("Search pull requests"),
         active: searching,
         onOpen: openSearch,
         onClose: closeSearch,
@@ -73,7 +75,7 @@ export function PullRequestToolbar(props: {
         filters
           ? [
               {
-                title: "Filter pull requests",
+                title: uiText("Filter pull requests"),
                 icon: filters.customized
                   ? "line.3.horizontal.decrease.circle.fill"
                   : "line.3.horizontal.decrease.circle",

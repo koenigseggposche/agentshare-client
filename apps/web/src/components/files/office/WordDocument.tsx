@@ -1,3 +1,4 @@
+import { useUiText } from "../../../i18n/uiText";
 /* oxlint-disable react/no-array-index-key -- Text spans retain their order within an immutable page. */
 /* oxlint-disable react/no-unstable-nested-components -- These callbacks return overlays, and are invoked as render functions. */
 import { Tooltip, TooltipTrigger, TooltipPopup } from "~/components/ui/tooltip";
@@ -25,6 +26,7 @@ export default function WordDocument(props: {
   onDetails: (text: string) => void;
   onError: (cause: unknown) => void;
 }) {
+  const uiText = useUiText();
   const { onError, bytes, onDetails } = props;
   const [opened, setOpened] = useState<Opened>();
   const scroll = useRef<((index: number, y?: number) => void) | null>(null);
@@ -98,7 +100,7 @@ export default function WordDocument(props: {
     <OfficePages
       pages={opened.pages}
       paint={opened.paint}
-      label="Page"
+      label={uiText("Page")}
       scrollRef={scroll}
       onError={onError}
       overlay={(index) => (

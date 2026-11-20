@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type {
   NativeStackHeaderItem,
   NativeStackHeaderItemMenu,
@@ -31,17 +33,20 @@ function toNativeHeaderMenuItems(items: HomeListFilterMenu["items"]): NativeHead
   );
 }
 
-export function createSidebarHeaderItems(input: {
-  readonly filterIcon: string;
-  readonly filterMenu: HomeListFilterMenu;
-  readonly onOpenSettings: () => void;
-}): NativeStackHeaderItem[] {
+export function createSidebarHeaderItems(
+  input: {
+    readonly filterIcon: string;
+    readonly filterMenu: HomeListFilterMenu;
+    readonly onOpenSettings: () => void;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): NativeStackHeaderItem[] {
   return [
     withNativeGlassHeaderItem({
       type: "menu",
       axisBehavior: "horizontalOnly",
       label: "",
-      accessibilityLabel: "Filter threads",
+      accessibilityLabel: uiText("Filter threads"),
       icon: sfSymbolIcon(input.filterIcon),
       menu: {
         title: input.filterMenu.title,
@@ -51,8 +56,8 @@ export function createSidebarHeaderItems(input: {
     withNativeGlassHeaderItem({
       type: "button",
       axisBehavior: "horizontalOnly",
-      label: "Settings",
-      accessibilityLabel: "Open settings",
+      label: uiText("Settings"),
+      accessibilityLabel: uiText("Open settings"),
       icon: sfSymbolIcon("gearshape"),
       onPress: input.onOpenSettings,
     }),

@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { workspaceConnectionEmptyState } from "../connection/workspace-empty-state";
 import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { usePaneRole } from "../../components/ui/Pane";
@@ -210,6 +211,7 @@ function renderHomeScrollView(props: ScrollViewProps) {
 }
 
 export function HomeScreen(props: HomeScreenProps) {
+  const uiText = useUiText();
   const language = useWorkbenchLanguage();
   const usesNativeWorkspaceColumns = useNativeWorkspaceColumnsSupported();
   const workspace = useWorkspaceTabs();
@@ -722,25 +724,25 @@ export function HomeScreen(props: HomeScreenProps) {
   const v2ListEmpty =
     hasSearchQuery && threadSearch.isPending ? undefined : hasSearchQuery ? (
       <EmptyState
-        title="No results"
+        title={uiText("No results")}
         detail={`No threads matching "${props.searchQuery}".`}
         variant={Platform.OS === "android" ? "plain" : undefined}
       />
     ) : v2ScopedProjectGroup !== null ? (
       <EmptyState
-        title={`No threads in ${v2ScopedProjectGroup.title}`}
+        title={uiText("No threads in {0}", [v2ScopedProjectGroup.title])}
         detail="Choose another project or create a new task."
         variant={Platform.OS === "android" ? "plain" : undefined}
       />
     ) : selectedEnvironmentLabel ? (
       <EmptyState
-        title={`No threads in ${selectedEnvironmentLabel}`}
+        title={uiText("No threads in {0}", [selectedEnvironmentLabel])}
         detail="Choose another environment or create a new task."
         variant={Platform.OS === "android" ? "plain" : undefined}
       />
     ) : (
       <EmptyState
-        title="No threads yet"
+        title={uiText("No threads yet")}
         detail="Create a task to start a new coding session."
         variant={Platform.OS === "android" ? "plain" : undefined}
       />

@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import { useRememberThreadProject } from "./useRememberThreadProject";
 import { useOpenPullRequest } from "../../native/useOpenPullRequest";
@@ -120,6 +122,7 @@ function firstRouteParam(value: string | string[] | undefined): string | null {
 }
 
 function ThreadRouteFallbackLayout(props: { readonly children: ReactNode }) {
+  const uiText = useUiText();
   const goBack = useWorkspaceBackNavigation("threads");
   const { layout } = useAdaptiveWorkspaceLayout();
   const { themeVariables } = useAppearancePreferences();
@@ -129,7 +132,7 @@ function ThreadRouteFallbackLayout(props: { readonly children: ReactNode }) {
   return (
     <>
       <AppBar
-        title="Thread"
+        title={uiText("Thread")}
         options={{ contentStyle: { backgroundColor: themeVariables["--color-header"] } }}
         onBack={layout.usesSplitView ? undefined : goBack}
         hideBottomBorder
@@ -140,10 +143,11 @@ function ThreadRouteFallbackLayout(props: { readonly children: ReactNode }) {
 }
 
 function OpeningThreadLoadingScreen() {
+  const uiText = useUiText();
   return (
     <ThreadRouteFallbackLayout>
       <LoadingScreen
-        message="Opening thread…"
+        message={uiText("Opening thread…")}
         messagePlacement="above-spinner"
         embedded={Platform.OS === "android"}
       />
@@ -169,6 +173,7 @@ function ThreadUnavailableScreen(props: {
   readonly actionLabel: string;
   readonly onAction: () => void;
 }) {
+  const uiText = useUiText();
   return (
     <ThreadRouteFallbackLayout>
       <ScrollView
@@ -182,7 +187,7 @@ function ThreadUnavailableScreen(props: {
         className="bg-screen flex-1 android:bg-transparent"
       >
         <EmptyState
-          title="Thread unavailable"
+          title={uiText("Thread unavailable")}
           detail="This thread is not available in the current mobile snapshot."
           actionLabel={props.actionLabel}
           onAction={props.onAction}
@@ -233,6 +238,7 @@ export function ThreadRouteScreen(props: ThreadRouteScreenProps) {
 }
 
 function LiveThreadRouteController(props: ThreadRouteScreenProps) {
+  const uiText = useUiText();
   useAndroidWorkspaceBack("threads");
   const connectionsReady = useConnectionsReady();
   const { connectionState } = useRemoteConnectionStatus();
@@ -268,7 +274,7 @@ function LiveThreadRouteController(props: ThreadRouteScreenProps) {
     <>
       {props.inspectorPresentation ? (
         <ThreadInspectorHeader
-          title={selectedThread?.title ?? "Thread"}
+          title={selectedThread?.title ?? uiText("Thread")}
           {...props.inspectorPresentation}
         />
       ) : null}
@@ -339,6 +345,7 @@ function ThreadRouteContent(
     readonly selectedThreadDetailState: ReturnType<typeof useSelectedThreadDetailState>;
   },
 ) {
+  const uiText = useUiText();
   const { themeVariables } = useAppearancePreferences();
   const headerColor = themeVariables["--color-header"];
   const { fileInspector, layout, panes, showInspector, toggleAuxiliaryPane } =
@@ -374,23 +381,23 @@ function ThreadRouteContent(
   const requests = useSelectedThreadRequests();
   const interruptThreadTurn = useAtomCommand(threadEnvironment.interruptTurn, "thread interrupt");
   const resumeThreadQueue = useAtomCommand(threadEnvironment.resumeThreadQueue, {
-    label: "resume queue",
+    label: uiText("resume queue"),
     reportFailure: false,
   });
   const continueThreadRun = useAtomCommand(threadEnvironment.startTurn, {
-    label: "continue thread",
+    label: uiText("continue thread"),
     reportFailure: false,
   });
   const setThreadRuntimeMode = useAtomCommand(threadEnvironment.setRuntimeMode, {
-    label: "set thread runtime mode",
+    label: uiText("set thread runtime mode"),
     reportFailure: false,
   });
   const setThreadInteractionMode = useAtomCommand(threadEnvironment.setInteractionMode, {
-    label: "set thread interaction mode",
+    label: uiText("set thread interaction mode"),
     reportFailure: false,
   });
   const loadEarlierHistory = useAtomCommand(threadEnvironment.loadEarlierHistory, {
-    label: "load earlier thread history",
+    label: uiText("load earlier thread history"),
     reportFailure: false,
   });
   const historyControls = (() => {
@@ -679,8 +686,8 @@ function ThreadRouteContent(
     if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
       const error = squashAtomCommandFailure(result);
       Dialog.alert(
-        "Could not resume thread",
-        error instanceof Error ? error.message : "Try again.",
+        readUiText("Could not resume thread"),
+        error instanceof Error ? error.message : readUiText("Try again."),
       );
     }
   };
@@ -782,7 +789,7 @@ function ThreadRouteContent(
     auxiliaryPaneControl:
       !layout.usesSplitView && fileInspector.supported && selectedThreadCwd !== null
         ? {
-            accessibilityLabel: "Toggle inspector",
+            accessibilityLabel: uiText("Toggle inspector"),
             onPress: handleToggleInspector,
           }
         : undefined,
@@ -823,7 +830,7 @@ function ThreadRouteContent(
       await recoverFailedThreadDraft(creation);
     } catch (error) {
       Dialog.alert(
-        "Could not restore draft",
+        readUiText("Could not restore draft"),
         error instanceof Error ? error.message : String(error),
       );
       return;
@@ -947,12 +954,15 @@ function ThreadRouteContent(
   const contentPresentation =
     creationState !== null
       ? { kind: "ready" as const }
-      : projectThreadContentPresentation({
-          hasDetail: selectedThreadDetail !== null,
-          detailError: Option.getOrNull(selectedThreadDetailState.error),
-          detailDeleted: selectedThreadDetailState.status === "deleted",
-          connectionState: routeConnectionState,
-        });
+      : projectThreadContentPresentation(
+          {
+            hasDetail: selectedThreadDetail !== null,
+            detailError: Option.getOrNull(selectedThreadDetailState.error),
+            detailDeleted: selectedThreadDetailState.status === "deleted",
+            connectionState: routeConnectionState,
+          },
+          uiText,
+        );
   const serverConfig = routeEnvironmentRuntime?.serverConfig ?? null;
   const renderThreadRouteBody = () => (
     <>
@@ -987,7 +997,7 @@ function ThreadRouteContent(
           selectedThread={selectedThreadWithDraftSettings ?? selectedThread}
           selectedThreadDetailRef={selectedThreadDetailRef}
           contentPresentation={contentPresentation}
-          screenTone={connectionTone(routeConnectionState)}
+          screenTone={connectionTone(routeConnectionState, uiText)}
           connectionError={routeConnectionError}
           environmentLabel={selectedEnvironmentConnection?.environmentLabel ?? null}
           feedbackSubmissions={composer.feedbackSubmissions}

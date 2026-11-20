@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   matchComposerEnvironmentItems,
   matchComposerThreadItems,
@@ -93,6 +94,7 @@ export function useComposerMenuItems({
   readonly workspaceSkillsScanning: boolean;
   readonly questionAttachmentTarget: DraftId | null;
 }) {
+  const uiText = useUiText();
   // Thread mentions rank by recency as of when the composer mounted.
   const [now] = useState(() => Date.now());
   const composerTriggerKind = composerTrigger?.kind ?? null;
@@ -222,7 +224,7 @@ export function useComposerMenuItems({
           type: "slash-command",
           command: "model",
           label: "/model",
-          description: "Switch response model for this thread",
+          description: uiText("Switch response model for this thread"),
         },
         ...(planModeUiEnabled
           ? ([
@@ -231,14 +233,14 @@ export function useComposerMenuItems({
                 type: "slash-command",
                 command: "plan",
                 label: "/plan",
-                description: "Switch this thread into plan mode",
+                description: uiText("Switch this thread into plan mode"),
               },
               {
                 id: "slash:default",
                 type: "slash-command",
                 command: "default",
                 label: "/default",
-                description: "Switch this thread back to normal build mode",
+                description: uiText("Switch this thread back to normal build mode"),
               },
             ] as const)
           : []),
@@ -249,14 +251,15 @@ export function useComposerMenuItems({
                 type: "slash-command",
                 command: "side",
                 label: "/side",
-                description: sideChatDisabledReason ?? "Ask a side question in a new side chat",
+                description:
+                  sideChatDisabledReason ?? uiText("Ask a side question in a new side chat"),
               },
               {
                 id: "slash:btw",
                 type: "slash-command",
                 command: "btw",
                 label: "/btw",
-                description: sideChatDisabledReason ?? "Same as /side",
+                description: sideChatDisabledReason ?? uiText("Same as /side"),
               },
             ] as const)
           : []),
@@ -274,7 +277,7 @@ export function useComposerMenuItems({
         provider: selectedProvider,
         command,
         label: `/${command.name}`,
-        description: command.description ?? command.input?.hint ?? "Run provider command",
+        description: command.description ?? command.input?.hint ?? uiText("Run provider command"),
       }));
       const query = composerTrigger.query.trim().toLowerCase();
       const skillItems = slashMenuSkills.map((skill) => ({
@@ -286,7 +289,7 @@ export function useComposerMenuItems({
         description:
           skill.shortDescription ??
           skill.description ??
-          (skill.scope ? `${skill.scope} skill` : ""),
+          (skill.scope ? uiText("{0} skill", [skill.scope]) : ""),
       }));
       const visibleProviderSlashCommandItems = providerSlashCommandItems.filter(
         (item) => item.command.name !== "compact" || compactSlashCommandAvailable,
@@ -307,7 +310,7 @@ export function useComposerMenuItems({
         description:
           skill.shortDescription ??
           skill.description ??
-          (skill.scope ? `${skill.scope} skill` : "Run provider skill"),
+          (skill.scope ? uiText("{0} skill", [skill.scope]) : uiText("Run provider skill")),
       }));
     }
     if (

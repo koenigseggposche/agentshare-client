@@ -1,3 +1,6 @@
+import { readUiText } from "../../i18n/uiText";
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { worktreeSetupAgentStarted } from "@t3tools/client-runtime/worktree-setup";
 import { resolveUserMessagePresentation } from "@t3tools/client-runtime/user-message";
 import { isLiveSubagentTurnItem } from "@t3tools/client-runtime/state/subagentRuntime";
@@ -1210,7 +1213,10 @@ function deriveTurnFolds(input: {
         createdAt: steer.createdAt,
         hiddenEntryIds: segmentHiddenIds(entries),
         entryIds: new Set(entries.map((entry) => entry.id)),
-        label: segmentMs !== null ? `Continued for ${formatDuration(segmentMs)}` : "Continued",
+        label:
+          segmentMs !== null
+            ? readUiText("Continued for {0}", [formatDuration(segmentMs)])
+            : readUiText("Continued"),
       });
     }
   }
@@ -1390,24 +1396,27 @@ function deriveTimelineTurnFolds(
   });
 }
 
-export function deriveMessagesTimelineRows(input: {
-  timelineEntries: ReadonlyArray<TimelineEntry>;
-  pendingApprovalRequestIds?: ReadonlySet<RuntimeRequestId>;
-  latestRun?: TimelineLatestRun | null;
-  runningRunId?: RunId | null;
-  expandedRunIds?: ReadonlySet<RunId>;
-  expandedAttemptIds?: ReadonlySet<RunAttemptId>;
-  expandedWorkGroupIds?: ReadonlySet<string>;
-  isWorking: boolean;
-  /** Native subagent work has no app run; runless entries form the live response. */
-  runlessWorkActive?: boolean;
-  activeTurnStartedAt?: string | null;
-  turnDiffSummaries: ReadonlyArray<TurnDiffSummary>;
-  supportsConversationRollback: boolean;
-  threadStartCheckpointReady?: boolean;
-  availableRevertTurnCounts?: ReadonlySet<number> | undefined;
-  worktreeSetup?: WorktreeSetupSnapshot | null;
-}): MessagesTimelineRow[] {
+export function deriveMessagesTimelineRows(
+  input: {
+    timelineEntries: ReadonlyArray<TimelineEntry>;
+    pendingApprovalRequestIds?: ReadonlySet<RuntimeRequestId>;
+    latestRun?: TimelineLatestRun | null;
+    runningRunId?: RunId | null;
+    expandedRunIds?: ReadonlySet<RunId>;
+    expandedAttemptIds?: ReadonlySet<RunAttemptId>;
+    expandedWorkGroupIds?: ReadonlySet<string>;
+    isWorking: boolean;
+    /** Native subagent work has no app run; runless entries form the live response. */
+    runlessWorkActive?: boolean;
+    activeTurnStartedAt?: string | null;
+    turnDiffSummaries: ReadonlyArray<TurnDiffSummary>;
+    supportsConversationRollback: boolean;
+    threadStartCheckpointReady?: boolean;
+    availableRevertTurnCounts?: ReadonlySet<number> | undefined;
+    worktreeSetup?: WorktreeSetupSnapshot | null;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): MessagesTimelineRow[] {
   const timelineEntries = timelineRowEntries(input.timelineEntries);
   const isPendingApproval = (entry: WorkLogEntry) => {
     const item = entry.projectedItem?.item;
@@ -1740,7 +1749,7 @@ export function deriveMessagesTimelineRows(input: {
         createdAt: supersededFold.createdAt,
         runId: supersededFold.runId,
         attemptId: supersededFold.attemptId,
-        label: "Superseded attempt",
+        label: uiText("Superseded attempt"),
         expanded: input.expandedAttemptIds?.has(supersededFold.attemptId) ?? false,
       });
     }
@@ -2014,8 +2023,8 @@ export function deriveMessagesTimelineRows(input: {
           label: pending
             ? reason
               ? IDLE_COMPACTING_LABELS[reason]
-              : "Compacting context"
-            : "Context compaction",
+              : uiText("Compacting context")
+            : uiText("Context compaction"),
           tokenCounts: null,
           active: pending,
         });
@@ -2355,12 +2364,13 @@ function replaceStreamingMessageRows(
 export function deriveMessagesTimelineRowsWithState(
   input: MessagesTimelineRowsInput,
   previous: MessagesTimelineRowsProjection | null = null,
+  uiText: UiTranslator = uiTranslators.en,
 ): MessagesTimelineRowsProjection {
   return {
     input,
     rows:
       (previous === null ? null : replaceStreamingMessageRows(input, previous)) ??
-      deriveMessagesTimelineRows(input),
+      deriveMessagesTimelineRows(input, uiText),
   };
 }
 

@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { PullRequestStack } from "@t3tools/contracts";
 import { cn } from "~/lib/utils";
 import { resolvePullRequestState } from "./pullRequestPresentation";
@@ -9,10 +10,14 @@ export function PullRequestStackLayerContent({
   layer: PullRequestStack["layers"][number];
   compact?: boolean;
 }) {
-  const state = resolvePullRequestState({
-    state: layer.state,
-    isDraft: layer.isDraft ?? false,
-  });
+  const uiText = useUiText();
+  const state = resolvePullRequestState(
+    {
+      state: layer.state,
+      isDraft: layer.isDraft ?? false,
+    },
+    uiText,
+  );
   return (
     <>
       <state.Icon aria-hidden className={cn("size-4 shrink-0", state.toneClassName)} />

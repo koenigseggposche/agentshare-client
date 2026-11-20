@@ -17,5 +17,11 @@ describe("timestamps in an explicit time zone", () => {
     expect(formatDayAwareTimestamp("2026-07-01T03:30:00.000Z", "12-hour", now, zone)).toMatch(
       /^yesterday at /,
     );
+    expect(formatDayAwareTimestamp("2026-07-01T03:30:00.000Z", "12-hour", now, zone, "zh")).toMatch(
+      /^昨天 /,
+    );
+    expect(formatUpcomingTimestamp("2026-07-02T05:30:00.000Z", "12-hour", now, zone, "zh")).toMatch(
+      /^明天 /,
+    );
   });
 });

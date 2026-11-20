@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import {
   deriveWorkflowGroups,
@@ -53,6 +54,7 @@ export function useThreadTurnSubagents(target: AgentsTarget | null): ThreadTurnS
 }
 
 export function ThreadAgentsSheet({ route }: StaticScreenProps<AgentsTarget>) {
+  const uiText = useUiText();
   const { layout } = useAdaptiveWorkspaceLayout();
   const target = route.params;
   const navigation = useNavigation();
@@ -102,7 +104,7 @@ export function ThreadAgentsSheet({ route }: StaticScreenProps<AgentsTarget>) {
     >
       {subagents.length === 0 ? (
         <Text className="pt-6 text-center text-sm text-foreground-muted">
-          No agents in this turn.
+          {uiText("No agents in this turn.")}
         </Text>
       ) : (
         subagents.map((subagent) => {
@@ -151,7 +153,7 @@ export function ThreadAgentsSheet({ route }: StaticScreenProps<AgentsTarget>) {
               tintColorClassName="accent-foreground"
               hideBackButton
               hideShadow={false}
-              title="Agents"
+              title={uiText("Agents")}
               titleColorClassName="accent-foreground"
               titleFontSize={18}
               titleFontWeight="800"
@@ -166,7 +168,7 @@ export function ThreadAgentsSheet({ route }: StaticScreenProps<AgentsTarget>) {
   return (
     <View collapsable={false} className="flex-1 bg-sheet">
       <NativeStackScreenOptions options={{ sheetCornerRadius: 28 }} />
-      <AppBar sheet title="Agents" onBack={() => navigation.goBack()} />
+      <AppBar sheet title={uiText("Agents")} onBack={() => navigation.goBack()} />
       <ScreenContent insetHorizontal={layout.usesSplitView}>{content}</ScreenContent>
     </View>
   );
@@ -178,6 +180,7 @@ function AgentRow(props: {
   readonly tickSeconds: boolean;
   readonly onOpen: (child: { environmentId: EnvironmentId; threadId: ThreadId }) => void;
 }) {
+  const uiText = useUiText();
   const { subagent } = props;
   const { presentationById } = useEnvironments();
   const target = subagentThreadTarget(subagent, props.environmentId, (id) =>
@@ -202,8 +205,8 @@ function AgentRow(props: {
         className="min-w-0 flex-1"
         accessibilityHint={
           subagent.remoteChild === undefined
-            ? "Provider-managed agent. Its work appears in the transcript."
-            : `Runs on ${subagent.remoteChild.label}. Connect to it to open its thread.`
+            ? uiText("Provider-managed agent. Its work appears in the transcript.")
+            : uiText("Runs on {0}. Connect to it to open its thread.", [subagent.remoteChild.label])
         }
       >
         {row}
@@ -211,7 +214,7 @@ function AgentRow(props: {
     ) : (
       <Pressable
         accessibilityRole="link"
-        accessibilityHint="Opens this agent's thread"
+        accessibilityHint={uiText("Opens this agent's thread")}
         onPress={() => props.onOpen(target)}
         className="min-w-0 flex-1 active:opacity-70"
       >

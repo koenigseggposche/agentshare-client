@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { readUiTranslator } from "../../i18n/uiText";
+import { translateUiLabels, uiTranslators } from "@t3tools/shared/uiMessages";
 import { useAtomValue } from "@effect/atom-react";
 import { type AtomCommandSuccess, runAtomCommand } from "@t3tools/client-runtime/state/runtime";
 import { Atom, type AtomRegistry } from "effect/reactivity";
@@ -55,31 +58,34 @@ const UNAVAILABLE = {
  * detail is settled (loaded and no history page in flight), or with null when
  * the signal aborts.
  */
-export async function loadCitedHistory(input: {
-  readonly signal: AbortSignal;
-  readonly readThread: () => Promise<CitedThreadSnapshot | null>;
-  readonly loadThrough: () => Promise<HistoryPageResult>;
-}): Promise<CitedHistoryOutcome> {
+export async function loadCitedHistory(
+  input: {
+    readonly signal: AbortSignal;
+    readonly readThread: () => Promise<CitedThreadSnapshot | null>;
+    readonly loadThrough: () => Promise<HistoryPageResult>;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): Promise<CitedHistoryOutcome> {
   for (let attempts = 0; ; attempts += 1) {
     const thread = await input.readThread();
     if (thread === null || input.signal.aborted) return { _tag: "aborted" };
-    if (thread.loadFailed) return COULD_NOT_LOAD;
+    if (thread.loadFailed) return translateUiLabels(COULD_NOT_LOAD, uiText);
     if (thread.message === "assistant") return { _tag: "found" };
     if (thread.message === "other") {
       return {
         _tag: "failed",
-        title: "The citation does not refer to an assistant response",
-        description: "The selected text is still saved in your citation.",
+        title: uiText("The citation does not refer to an assistant response"),
+        description: uiText("The selected text is still saved in your citation."),
       };
     }
-    if (!thread.hasMoreHistory) return UNAVAILABLE;
-    if (attempts >= MAX_CITATION_PAGES) return COULD_NOT_LOAD;
+    if (!thread.hasMoreHistory) return translateUiLabels(UNAVAILABLE, uiText);
+    if (attempts >= MAX_CITATION_PAGES) return translateUiLabels(COULD_NOT_LOAD, uiText);
     const result = await input.loadThrough();
     if (input.signal.aborted) return { _tag: "aborted" };
-    if (result._tag === "error") return COULD_NOT_LOAD;
+    if (result._tag === "error") return translateUiLabels(COULD_NOT_LOAD, uiText);
     // A noop page means the store has nothing older to load (no cursor, or the
     // thread is gone), so re-reading would only spin on the same snapshot.
-    if (result._tag === "noop") return UNAVAILABLE;
+    if (result._tag === "noop") return translateUiLabels(UNAVAILABLE, uiText);
   }
 }
 
@@ -194,21 +200,25 @@ const citedHistoryAtom = Atom.family(
     return Atom.make((get): CitedHistory => {
       const controller = new AbortController();
       get.addFinalizer(() => controller.abort());
-      void loadCitedHistory({
-        signal: controller.signal,
-        readThread: () => waitForSettledThread(get.registry, settledThreadAtom, controller.signal),
-        loadThrough: async () => {
-          const result = await runAtomCommand(
-            get.registry,
-            threadEnvironment.loadEarlierHistory,
-            { environmentId, input: { threadId, throughEntryId: messageId } },
-            { label: "load cited thread history", reportFailure: false },
-          );
-          return result._tag === "Success"
-            ? result.value
-            : { _tag: "error", message: "Could not load history." };
+      void loadCitedHistory(
+        {
+          signal: controller.signal,
+          readThread: () =>
+            waitForSettledThread(get.registry, settledThreadAtom, controller.signal),
+          loadThrough: async () => {
+            const result = await runAtomCommand(
+              get.registry,
+              threadEnvironment.loadEarlierHistory,
+              { environmentId, input: { threadId, throughEntryId: messageId } },
+              { label: "load cited thread history", reportFailure: false },
+            );
+            return result._tag === "Success"
+              ? result.value
+              : { _tag: "error", message: "Could not load history." };
+          },
         },
-      }).then((outcome) => {
+        readUiTranslator(),
+      ).then((outcome) => {
         if (outcome._tag === "aborted") return;
         if (outcome._tag === "failed") {
           toastManager.add({

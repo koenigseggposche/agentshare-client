@@ -1,3 +1,4 @@
+import { useUiText } from "../../../i18n/uiText";
 import type { EnvironmentId, PullRequestRef, PullRequestReviewGuide } from "@t3tools/contracts";
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 
@@ -42,6 +43,7 @@ export function GuideTour({
   onFinish: (() => void) | null;
   onOpenFile: (path: string) => void;
 }) {
+  const uiText = useUiText();
   const key = guideProgressKey(guideRunKey(environmentId, reference), guide.headSha);
   const tour = useGuideProgress(key);
   const update = (change: (current: GuideProgress) => Partial<GuideProgress>) =>
@@ -104,11 +106,14 @@ export function GuideTour({
           {banner}
           {diff.error !== null ? (
             <p className="text-xs text-muted-foreground">
-              The diff could not be loaded, so excerpts are missing: {diff.error}
+              {uiText("The diff could not be loaded, so excerpts are missing: ")}
+              {diff.error}
             </p>
           ) : null}
           {stop === null ? (
-            <p className="text-sm text-muted-foreground">This change has no files to tour.</p>
+            <p className="text-sm text-muted-foreground">
+              {uiText("This change has no files to tour.")}
+            </p>
           ) : (
             <GuideStop
               key={position}

@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { translateUiLabels, uiTranslators } from "@t3tools/shared/uiMessages";
 import type { ClientSettings } from "@t3tools/contracts";
 
 // Ids are stored in client settings, so never rename one.
@@ -53,8 +55,13 @@ export function setThreadDetailsItem(
   return visible === defaultVisible(item, settings) ? rest : { ...rest, [item.id]: visible };
 }
 
-export function isDefaultThreadDetailsVisibility(visibility: ThreadDetailsVisibility) {
-  return THREAD_DETAILS_ITEMS.every((item) => visibility[item.id] === item.defaultVisible);
+export function isDefaultThreadDetailsVisibility(
+  visibility: ThreadDetailsVisibility,
+  uiText: UiTranslator = uiTranslators.en,
+) {
+  return translateUiLabels(THREAD_DETAILS_ITEMS, uiText).every(
+    (item) => visibility[item.id] === item.defaultVisible,
+  );
 }
 
 /** Also clears the retired Labs flag, so Usage and Context return to off. */

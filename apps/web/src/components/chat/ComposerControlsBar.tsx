@@ -260,9 +260,7 @@ export function ComposerControlsBar(props: {
       data-chat-provider-unavailable="true"
     >
       <ComposerControl
-        render={
-          <Link to="/settings/agentshare" search={{ machine: environmentId, section: "models" }} />
-        }
+        render={<Link to="/settings/providers" search={{ machine: environmentId }} />}
       >
         <CircleAlertIcon className="size-4" />
         {chinese ? "浏览 AgentShare 模型" : "Browse AgentShare models"}

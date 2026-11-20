@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type * as React from "react";
 import type {
   EnvironmentId,
@@ -36,6 +37,7 @@ function LazyChecksBody({
   reference: PullRequestRef;
   threadRef: ScopedThreadRef | null;
 }) {
+  const uiText = useUiText();
   const detailQuery = useEnvironmentQuery(
     pullRequestEnvironment.detail({ environmentId, input: reference }),
   );
@@ -45,7 +47,7 @@ function LazyChecksBody({
   if (detailQuery.data === null) {
     return (
       <p className="text-muted-foreground text-xs">
-        {detailQuery.isPending ? "Loading checks…" : "No checks reported"}
+        {detailQuery.isPending ? uiText("Loading checks…") : uiText("No checks reported")}
       </p>
     );
   }
@@ -59,6 +61,7 @@ function ChecksBody({
   checks: ReadonlyArray<PullRequestCheck>;
   threadRef: ScopedThreadRef | null;
 }) {
+  const uiText = useUiText();
   const openLink = useOpenLink(threadRef);
   const [showAll, setShowAll] = useState(false);
   const { attention, running, completed } = groupPullRequestChecks(checks);
@@ -66,7 +69,7 @@ function ChecksBody({
   const visibleChecks = [...attention, ...running, ...(showAll || !canCollapse ? completed : [])];
   const hasDetails = visibleChecks.some((check) => check.url !== null);
   if (checks.length === 0) {
-    return <p className="text-muted-foreground text-xs">No checks reported</p>;
+    return <p className="text-muted-foreground text-xs">{uiText("No checks reported")}</p>;
   }
   return (
     <>
@@ -91,7 +94,7 @@ function ChecksBody({
                   <TooltipPopup side="top">{check.description ?? check.name}</TooltipPopup>
                 </Tooltip>
                 <span className="justify-self-end whitespace-nowrap text-muted-foreground">
-                  {pullRequestCheckStatusLabel(check)}
+                  {pullRequestCheckStatusLabel(check, uiText)}
                 </span>
                 {check.url === null ? null : (
                   <button
@@ -101,11 +104,14 @@ function ChecksBody({
                       if (!check.url) return;
                       void openLink(check.url).catch((error: unknown) => {
                         console.error(error);
-                        toastManager.add({ type: "error", title: "Unable to open check details" });
+                        toastManager.add({
+                          type: "error",
+                          title: uiText("Unable to open check details"),
+                        });
                       });
                     }}
                   >
-                    Details
+                    {uiText("Details")}
                   </button>
                 )}
               </li>
@@ -120,7 +126,7 @@ function ChecksBody({
           aria-expanded={showAll}
           onClick={() => setShowAll(!showAll)}
         >
-          {showAll ? "Show less" : "Show all"}
+          {showAll ? uiText("Show less") : uiText("Show all")}
         </Button>
       ) : null}
     </>
@@ -148,22 +154,23 @@ export function PullRequestChecksPopover({
   className?: string;
   render?: React.ReactElement;
 }) {
-  const presentation = pullRequestChecksStatePresentation(checksState);
+  const uiText = useUiText();
+  const presentation = pullRequestChecksStatePresentation(checksState, uiText);
   const incompleteCount =
     checks?.filter((check) => check.status === "pending" || check.status === "action-required")
       .length ?? 0;
   const failedCount =
     checks?.filter((check) => check.status === "failure" || check.status === "cancelled").length ??
     0;
-  const summary = checks === undefined || stale ? null : summarizePullRequestChecks(checks);
+  const summary = checks === undefined || stale ? null : summarizePullRequestChecks(checks, uiText);
   return (
     <Popover>
       <PopoverTrigger
         nativeButton={variant === "count"}
         aria-label={
           variant === "count"
-            ? `Open checks: ${summary ?? presentation.label}`
-            : `Checks: ${presentation.label}`
+            ? uiText("Open checks: {0}", [summary ?? presentation.label])
+            : uiText("Checks: {0}", [presentation.label])
         }
         render={
           variant === "count" ? (
@@ -183,10 +190,14 @@ export function PullRequestChecksPopover({
           <>
             {checks !== undefined && incompleteCount > 0 ? (
               <span className="tabular-nums">
-                {checks.length - incompleteCount}/{checks.length} checks
+                {checks.length - incompleteCount}/{checks.length}
+                {uiText(" checks")}
               </span>
             ) : failedCount > 0 ? (
-              <span className="tabular-nums">{failedCount} failed</span>
+              <span className="tabular-nums">
+                {failedCount}
+                {uiText(" failed")}
+              </span>
             ) : null}
           </>
         ) : null}
@@ -196,7 +207,7 @@ export function PullRequestChecksPopover({
         {summary === null ? null : <p className="mb-2 text-muted-foreground text-xs">{summary}</p>}
         {stale ? (
           <p className="text-muted-foreground text-xs">
-            Check details are out of date. Refresh the pull request to update them.
+            {uiText("Check details are out of date. Refresh the pull request to update them.")}
           </p>
         ) : checks !== undefined ? (
           <ChecksBody checks={checks} threadRef={threadRef} />

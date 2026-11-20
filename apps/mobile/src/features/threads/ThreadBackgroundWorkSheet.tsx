@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import { StackActions, useNavigation, type StaticScreenProps } from "@react-navigation/native";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
@@ -31,6 +32,7 @@ const KIND_LABELS = {
 type BackgroundWorkTarget = { readonly environmentId: EnvironmentId; readonly threadId: ThreadId };
 
 export function ThreadBackgroundWorkSheet({ route }: StaticScreenProps<BackgroundWorkTarget>) {
+  const uiText = useUiText();
   const { layout } = useAdaptiveWorkspaceLayout();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -56,7 +58,7 @@ export function ThreadBackgroundWorkSheet({ route }: StaticScreenProps<Backgroun
     >
       {presentation === null ? (
         <Text className="pt-6 text-center text-sm text-foreground-muted">
-          Nothing running in the background.
+          {uiText("Nothing running in the background.")}
         </Text>
       ) : (
         presentation.items.map((item) => (
@@ -83,7 +85,7 @@ export function ThreadBackgroundWorkSheet({ route }: StaticScreenProps<Backgroun
               tintColorClassName="accent-foreground"
               hideBackButton
               hideShadow={false}
-              title="Background work"
+              title={uiText("Background work")}
               titleColorClassName="accent-foreground"
               titleFontSize={18}
               titleFontWeight="800"
@@ -97,7 +99,7 @@ export function ThreadBackgroundWorkSheet({ route }: StaticScreenProps<Backgroun
   return (
     <View collapsable={false} className="flex-1 bg-sheet">
       <NativeStackScreenOptions options={{ sheetCornerRadius: 28 }} />
-      <AppBar sheet title="Background work" onBack={() => navigation.goBack()} />
+      <AppBar sheet title={uiText("Background work")} onBack={() => navigation.goBack()} />
       <ScreenContent insetHorizontal={layout.usesSplitView}>{content}</ScreenContent>
     </View>
   );
@@ -107,6 +109,7 @@ function BackgroundWorkRow(props: {
   readonly item: PendingBackgroundWorkItem;
   readonly onOpen: (threadId: ThreadId) => void;
 }) {
+  const uiText = useUiText();
   const { item } = props;
   const childThreadId = item.childThreadId;
   const row = (
@@ -133,7 +136,7 @@ function BackgroundWorkRow(props: {
   ) : (
     <Pressable
       accessibilityRole="link"
-      accessibilityLabel={`Open subagent ${item.label}`}
+      accessibilityLabel={uiText("Open subagent {0}", [item.label])}
       onPress={() => props.onOpen(childThreadId)}
       className="active:opacity-70"
     >

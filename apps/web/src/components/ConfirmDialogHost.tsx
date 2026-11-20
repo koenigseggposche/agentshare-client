@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../i18n/uiText";
 import { useSyncExternalStore } from "react";
 
 import {
@@ -22,7 +25,10 @@ type ConfirmationCopy = {
   readonly description: string | null;
 };
 
-function resolveConfirmDialogCopy(message: string): ConfirmationCopy {
+function resolveConfirmDialogCopy(
+  message: string,
+  uiText: UiTranslator = uiTranslators.en,
+): ConfirmationCopy {
   const normalizedMessage = message.trim();
   const lines = normalizedMessage.split("\n");
   const questionLineIndex = lines.findIndex((line) => line.trim().endsWith("?"));
@@ -45,19 +51,20 @@ function resolveConfirmDialogCopy(message: string): ConfirmationCopy {
   }
 
   return {
-    title: "Confirm action",
-    description: normalizedMessage || "This action requires your confirmation.",
+    title: uiText("Confirm action"),
+    description: normalizedMessage || uiText("This action requires your confirmation."),
   };
 }
 
 export function ConfirmDialogHost() {
+  const uiText = useUiText();
   const state = useSyncExternalStore(
     subscribeConfirmDialogHost,
     readConfirmDialogState,
     readConfirmDialogState,
   );
 
-  const copy = resolveConfirmDialogCopy(state.status === "idle" ? "" : state.message);
+  const copy = resolveConfirmDialogCopy(state.status === "idle" ? "" : state.message, uiText);
   const confirmVariant = state.status === "idle" ? "default" : state.variant;
   const onCancel = () => respondToConfirmDialog(false);
   const onConfirm = () => respondToConfirmDialog(true);
@@ -82,9 +89,11 @@ export function ConfirmDialogHost() {
           ) : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+          <AlertDialogClose render={<Button variant="outline" />}>
+            {uiText("Cancel")}
+          </AlertDialogClose>
           <Button variant={confirmVariant} onClick={onConfirm}>
-            Confirm
+            {uiText("Confirm")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogPopup>

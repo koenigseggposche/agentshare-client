@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import { pipe } from "effect/Function";
 import {
   isAtomCommandInterrupted,
@@ -27,6 +29,7 @@ const CLI_COMMAND = "npx agentshare-client triage";
  * clones the matching source, then a No project draft opens with the prompt.
  */
 export function useStartTriage() {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const selectDetail = useSelectWorkspaceDetail();
   const prepare = useAtomCommand(serverEnvironment.prepareTriage, { reportFailure: false });
@@ -34,17 +37,17 @@ export function useStartTriage() {
 
   const fail = (message: string) =>
     Dialog.alert(
-      "Could not start triage",
-      `${message} Run ${CLI_COMMAND} in a terminal on that machine instead.`,
+      readUiText("Could not start triage"),
+      readUiText("{0} Run {1} in a terminal on that machine instead.", [message, CLI_COMMAND]),
       [
         {
-          text: "Copy command",
+          text: readUiText("Copy command"),
           onPress: () =>
             void Clipboard.setStringAsync(CLI_COMMAND).catch(() =>
               Dialog.alert("Could not copy", `Type ${CLI_COMMAND} instead.`),
             ),
         },
-        { text: "OK", style: "cancel" },
+        { text: readUiText("OK"), style: "cancel" },
       ],
     );
   const errorMessage = (error: unknown, fallback: string) =>
@@ -105,7 +108,9 @@ export function useStartTriage() {
     setComposerDraftText(draftId, prepared.value.prompt);
     selectDetail({
       name: "Thread",
-      params: { draft: { environmentId, projectId: scratch.value.id, title: "Triage", draftId } },
+      params: {
+        draft: { environmentId, projectId: scratch.value.id, title: uiText("Triage"), draftId },
+      },
     });
   };
 }

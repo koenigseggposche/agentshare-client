@@ -1,3 +1,5 @@
+import { readUiText } from "../i18n/uiText";
+import { useUiText } from "../i18n/uiText";
 import { useComposerAttachmentActions } from "./use-composer-attachment-actions";
 import * as Dialog from "../components/ui/Dialog";
 import { AuthOrchestrationOperateScope } from "@t3tools/contracts";
@@ -128,7 +130,10 @@ export function appendReviewCommentToDraft(input: {
       reidentifyComposerContext(upgraded.text, upgraded.records, uuidv4),
     )
   ) {
-    Dialog.alert("Too many context items", "Remove some context from the draft and try again.");
+    Dialog.alert(
+      readUiText("Too many context items"),
+      readUiText("Remove some context from the draft and try again."),
+    );
     return;
   }
   if (input.attachments && input.attachments.length > 0) {
@@ -186,6 +191,7 @@ export function updateThreadDraftModelSelection(
 }
 
 export function useThreadComposerState() {
+  const uiText = useUiText();
   const {
     selectedThread: selectedThreadShell,
     selectedThreadCreation,
@@ -253,13 +259,17 @@ export function useThreadComposerState() {
       !selectedThreadMessages?.some((message) => message.id === pendingCreationMessage.messageId)
         ? [pendingThreadCreationMessage(pendingCreationMessage)]
         : [];
-    const feed = buildThreadFeed(selectedThreadVisibleTurnItems, {
-      anchoredMessages: pendingCreation,
-      attempts: selectedThreadAttempts,
-      nodes: selectedThreadNodes,
-      checkpointSummaries,
-      cache: feedCache,
-    });
+    const feed = buildThreadFeed(
+      selectedThreadVisibleTurnItems,
+      {
+        anchoredMessages: pendingCreation,
+        attempts: selectedThreadAttempts,
+        nodes: selectedThreadNodes,
+        checkpointSummaries,
+        cache: feedCache,
+      },
+      uiText,
+    );
     const pendingAcknowledgments = selectPendingAcknowledgedMessages(acknowledgedMessages, {
       threadKey: selectedThreadKey,
       queuedMessages: selectedThreadQueuedMessages,
@@ -393,7 +403,7 @@ export function useThreadComposerState() {
 
   const cancelQueuedRunEdit = () => {
     if (selectedThreadKey === null || savingQueuedEditRef.current) return;
-    endQueuedRunEdit(selectedThreadKey);
+    endQueuedRunEdit(selectedThreadKey, undefined);
   };
 
   const onRemoveQueuedEditAttachment = (attachmentId: string) => {
@@ -414,7 +424,10 @@ export function useThreadComposerState() {
       edit.existingAttachments.length === 0 &&
       draft.attachments.length === 0
     ) {
-      Dialog.alert("Add a message", "A queued message cannot be left empty.");
+      Dialog.alert(
+        readUiText("Add a message"),
+        readUiText("A queued message cannot be left empty."),
+      );
       return;
     }
     if (
@@ -422,8 +435,10 @@ export function useThreadComposerState() {
       PROVIDER_SEND_TURN_MAX_ATTACHMENTS
     ) {
       Dialog.alert(
-        "Too many attachments",
-        `Remove attachments until there are at most ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS}.`,
+        readUiText("Too many attachments"),
+        readUiText("Remove attachments until there are at most {0}.", [
+          PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+        ]),
       );
       return;
     }
@@ -445,8 +460,8 @@ export function useThreadComposerState() {
       finishSave(false);
       const error = squashAtomCommandFailure(prepared);
       Dialog.alert(
-        "Could not save the queued message",
-        error instanceof Error ? error.message : "Your edit is still in the composer.",
+        readUiText("Could not save the queued message"),
+        error instanceof Error ? error.message : readUiText("Your edit is still in the composer."),
       );
       return;
     }
@@ -481,8 +496,8 @@ export function useThreadComposerState() {
       // The run left the queue during the save; its exit already told the composer what happened.
       if (!finishSave(false)) return;
       Dialog.alert(
-        "Could not save the queued message",
-        "It may have already started. Your edit is still in the composer.",
+        readUiText("Could not save the queued message"),
+        readUiText("It may have already started. Your edit is still in the composer."),
       );
       return;
     }
@@ -545,15 +560,17 @@ export function useThreadComposerState() {
     // Recovery preserves over-cap attachments; require trimming or outbox delivery would reject indefinitely.
     if (attachments.length > PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
       Dialog.alert(
-        "Too many attachments",
-        `Remove attachments until there are at most ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS}.`,
+        readUiText("Too many attachments"),
+        readUiText("Remove attachments until there are at most {0}.", [
+          PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+        ]),
       );
       return null;
     }
 
     const contextBlockReason = composerContextSendBlockReason(draft.context);
     if (contextBlockReason) {
-      Dialog.alert("Too much context", contextBlockReason);
+      Dialog.alert(readUiText("Too much context"), contextBlockReason);
       return null;
     }
 
@@ -567,6 +584,7 @@ export function useThreadComposerState() {
         serverConfig,
         modelSelection,
         thread.projectId,
+        uiText,
       );
       Dialog.alert(title, detail);
       return null;
@@ -582,7 +600,10 @@ export function useThreadComposerState() {
       if (!readEnvironmentScope(selectedThreadShell.environmentId, AuthOrchestrationOperateScope))
         return null;
       if (thread.activeProviderThreadId === null) {
-        Dialog.alert("Start a Codex thread first", "Send a message before you submit feedback.");
+        Dialog.alert(
+          readUiText("Start a Codex thread first"),
+          readUiText("Send a message before you submit feedback."),
+        );
         return null;
       }
       const metadata = makeQueuedMessageMetadata();

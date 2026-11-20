@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { SymbolView } from "../../components/ui/AppSymbol";
 import { Menu } from "../../components/ui/Menu";
 import type { MenuAction } from "@react-native-menu/menu";
@@ -79,19 +82,22 @@ function swipeActionsWidth(hasSecondaryAction: boolean) {
   return hasSecondaryAction ? THREAD_SWIPE_ACTIONS_WIDTH : ACTION_ITEM_WIDTH;
 }
 
-function resolveSecondaryAction(input: {
-  readonly close: () => void;
-  readonly onDelete: () => void;
-  readonly secondaryAction: ThreadSwipeAction | null | undefined;
-  readonly threadTitle: string;
-}): ThreadSwipeSecondaryAction | null {
+function resolveSecondaryAction(
+  input: {
+    readonly close: () => void;
+    readonly onDelete: () => void;
+    readonly secondaryAction: ThreadSwipeAction | null | undefined;
+    readonly threadTitle: string;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): ThreadSwipeSecondaryAction | null {
   if (input.secondaryAction === null) return null;
   if (input.secondaryAction === undefined) {
     return {
-      accessibilityLabel: `Delete ${input.threadTitle}`,
+      accessibilityLabel: uiText("Delete {0}", [input.threadTitle]),
       tone: "danger",
       icon: "trash",
-      label: "Delete",
+      label: uiText("Delete"),
       onPress: () => {
         input.close();
         input.onDelete();
@@ -237,6 +243,7 @@ interface ThreadSwipeableProps {
 }
 
 export function ThreadSwipeable(props: ThreadSwipeableProps) {
+  const uiText = useUiText();
   const swipeableRef = useRef<SwipeableMethods | null>(null);
   const hasSecondaryAction = props.secondaryAction !== null;
   const actionsWidth = swipeActionsWidth(hasSecondaryAction);
@@ -463,12 +470,15 @@ export function ThreadSwipeable(props: ThreadSwipeableProps) {
           fullSwipeThreshold={fullSwipeThreshold}
           onFullSwipeArmedChange={handleFullSwipeArmedChange}
           primaryAction={{ ...primaryAction, onPress: commitPrimaryAction }}
-          secondaryAction={resolveSecondaryAction({
-            close: () => methods.close(),
-            onDelete,
-            secondaryAction,
-            threadTitle,
-          })}
+          secondaryAction={resolveSecondaryAction(
+            {
+              close: () => methods.close(),
+              onDelete,
+              secondaryAction,
+              threadTitle,
+            },
+            uiText,
+          )}
           translation={translation}
         />
       </Animated.View>

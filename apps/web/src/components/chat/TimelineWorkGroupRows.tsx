@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { TimelinePendingApprovalRow } from "./TimelinePendingApprovalRow";
 import { WorkLogButton, WorkLogList, WorkLogRow } from "./WorkLog";
 import type { WorktreeSetupSnapshot } from "@t3tools/contracts";
@@ -68,6 +69,7 @@ export const WorkGroupSection = memo(function WorkGroupSection({
   isExpandedToolGroup: boolean;
   displayLabel?: string | undefined;
 }) {
+  const uiText = useUiText();
   const { workspaceRoot, routeThreadKey, onToggleWorkEntry, pendingApprovals } =
     use(TimelineRowCtx);
   const onToggleStandaloneEntry = (collapsed: boolean) =>
@@ -97,7 +99,7 @@ export const WorkGroupSection = memo(function WorkGroupSection({
   }
 
   return (
-    <section aria-label="Activity">
+    <section aria-label={uiText("Activity")}>
       {nonEmptyEntries.map((workEntry) => (
         <SimpleWorkEntryRow
           key={workEntry.id}
@@ -133,6 +135,7 @@ function ExpandedWorkGroupEntries({
   entries: TimelineWorkEntry[];
   workspaceRoot: string | undefined;
 }) {
+  const uiText = useUiText();
   const { workGroupViewState: viewState, onToggleWorkEntry } = use(TimelineRowCtx);
   const [initialScrollIndex] = useState(() =>
     resolveWorkGroupScrollIndex(entries, viewState.scrollPositions.get(anchorKey)),
@@ -260,7 +263,7 @@ function ExpandedWorkGroupEntries({
           onItemSizeChanged={updateExpandedContentHeight}
           tabIndex={0}
           role="region"
-          aria-label="Tool calls"
+          aria-label={uiText("Tool calls")}
           data-tool-group-scroll
           style={{ maxHeight: `calc(min(18rem, 50dvh) + ${expandedContentHeight}px)` }}
           className={cn(
@@ -276,6 +279,7 @@ function ExpandedWorkGroupEntries({
 const workEntryKey = (entry: TimelineWorkEntry) => entry.id;
 
 export function WorkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "working" }> }) {
+  const uiText = useUiText();
   const { isCompacting, isPreparingWorktree, backgroundWorktreeSetup } =
     use(TimelineRowActivityCtx);
   const compacting = row.compacting === true || isCompacting;
@@ -286,7 +290,8 @@ export function WorkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: 
     <CompactingLabel createdAt={row.createdAt} />
   ) : row.createdAt ? (
     <>
-      Working for <WorkingTimer createdAt={row.createdAt} />
+      {uiText("Working for ")}
+      <WorkingTimer createdAt={row.createdAt} />
     </>
   ) : (
     "Working..."
@@ -310,6 +315,7 @@ export function WorkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: 
 }
 
 function BackgroundWorktreeSetupChip({ snapshot }: { snapshot: WorktreeSetupSnapshot }) {
+  const uiText = useUiText();
   const ctx = use(TimelineRowCtx);
   const terminalId = snapshot.setupScript?.terminalId ?? null;
   const openTerminal = ctx.onOpenWorktreeSetupTerminal;
@@ -323,12 +329,14 @@ function BackgroundWorktreeSetupChip({ snapshot }: { snapshot: WorktreeSetupSnap
             variant="ghost-muted"
             size="micro"
             className="ml-auto min-w-0 shrink-0"
-            aria-label={`Background setup is still running: ${scriptName}. Show setup progress.`}
+            aria-label={uiText("Background setup is still running: {0}. Show setup progress.", [
+              scriptName,
+            ])}
           />
         }
       >
         <Spinner className="size-3 shrink-0" />
-        <span className="truncate">Background setup</span>
+        <span className="truncate">{uiText("Background setup")}</span>
       </PopoverTrigger>
       <PopoverPopup side="bottom" align="end" width="lg" padding="compact">
         <WorktreeSetupCard
@@ -344,28 +352,31 @@ function BackgroundWorktreeSetupChip({ snapshot }: { snapshot: WorktreeSetupSnap
 }
 
 function CompactingLabel({ createdAt }: { createdAt: string | null }) {
+  const uiText = useUiText();
   return (
     <span className="inline-flex items-center gap-1.5">
       <Minimize2Icon aria-hidden="true" className="size-3" />
       {createdAt ? (
         <span>
-          Compacting for <WorkingTimer createdAt={createdAt} />
+          {uiText("Compacting for ")}
+          <WorkingTimer createdAt={createdAt} />
         </span>
       ) : (
-        "Compacting…"
+        uiText("Compacting…")
       )}
     </span>
   );
 }
 
 export function ThinkingTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "thinking" }> }) {
+  const uiText = useUiText();
   const ctx = use(TimelineRowCtx);
   const { isCompacting, isPreparingWorktree } = use(TimelineRowActivityCtx);
   if (isPreparingWorktree || isCompacting) return <WorkLogRow label="" />;
   // A failed group keeps this disclosure while an approval waits, but nothing is thinking then.
   const live = ctx.pendingApprovals.size === 0;
   const activity = (
-    <LiveActivityRow label="Thinking" iconName="brain" active={live} shimmer={live} />
+    <LiveActivityRow label={uiText("Thinking")} iconName="brain" active={live} shimmer={live} />
   );
   const { groupId } = row;
   if (groupId === undefined) return activity;
@@ -437,6 +448,7 @@ function LiveActivityContent({
   active?: boolean;
   highlighted?: boolean;
 }) {
+  const uiText = useUiText();
   const showTrailingFailureMark =
     failed && iconName !== undefined && !toolIconAcceptsTint(toolIcon);
 
@@ -454,7 +466,7 @@ function LiveActivityContent({
                   : "text-icon-muted",
             )}
             role={announceFailure ? "img" : undefined}
-            aria-label={announceFailure ? "Tool call failed" : undefined}
+            aria-label={announceFailure ? uiText("Tool call failed") : undefined}
           >
             <ToolActivityIconView
               icon={toolIcon}
@@ -490,6 +502,7 @@ export function LiveWorkEntryTimelineRow({
 }: {
   row: Extract<TimelineRow, { kind: "work-live" }>;
 }) {
+  const uiText = useUiText();
   const ctx = use(TimelineRowCtx);
   const threadTarget = useThreadReadTarget(row.entry, ctx.activeThreadEnvironmentId);
   const label = liveWorkEntryLabel(row.entry, ctx.workspaceRoot, row.active);
@@ -513,7 +526,10 @@ export function LiveWorkEntryTimelineRow({
       )}
       aria-label={
         failed
-          ? `${thoughtLine ? `${thoughtLine} ` : ""}${threadLabel?.text ?? label}, tool call failed`
+          ? uiText("{0}{1}, tool call failed", [
+              thoughtLine ? `${thoughtLine} ` : "",
+              threadLabel?.text ?? label,
+            ])
           : undefined
       }
       aria-expanded={row.expanded}
@@ -549,9 +565,9 @@ export function LiveWorkEntryTimelineRow({
         label={
           thoughtIsStatus ? (
             row.active ? (
-              "Thinking"
+              uiText("Thinking")
             ) : (
-              "Thought"
+              uiText("Thought")
             )
           ) : row.entry.itemType === "reasoning" ? (
             <ChatMarkdown
@@ -610,9 +626,10 @@ function WorkGroupHeader(props: {
   timestampFormat: TimestampFormat;
   onToggle: () => void;
 }) {
+  const uiText = useUiText();
   return (
     <WorkLogButton
-      aria-label={props.failed ? `${props.label}, tool call failed` : props.label}
+      aria-label={props.failed ? uiText("{0}, tool call failed", [props.label]) : props.label}
       aria-expanded={props.expanded}
       onClick={props.onToggle}
       icon={

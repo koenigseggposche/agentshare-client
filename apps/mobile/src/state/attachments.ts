@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { readUiTranslator } from "../i18n/uiText";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { createAttachmentEnvironmentAtoms } from "@t3tools/client-runtime/state/attachments";
 import type { AtomCommand } from "@t3tools/client-runtime/state/runtime";
 import {
@@ -13,6 +16,7 @@ import { readEnvironmentScope } from "./session";
 
 function requireAttachmentWriteAccess<W extends { readonly environmentId: EnvironmentId }, A, E>(
   command: AtomCommand<W, A, E>,
+  uiText: UiTranslator = uiTranslators.en,
 ): AtomCommand<W, A, E | EnvironmentAuthorizationError> {
   return {
     ...command,
@@ -21,7 +25,7 @@ function requireAttachmentWriteAccess<W extends { readonly environmentId: Enviro
         return AsyncResult.failure(
           Cause.fail(
             new EnvironmentAuthorizationError({
-              message: "This connection cannot change attachments.",
+              message: uiText("This connection cannot change attachments."),
               requiredScope: AuthOrchestrationOperateScope,
             }),
           ),
@@ -34,6 +38,6 @@ function requireAttachmentWriteAccess<W extends { readonly environmentId: Enviro
 
 const commands = createAttachmentEnvironmentAtoms(connectionAtomRuntime);
 export const attachmentEnvironment = {
-  createUploadUrl: requireAttachmentWriteAccess(commands.createUploadUrl),
-  remove: requireAttachmentWriteAccess(commands.remove),
+  createUploadUrl: requireAttachmentWriteAccess(commands.createUploadUrl, readUiTranslator()),
+  remove: requireAttachmentWriteAccess(commands.remove, readUiTranslator()),
 };

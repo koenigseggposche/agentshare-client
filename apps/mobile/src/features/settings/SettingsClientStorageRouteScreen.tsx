@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { ScreenScrollView as ScrollView } from "../../components/ui/ScreenScrollView";
@@ -23,6 +25,7 @@ import { SettingsSection } from "./components/SettingsSection";
 import { SettingsScreen } from "./components/SettingsScreen";
 
 export function SettingsClientStorageRouteScreen() {
+  const uiText = useUiText();
   const insets = useSafeAreaInsets();
   const summaryResult = useAtomValue(clientCacheSummaryAtom);
   const clearResult = useAtomValue(clearClientCacheAtom);
@@ -46,10 +49,11 @@ export function SettingsClientStorageRouteScreen() {
       savedConnectionsById[environment.environmentId]?.environmentLabel ??
       environment.environmentId;
     Dialog.confirm({
-      title: `Clear cache for ${label}?`,
-      message:
+      title: uiText("Clear cache for {0}?", [label]),
+      message: uiText(
         "This removes offline threads, server metadata, and cached branches for this environment. The saved connection and credentials stay intact.",
-      confirmText: "Clear Cache",
+      ),
+      confirmText: readUiText("Clear Cache"),
       destructive: true,
       onConfirm: () =>
         clearCache({ type: "environment", environmentId: environment.environmentId }),
@@ -58,17 +62,18 @@ export function SettingsClientStorageRouteScreen() {
 
   const confirmClearAll = () => {
     Dialog.confirm({
-      title: "Clear all client caches?",
-      message:
+      title: uiText("Clear all client caches?"),
+      message: uiText(
         "This removes offline data for every environment. Connections, credentials, account data, and app preferences stay intact.",
-      confirmText: "Clear All Caches",
+      ),
+      confirmText: readUiText("Clear All Caches"),
       destructive: true,
       onConfirm: () => clearCache({ type: "all" }),
     });
   };
 
   return (
-    <SettingsScreen title="Client Storage">
+    <SettingsScreen title={uiText("Client Storage")}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentInset={{ bottom: Math.max(insets.bottom, 18) }}
@@ -76,7 +81,7 @@ export function SettingsClientStorageRouteScreen() {
         className="flex-1"
         contentContainerClassName="gap-6 px-5 pt-4 pb-[18px]"
       >
-        <SettingsSection title="Environment caches">
+        <SettingsSection title={uiText("Environment caches")}>
           {AsyncResult.isFailure(summaryResult) ? (
             <View className="items-center gap-2 px-6 py-8">
               <SymbolView
@@ -86,16 +91,18 @@ export function SettingsClientStorageRouteScreen() {
                 type="monochrome"
                 weight="regular"
               />
-              <Text className="text-center text-base text-foreground">Storage unavailable</Text>
+              <Text className="text-center text-base text-foreground">
+                {uiText("Storage unavailable")}
+              </Text>
               <Text className="text-center text-sm text-foreground-muted">
-                Restart the app and try again.
+                {uiText("Restart the app and try again.")}
               </Text>
             </View>
           ) : !summary ? (
             <View className="items-center gap-3 px-6 py-8">
               <AppActivityIndicator />
               <Text className="text-center text-sm text-foreground-muted">
-                Inspecting cached data…
+                {uiText("Inspecting cached data…")}
               </Text>
             </View>
           ) : environmentSummaries.length > 0 ? (
@@ -124,19 +131,25 @@ export function SettingsClientStorageRouteScreen() {
                 type="monochrome"
                 weight="regular"
               />
-              <Text className="text-center text-base text-foreground">No cached data</Text>
+              <Text className="text-center text-base text-foreground">
+                {uiText("No cached data")}
+              </Text>
               <Text className="text-center text-sm text-foreground-muted">
-                Offline cache records will appear here after environments are used.
+                {uiText("Offline cache records will appear here after environments are used.")}
               </Text>
             </View>
           )}
         </SettingsSection>
 
         <View className="gap-3">
-          <SettingsSection title="Actions">
+          <SettingsSection title={uiText("Actions")}>
             <SettingsActionRow
               icon="trash"
-              label={summary ? `Clear ${formatBytes(summary.payloadBytes)}` : "Clear caches"}
+              label={
+                summary
+                  ? uiText("Clear {0}", [formatBytes(summary.payloadBytes)])
+                  : uiText("Clear caches")
+              }
               tone="danger"
               disabled={isClearing || !summary || summary.recordCount === 0}
               loading={isClearing}
@@ -144,12 +157,15 @@ export function SettingsClientStorageRouteScreen() {
             />
           </SettingsSection>
           <Text className="px-2 text-sm leading-normal text-foreground-muted">
-            Clearing caches never removes environment connections, credentials, account data, or
-            appearance preferences.
+            {uiText(
+              "Clearing caches never removes environment connections, credentials, account data, or appearance preferences.",
+            )}
           </Text>
           {AsyncResult.isFailure(summaryResult) || AsyncResult.isFailure(clearResult) ? (
             <Text selectable className="px-2 text-sm text-danger-foreground">
-              Client storage is temporarily unavailable. Try again after restarting the app.
+              {uiText(
+                "Client storage is temporarily unavailable. Try again after restarting the app.",
+              )}
             </Text>
           ) : null}
         </View>
@@ -166,12 +182,15 @@ function CacheEnvironmentRow(props: {
   readonly first: boolean;
   readonly onClear: () => void;
 }) {
+  const uiText = useUiText();
   return (
     <View className={props.first ? undefined : "border-t border-border"}>
       <SettingsActionRow
         icon={ENVIRONMENT_MACHINE_SYMBOLS[props.machine]}
         label={props.environmentLabel}
-        description={`Clear ${formatBytes(props.environment.payloadBytes)} of cached data`}
+        description={uiText("Clear {0} of cached data", [
+          formatBytes(props.environment.payloadBytes),
+        ])}
         tone="danger"
         disabled={props.disabled}
         onPress={props.onClear}

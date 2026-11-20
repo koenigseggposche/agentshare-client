@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
 import type { UnifiedSettings } from "@t3tools/contracts";
 import type { Dispatch } from "react";
@@ -58,6 +59,7 @@ interface ComposerSelectionInput {
  * and where a new thread runs (local or a new worktree, from the remote's tip or not).
  */
 export function useComposerSelection(input: ComposerSelectionInput) {
+  const uiText = useUiText();
   const {
     environmentId,
     composerDraftTarget,
@@ -137,6 +139,7 @@ export function useComposerSelection(input: ComposerSelectionInput) {
           currentProviderInstanceId: runtimeProviderInstanceId,
         }
       : null,
+    uiText,
   );
 
   const onProviderModelSelect = (
@@ -189,13 +192,16 @@ export function useComposerSelection(input: ComposerSelectionInput) {
       rememberedOptions !== undefined && rememberedOptions.length > 0
         ? { instanceId, model: resolvedModel, options: [...rememberedOptions] }
         : { instanceId, model: resolvedModel };
-    const modelChangeBlockReason = getStartedThreadModelChangeBlockReason({
-      hasStartedSession: activeRuntime !== null,
-      supportsProviderSwitchingViaHandoff,
-      currentModelSelection: activeThread.modelSelection,
-      currentProviderInstanceId: activeRuntime?.providerInstanceId ?? null,
-      nextModelSelection,
-    });
+    const modelChangeBlockReason = getStartedThreadModelChangeBlockReason(
+      {
+        hasStartedSession: activeRuntime !== null,
+        supportsProviderSwitchingViaHandoff,
+        currentModelSelection: activeThread.modelSelection,
+        currentProviderInstanceId: activeRuntime?.providerInstanceId ?? null,
+        nextModelSelection,
+      },
+      uiText,
+    );
     if (modelChangeBlockReason) {
       toastManager.add({
         type: "warning",

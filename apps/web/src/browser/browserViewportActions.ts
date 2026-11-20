@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { runAtomCommand, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import type { PreviewViewportSetting, ScopedThreadRef } from "@t3tools/contracts";
 
@@ -65,6 +67,7 @@ const runHandlerWithTimeout = (tabId: string, operation: Promise<void>): Promise
 async function resizeBrowserViewport(
   target: BrowserViewportTarget,
   viewport: PreviewViewportSetting,
+  uiText: UiTranslator = uiTranslators.en,
 ): Promise<void> {
   const result = await runAtomCommand(
     appAtomRegistry,
@@ -73,14 +76,14 @@ async function resizeBrowserViewport(
       environmentId: target.threadRef.environmentId,
       input: { threadId: target.threadRef.threadId, tabId: target.tabId, viewport },
     },
-    { label: "preview viewport resize" },
+    { label: uiText("preview viewport resize") },
   );
   if (result._tag === "Failure") {
     const error = squashAtomCommandFailure(result);
     toastManager.add({
       type: "error",
-      title: "Unable to resize browser viewport",
-      description: error instanceof Error ? error.message : "An error occurred.",
+      title: uiText("Unable to resize browser viewport"),
+      description: error instanceof Error ? error.message : uiText("An error occurred."),
     });
     throw error;
   }
@@ -103,8 +106,9 @@ export function queueBrowserViewportCommit(
 export function commitBrowserViewportChange(
   target: BrowserViewportTarget,
   setting: PreviewViewportSetting,
+  uiText: UiTranslator = uiTranslators.en,
 ): Promise<void> {
   return queueBrowserViewportCommit(target.runtimeTabId, () =>
-    resizeBrowserViewport(target, setting),
+    resizeBrowserViewport(target, setting, uiText),
   );
 }

@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { translateUiLabels, uiTranslators } from "@t3tools/shared/uiMessages";
 import type { UsageModelPriceOverride } from "@t3tools/contracts";
 
 export const USAGE_PRICE_FIELDS = [
@@ -35,11 +37,12 @@ export function isUsagePriceEdit(previous: string, next: string): boolean {
 /** Blank cache prices use the input rate; explicit zero means free. */
 export function parseUsagePriceForm(
   form: UsagePriceForm,
+  uiText: UiTranslator = uiTranslators.en,
 ): { model: string; price: UsageModelPriceOverride } | null {
   const model = form.model.trim();
   if (model.length === 0) return null;
   const rates: Partial<Record<(typeof USAGE_PRICE_FIELDS)[number]["key"], number>> = {};
-  for (const field of USAGE_PRICE_FIELDS) {
+  for (const field of translateUiLabels(USAGE_PRICE_FIELDS, uiText)) {
     const raw = form[field.key].trim().replace(",", ".");
     if (raw === "") {
       if (field.optional) continue;

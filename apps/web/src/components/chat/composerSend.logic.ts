@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { EnvironmentId, ThreadContextRecord } from "@t3tools/contracts";
 import { collectInlineContextIds } from "../../lib/composerContextReferences";
 
@@ -12,15 +14,20 @@ export function referencedThreadContexts(draft: {
 }
 
 /** Why a send waits for the user to pick a machine when no machine was chosen automatically. */
-export function loadBalancingSendWarning(input: {
-  readonly pending: boolean;
-  readonly threadContexts: ReadonlyArray<ThreadContextRecord>;
-  readonly candidateEnvironmentIds: ReadonlyArray<EnvironmentId>;
-}) {
+export function loadBalancingSendWarning(
+  input: {
+    readonly pending: boolean;
+    readonly threadContexts: ReadonlyArray<ThreadContextRecord>;
+    readonly candidateEnvironmentIds: ReadonlyArray<EnvironmentId>;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+) {
   if (input.pending) {
     return {
-      title: "Checking machine resources",
-      description: "Resource checks are still running. You can choose a machine in the composer.",
+      title: uiText("Checking machine resources"),
+      description: uiText(
+        "Resource checks are still running. You can choose a machine in the composer.",
+      ),
     };
   }
   const noMachineReadsEveryThread =
@@ -29,10 +36,14 @@ export function loadBalancingSendWarning(input: {
       input.threadContexts.every((record) => record.environmentId === environmentId),
     );
   return {
-    title: "Choose a machine to continue",
+    title: uiText("Choose a machine to continue"),
     description: noMachineReadsEveryThread
-      ? "No machine can read every attached thread. Choose a machine in the composer or remove the threads."
-      : "No eligible machine has available resources. Choose a machine in the composer to override.",
+      ? uiText(
+          "No machine can read every attached thread. Choose a machine in the composer or remove the threads.",
+        )
+      : uiText(
+          "No eligible machine has available resources. Choose a machine in the composer to override.",
+        ),
   };
 }
 

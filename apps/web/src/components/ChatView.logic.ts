@@ -1,3 +1,6 @@
+import { readUiText } from "../i18n/uiText";
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { type OrchestrationV2ProviderTurn, type RunAttemptId } from "@t3tools/contracts";
 import {
   deriveLatestThreadRun,
@@ -447,12 +450,13 @@ export function buildLocalDraftThread(
   threadId: ThreadId,
   draftThread: DraftThreadState,
   fallbackModelSelection: ModelSelection,
+  uiText: UiTranslator = uiTranslators.en,
 ): Thread {
   const timestamp = DateTime.makeUnsafe(draftThread.createdAt);
   return presentThreadShell(draftThread.environmentId, {
     id: threadId,
     projectId: draftThread.projectId,
-    title: "New thread",
+    title: uiText("New thread"),
     providerInstanceId: fallbackModelSelection.instanceId,
     modelSelection: fallbackModelSelection,
     runtimeMode: draftThread.runtimeMode,
@@ -785,13 +789,16 @@ export function buildExpiredTerminalContextToastCopy(
   const pronoun = count === 1 ? "it" : "them";
   if (variant === "empty") {
     return {
-      title: `${noun} won't be sent`,
-      description: `Remove ${pronoun} or re-add ${pronoun} to include terminal output.`,
+      title: readUiText("{0} won't be sent", [noun]),
+      description: readUiText("Remove {0} or re-add {1} to include terminal output.", [
+        pronoun,
+        pronoun,
+      ]),
     };
   }
   return {
-    title: `${noun} omitted from message`,
-    description: `Re-add ${pronoun} if you want that terminal output included.`,
+    title: readUiText("{0} omitted from message", [noun]),
+    description: readUiText("Re-add {0} if you want that terminal output included.", [pronoun]),
   };
 }
 
@@ -916,13 +923,16 @@ export function deriveLockedProvider(input: {
   return narrowedThreadProvider ?? narrowedSelectedProvider ?? null;
 }
 
-export function getStartedThreadModelChangeBlockReason(input: {
-  hasStartedSession: boolean;
-  supportsProviderSwitchingViaHandoff?: boolean;
-  currentModelSelection: ModelSelection;
-  currentProviderInstanceId?: ModelSelection["instanceId"] | null | undefined;
-  nextModelSelection: ModelSelection;
-}): { title: string; description: string } | null {
+export function getStartedThreadModelChangeBlockReason(
+  input: {
+    hasStartedSession: boolean;
+    supportsProviderSwitchingViaHandoff?: boolean;
+    currentModelSelection: ModelSelection;
+    currentProviderInstanceId?: ModelSelection["instanceId"] | null | undefined;
+    nextModelSelection: ModelSelection;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): { title: string; description: string } | null {
   if (!input.hasStartedSession) {
     return null;
   }
@@ -937,8 +947,8 @@ export function getStartedThreadModelChangeBlockReason(input: {
     return null;
   }
   return {
-    title: "Start a new chat to switch providers",
-    description: "This thread does not support switching providers after it has started.",
+    title: uiText("Start a new chat to switch providers"),
+    description: uiText("This thread does not support switching providers after it has started."),
   };
 }
 
@@ -1283,8 +1293,11 @@ export type LocalThreadErrorEntry = {
   readonly at: number;
 };
 
-export function chatActionErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "An error occurred.";
+export function chatActionErrorMessage(
+  error: unknown,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
+  return error instanceof Error ? error.message : uiText("An error occurred.");
 }
 
 export function releaseChatTimelineAnchor<T extends { readonly messageId: MessageId | null }>(
@@ -1346,13 +1359,17 @@ export function makeModelDisabledReason(
     Parameters<typeof getStartedThreadModelChangeBlockReason>[0],
     "nextModelSelection"
   > | null,
+  uiText: UiTranslator = uiTranslators.en,
 ) {
   return (instanceId: ProviderInstanceId, model: string): string | null => {
     if (!context) return null;
-    const reason = getStartedThreadModelChangeBlockReason({
-      ...context,
-      nextModelSelection: { instanceId, model },
-    });
+    const reason = getStartedThreadModelChangeBlockReason(
+      {
+        ...context,
+        nextModelSelection: { instanceId, model },
+      },
+      uiText,
+    );
     return reason ? `${reason.description} Start a new thread to use this model.` : null;
   };
 }
@@ -1491,14 +1508,17 @@ export function optimisticMessageAttachments(
 }
 
 /** Fallback title sources for a message with no text of its own. */
-export function sendTitleFallbackLabels(snapshot: ComposerSendSnapshot) {
+export function sendTitleFallbackLabels(
+  snapshot: ComposerSendSnapshot,
+  uiText: UiTranslator = uiTranslators.en,
+) {
   const terminalContext = snapshot.terminalContexts[0];
   const reviewComment = snapshot.reviewComments[0];
   const previewAnnotation = snapshot.previewAnnotations[0];
   return [
     terminalContext ? formatTerminalContextLabel(terminalContext) : undefined,
     reviewComment ? `Review: ${reviewCommentContextLabel(reviewComment)}` : undefined,
-    previewAnnotation ? previewAnnotationContextLabel(previewAnnotation) : undefined,
+    previewAnnotation ? previewAnnotationContextLabel(previewAnnotation, uiText) : undefined,
   ];
 }
 

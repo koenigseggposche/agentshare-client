@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { Toolbar } from "../../components/ui/Toolbar";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import { useAtomRefresh } from "@effect/atom-react";
@@ -41,6 +42,7 @@ export function PullRequestDiscussionScreen({
 }
 
 function Discussion({ params }: { params: PullRequestParams & { readonly discussionId: string } }) {
+  const uiText = useUiText();
   const target = pullRequestTarget(params);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -137,12 +139,12 @@ function Discussion({ params }: { params: PullRequestParams & { readonly discuss
     <PullRequestMarkdownRepository params={params} changeRequest={detail.data}>
       <KeyboardAvoidingView automaticOffset behavior="height" className="flex-1 bg-screen">
         <NativeStackScreenOptions
-          options={{ title: "Discussion", unstable_headerSubtitle: `#${params.number}` }}
+          options={{ title: uiText("Discussion"), unstable_headerSubtitle: `#${params.number}` }}
         />
         {Platform.OS === "android" ? (
           <AppBar
             embedded
-            title="Discussion"
+            title={uiText("Discussion")}
             subtitle={`#${params.number}`}
             onBack={() => navigation.goBack()}
             actions={
@@ -186,28 +188,28 @@ function Discussion({ params }: { params: PullRequestParams & { readonly discuss
                   {thread.line ? `:${thread.line}` : ""}
                 </Text>
                 <Text className="text-xs text-foreground-muted">
-                  {thread.isResolved ? "Resolved" : "Unresolved"}
-                  {thread.isOutdated ? " · Outdated" : ""}
+                  {thread.isResolved ? uiText("Resolved") : uiText("Unresolved")}
+                  {thread.isOutdated ? uiText(" · Outdated") : ""}
                 </Text>
                 <Button
-                  label="View file diff"
+                  label={uiText("View file diff")}
                   onPress={() =>
                     navigation.navigate("PullRequestFile", { ...params, path: thread.path })
                   }
                 />
               </View>
             ) : !activity.isPending ? (
-              <Text>This discussion is no longer available.</Text>
+              <Text>{uiText("This discussion is no longer available.")}</Text>
             ) : null}
             {comments.map((comment) => (
               <View key={comment.id} className="gap-3 border-b border-border-subtle py-4">
                 <View className="flex-row items-center gap-2">
                   <PullRequestAvatar actor={comment.author} size={28} />
                   <Text className="min-w-0 flex-1 text-sm font-t3-medium">
-                    {comment.author?.login ?? "Unknown author"}
+                    {comment.author?.login ?? uiText("Unknown author")}
                   </Text>
                   <Text className="text-2xs text-foreground-muted">
-                    {relativeTime(comment.createdAt)}
+                    {relativeTime(comment.createdAt, undefined, uiText.language)}
                   </Text>
                 </View>
                 <PullRequestMarkdown markdown={comment.body} />
@@ -225,7 +227,7 @@ function Discussion({ params }: { params: PullRequestParams & { readonly discuss
             ))}
             {nextCursor ? (
               <Button
-                label={busy ? "Loading…" : "Load more replies"}
+                label={busy ? uiText("Loading…") : uiText("Load more replies")}
                 disabled={busy}
                 onPress={() => void more()}
               />
@@ -246,10 +248,10 @@ function Discussion({ params }: { params: PullRequestParams & { readonly discuss
               className="flex-row items-end gap-1 p-1"
             >
               <TextInput
-                accessibilityLabel="Discussion reply"
+                accessibilityLabel={uiText("Discussion reply")}
                 multiline
                 maxLength={65536}
-                placeholder="Reply…"
+                placeholder={uiText("Reply…")}
                 placeholderTextColorClassName="accent-foreground-muted"
                 value={body}
                 onChangeText={setBody}
@@ -258,7 +260,7 @@ function Discussion({ params }: { params: PullRequestParams & { readonly discuss
               />
               <View>
                 <Button
-                  label={busy ? "Posting…" : "Reply"}
+                  label={busy ? uiText("Posting…") : uiText("Reply")}
                   tone="contrast"
                   disabled={busy || !body.trim()}
                   onPress={() => void post()}

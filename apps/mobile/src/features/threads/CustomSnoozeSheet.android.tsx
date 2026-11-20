@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import {
   BasicAlertDialog,
@@ -59,6 +61,7 @@ function systemUses24HourClock() {
 }
 
 export function CustomSnoozeSheet(props: Props) {
+  const uiText = useUiText();
   const { themeAppearance, themeVariables: colors } = useAppearancePreferences();
   const [is24Hour, setIs24Hour] = useState(systemUses24HourClock);
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- subscribes to AppState to re-read the native 24-hour clock setting when the app resumes
@@ -142,11 +145,11 @@ export function CustomSnoozeSheet(props: Props) {
                 verticalArrangement={{ spacedBy: 16 }}
                 modifiers={[fillMaxWidth(), padding(24, 24, 24, 16)]}
               >
-                <Text style={titleTypography}>Custom snooze</Text>
+                <Text style={titleTypography}>{uiText("Custom snooze")}</Text>
                 <RNHostView matchContents={{ vertical: true }} modifiers={[fillMaxWidth()]}>
                   <SegmentedControl
                     variant="card"
-                    options={modes}
+                    options={translateUiLabels(modes, uiText)}
                     selected={mode}
                     onSelect={(value) => {
                       setMode(value);
@@ -161,11 +164,14 @@ export function CustomSnoozeSheet(props: Props) {
                       options={[
                         {
                           value: "date",
-                          label: date.toLocaleDateString([], { month: "short", day: "numeric" }),
+                          label: date.toLocaleDateString(uiText.language, {
+                            month: "short",
+                            day: "numeric",
+                          }),
                         },
                         {
                           value: "time",
-                          label: date.toLocaleTimeString([], {
+                          label: date.toLocaleTimeString(uiText.language, {
                             hour: "numeric",
                             minute: "2-digit",
                             hourCycle: is24Hour ? "h23" : "h12",
@@ -235,7 +241,7 @@ export function CustomSnoozeSheet(props: Props) {
                   <RNHostView matchContents={{ vertical: true }} modifiers={[fillMaxWidth()]}>
                     <SegmentedControl
                       variant="card"
-                      options={units}
+                      options={translateUiLabels(units, uiText)}
                       selected={unit}
                       onSelect={setUnit}
                     />
@@ -256,13 +262,13 @@ export function CustomSnoozeSheet(props: Props) {
                     onClick={props.onClose}
                     colors={{ contentColor: colors["--color-foreground"] }}
                   >
-                    <Text style={bodyTypography}>Cancel</Text>
+                    <Text style={bodyTypography}>{uiText("Cancel")}</Text>
                   </TextButton>
                   <TextButton
                     onClick={submit}
                     colors={{ contentColor: colors["--color-foreground"] }}
                   >
-                    <Text style={bodyTypography}>Snooze</Text>
+                    <Text style={bodyTypography}>{uiText("Snooze")}</Text>
                   </TextButton>
                 </Row>
               </Column>

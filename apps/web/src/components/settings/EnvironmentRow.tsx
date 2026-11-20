@@ -1,3 +1,5 @@
+import { useUiText } from "../../i18n/uiText";
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   type ConnectionTarget,
   connectionRouteId,
@@ -22,9 +24,10 @@ export function formatDesktopSshTarget(target: DesktopSshEnvironmentTarget): str
 export function environmentTransportLabel(
   environment: EnvironmentPresentation,
   activeTarget: ConnectionTarget | null = null,
+  uiText: UiTranslator = uiTranslators.en,
 ): string {
   const { entry } = environment;
-  if (entry.target._tag === "PrimaryConnectionTarget") return "This machine";
+  if (entry.target._tag === "PrimaryConnectionTarget") return uiText("This machine");
   const routes = connectionRoutes(entry);
   if (routes.length > 1) {
     const active =
@@ -37,7 +40,7 @@ export function environmentTransportLabel(
       ? connectionRouteLabel(routes[0]!)
       : `via ${connectionRouteLabel(active)}`;
   }
-  if (environment.relayManaged) return "T3 Connect";
+  if (environment.relayManaged) return uiText("T3 Connect");
   if (isDesktopLocalConnectionTarget(entry.target)) return "WSL";
   if (
     entry.target._tag === "SshConnectionTarget" &&
@@ -46,16 +49,18 @@ export function environmentTransportLabel(
   ) {
     return `SSH ${formatDesktopSshTarget(entry.profile.value.target)}`;
   }
-  return environment.displayUrl ?? "Remote link";
+  return environment.displayUrl ?? uiText("Remote link");
 }
 
 export function useEnvironmentTransportLabel(environment: EnvironmentPresentation): string {
+  const uiText = useUiText();
   const prepared = usePreparedConnection(environment.environmentId);
   return environmentTransportLabel(
     environment,
     environment.connection.phase === "connected" && prepared._tag === "Some"
       ? prepared.value.target
       : null,
+    uiText,
   );
 }
 

@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { Platform } from "react-native";
 import { AndroidNavigationAppearanceSection } from "./appearance/sections/AndroidNavigationAppearanceSection";
 import { ScreenScrollView as ScrollView } from "../../components/ui/ScreenScrollView";
@@ -10,10 +11,11 @@ import { TextAppearanceSection } from "./appearance/sections/TextAppearanceSecti
 import { ThemeAppearanceSection } from "./appearance/sections/ThemeAppearanceSection";
 
 export function SettingsAppearanceRouteScreen() {
+  const uiText = useUiText();
   const insets = useSafeAreaInsets();
 
   return (
-    <SettingsScreen title="Appearance">
+    <SettingsScreen title={uiText("Appearance")}>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}

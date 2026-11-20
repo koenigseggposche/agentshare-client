@@ -1,3 +1,7 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import type { OtlpEndpointCheckResult, OtlpSignal, ServerObservability } from "@t3tools/contracts";
 import { useEffect, useEffectEvent, useState } from "react";
@@ -56,28 +60,39 @@ type EndpointCheck = { readonly url: string; readonly result: OtlpEndpointCheckR
 
 const isHttpUrl = (url: string) => /^https?:\/\/./i.test(url);
 
-function endpointStatus(url: string, check: EndpointCheck | undefined) {
-  if (url === "") return { label: "Off", dot: "bg-muted-foreground/40" };
-  if (check?.url !== url) return { label: "Not checked", dot: "bg-muted-foreground/40" };
+function endpointStatus(
+  url: string,
+  check: EndpointCheck | undefined,
+  uiText: UiTranslator = uiTranslators.en,
+) {
+  if (url === "") return { label: uiText("Off"), dot: "bg-muted-foreground/40" };
+  if (check?.url !== url) return { label: uiText("Not checked"), dot: "bg-muted-foreground/40" };
   const { result } = check;
-  if (result === null) return { label: "Checking…", dot: "bg-warning" };
+  if (result === null) return { label: uiText("Checking…"), dot: "bg-warning" };
   switch (result._tag) {
     case "Accepted":
-      return { label: `Connected · ${Math.round(result.latencyMs)} ms`, dot: "bg-success" };
+      return {
+        label: uiText("Connected · {0} ms", [Math.round(result.latencyMs)]),
+        dot: "bg-success",
+      };
     case "Rejected":
-      return { label: `Rejected · HTTP ${result.status}`, dot: "bg-destructive" };
+      return { label: uiText("Rejected · HTTP {0}", [result.status]), dot: "bg-destructive" };
     case "Unreachable":
-      return { label: result.timedOut ? "Timed out" : "Unreachable", dot: "bg-destructive" };
+      return {
+        label: result.timedOut ? uiText("Timed out") : uiText("Unreachable"),
+        dot: "bg-destructive",
+      };
   }
 }
 
 export function TelemetryExportSettings() {
+  const uiText = useUiText();
   const { environment, scope } = useSettingsScope();
   if (scope.kind !== "environment" || !environment) {
     return (
-      <SettingsSection title="OpenTelemetry export" id="telemetry-export">
+      <SettingsSection title={uiText("OpenTelemetry export")} id="telemetry-export">
         <SettingsScopeNotice target="environment">
-          Choose one environment to configure its telemetry exports.
+          {uiText("Choose one environment to configure its telemetry exports.")}
         </SettingsScopeNotice>
       </SettingsSection>
     );
@@ -86,6 +101,7 @@ export function TelemetryExportSettings() {
 }
 
 function TelemetryExportForm() {
+  const uiText = useUiText();
   const { environment } = useSettingsScope();
   const saved = useScopedSettings((settings) => settings.observability);
   const [draft, setDraft] = useState<Partial<typeof saved>>({});
@@ -100,7 +116,7 @@ function TelemetryExportForm() {
   const running = environment?.serverConfig?.observability;
   const [checks, setChecks] = useState<Partial<Record<SignalKey, EndpointCheck>>>(() =>
     Object.fromEntries(
-      SIGNALS.flatMap((descriptor) => {
+      translateUiLabels(SIGNALS, uiText).flatMap((descriptor) => {
         const url = runningOverride(running, descriptor)?.url ?? saved[descriptor.key];
         return isHttpUrl(url) ? [[descriptor.key, { url, result: null }]] : [];
       }),
@@ -109,7 +125,9 @@ function TelemetryExportForm() {
   const updateSettings = useAtomCommand(serverEnvironment.updateSettings, { reportFailure: true });
   const checkOtlpEndpoint = useAtomCommand(serverEnvironment.checkOtlpEndpoint);
   const values = { ...saved, ...draft };
-  const changedSignals = SIGNALS.filter(({ key }) => values[key].trim() !== saved[key]);
+  const changedSignals = translateUiLabels(SIGNALS, uiText).filter(
+    ({ key }) => values[key].trim() !== saved[key],
+  );
   const changed = changedSignals.length > 0;
 
   const sendCheck = async (key: SignalKey, signal: OtlpSignal, url: string) => {
@@ -131,7 +149,7 @@ function TelemetryExportForm() {
   };
 
   const sendPendingChecks = useEffectEvent(() => {
-    for (const { key, signal } of SIGNALS) {
+    for (const { key, signal } of translateUiLabels(SIGNALS, uiText)) {
       const check = checks[key];
       if (check?.result === null) void sendCheck(key, signal, check.url);
     }
@@ -143,7 +161,7 @@ function TelemetryExportForm() {
   }, [canCheck]);
 
   return (
-    <SettingsSection title="OpenTelemetry export" id="telemetry-export">
+    <SettingsSection title={uiText("OpenTelemetry export")} id="telemetry-export">
       <form
         className="grid gap-4 px-4 py-4 sm:px-5"
         onSubmit={async (event) => {
@@ -169,20 +187,21 @@ function TelemetryExportForm() {
         }}
       >
         <p className="text-xs text-muted-foreground">
-          Send traces, metrics, and logs to an OTLP HTTP receiver. Restart the server to apply.
-          Environment variables override these settings.
+          {uiText(
+            "Send traces, metrics, and logs to an OTLP HTTP receiver. Restart the server to apply. Environment variables override these settings.",
+          )}
         </p>
         {!canEdit && (
           <p className="text-xs text-muted-foreground">
-            This connection lacks permission to change settings on{" "}
-            {environment?.label ?? "the selected environment"}.
+            {uiText("This connection lacks permission to change settings on")}{" "}
+            {environment?.label ?? uiText("the selected environment")}.
           </p>
         )}
-        {SIGNALS.map((descriptor) => {
+        {translateUiLabels(SIGNALS, uiText).map((descriptor) => {
           const { key, label, signal } = descriptor;
           const override = runningOverride(running, descriptor);
           const url = override?.url ?? values[key].trim();
-          const check = canCheck ? endpointStatus(url, checks[key]) : null;
+          const check = canCheck ? endpointStatus(url, checks[key], uiText) : null;
           const status = override
             ? {
                 label: check ? `${override.label} · ${check.label}` : override.label,
@@ -194,7 +213,10 @@ function TelemetryExportForm() {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5">
                   {status && <ConnectionStatusDot dotClassName={status.dot} />}
-                  <Label htmlFor={key}>{label} endpoint</Label>
+                  <Label htmlFor={key}>
+                    {label}
+                    {uiText(" endpoint")}
+                  </Label>
                 </div>
                 {status && <span className="text-xs text-muted-foreground">{status.label}</span>}
               </div>
@@ -204,7 +226,9 @@ function TelemetryExportForm() {
                   size="sm"
                   type="url"
                   pattern="[Hh][Tt][Tt][Pp][Ss]?://.*"
-                  title="Enter an HTTP or HTTPS endpoint, or leave empty to disable export."
+                  title={uiText(
+                    "Enter an HTTP or HTTPS endpoint, or leave empty to disable export.",
+                  )}
                   placeholder={`http://localhost:4318/v1/${signal}`}
                   value={values[key]}
                   disabled={saving || !canEdit}
@@ -227,17 +251,19 @@ function TelemetryExportForm() {
                     disabled={!isHttpUrl(url) || checks[key]?.result === null}
                     onClick={() => void checkEndpoint(key, signal, url)}
                   >
-                    Test
+                    {uiText("Test")}
                   </Button>
                 )}
               </div>
               {(saved[key] !== (running?.[key] ?? "") || override?.variable) && (
                 <p className="break-all text-xs text-muted-foreground">
-                  Running: {running?.[key] || "Disabled"}
+                  {uiText("Running: ")}
+                  {running?.[key] || uiText("Disabled")}
                   {override?.variable && (
                     <>
                       {" "}
-                      from <code className="font-mono">{override.variable}</code>
+                      {uiText("from ")}
+                      <code className="font-mono">{override.variable}</code>
                     </>
                   )}
                 </p>
@@ -259,17 +285,17 @@ function TelemetryExportForm() {
                 setDraft({});
                 setMessage(null);
                 if (!canCheck) return;
-                for (const descriptor of SIGNALS) {
+                for (const descriptor of translateUiLabels(SIGNALS, uiText)) {
                   const { key, signal } = descriptor;
                   if (runningOverride(running, descriptor)) continue;
                   if (checks[key]?.url !== saved[key]) checkEndpoint(key, signal, saved[key]);
                 }
               }}
             >
-              Discard
+              {uiText("Discard")}
             </Button>
             <Button type="submit" size="xs" disabled={!changed || saving || !canEdit}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? uiText("Saving…") : uiText("Save")}
             </Button>
           </div>
         </div>

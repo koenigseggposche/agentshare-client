@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import {
   isAtomCommandInterrupted,
@@ -21,6 +23,7 @@ export function ProposedPlanCard(props: {
   readonly markdown: string;
   readonly renderMarkdown: (text: string) => ReactNode;
 }) {
+  const uiText = useUiText();
   const canWrite = useAtomValue(projectEnvironment.writeFile.permissionAtom(props.environmentId));
   const writeFile = useAtomCommand(projectEnvironment.writeFile, { reportFailure: false });
   const inFlight = useRef(false);
@@ -32,7 +35,7 @@ export function ProposedPlanCard(props: {
     const relativePath = path.trim();
     if (!canWrite || !props.workspaceRoot || inFlight.current) return;
     if (!relativePath) {
-      Dialog.alert("Enter a workspace path");
+      Dialog.alert(readUiText("Enter a workspace path"));
       return;
     }
     inFlight.current = true;
@@ -46,10 +49,13 @@ export function ProposedPlanCard(props: {
       setSaving(false);
     });
     if (result._tag === "Success") {
-      Dialog.alert("Plan saved to workspace", result.value.relativePath);
+      Dialog.alert(readUiText("Plan saved to workspace"), result.value.relativePath);
     } else if (!isAtomCommandInterrupted(result)) {
       const error = squashAtomCommandFailure(result);
-      Dialog.alert("Could not save plan", error instanceof Error ? error.message : String(error));
+      Dialog.alert(
+        readUiText("Could not save plan"),
+        error instanceof Error ? error.message : String(error),
+      );
     }
   };
 
@@ -57,24 +63,25 @@ export function ProposedPlanCard(props: {
     <View className="mb-3 gap-3 rounded-[20px] border border-border bg-card-alt p-4">
       <View className="flex-row items-center gap-2">
         <Text accessibilityRole="header" className="flex-1 font-t3-bold text-base text-foreground">
-          {proposedPlanTitle(props.markdown) ?? "Proposed plan"}
+          {proposedPlanTitle(props.markdown) ?? uiText("Proposed plan")}
         </Text>
-        <CopyTextButton accessibilityLabel="Copy plan" text={contents} />
+        <CopyTextButton accessibilityLabel={uiText("Copy plan")} text={contents} />
       </View>
       {props.renderMarkdown(stripDisplayedPlanMarkdown(props.markdown))}
       <View className="flex-row">
         <Button
-          label={saving ? "Saving..." : "Save to workspace"}
+          label={saving ? uiText("Saving...") : uiText("Save to workspace")}
           tone="secondary"
           disabled={!canWrite || !props.workspaceRoot || saving}
           onPress={() =>
             Dialog.prompt({
-              title: "Save plan to workspace",
+              title: uiText("Save plan to workspace"),
               // The write replaces an existing file, and the RPC has no create-only mode.
-              message:
+              message: uiText(
                 "Enter a path relative to the thread's workspace. A file already at that path is replaced.",
+              ),
               initialValue: lastPath,
-              confirmText: "Save",
+              confirmText: readUiText("Save"),
               onConfirm: (path) => void save(path),
             })
           }

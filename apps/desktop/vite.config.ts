@@ -147,6 +147,7 @@ export default defineConfig({
     // desktop integration tests can exceed Vitest's 5 second default there.
     testTimeout: 15_000,
     setupFiles: [
+      "./test/uiLanguage.ts",
       "../../packages/shared/src/testing/longTempDir.ts",
       "../../packages/shared/src/testing/providerEnv.ts",
     ],

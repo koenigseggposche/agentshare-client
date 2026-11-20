@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
 import type { ChangeRequestTerminology } from "@t3tools/client-runtime/source-control-clients";
 import type { PullRequestActor } from "@t3tools/contracts";
@@ -15,11 +16,12 @@ export function PullRequestReadStatus(props: {
   readonly error: string | null;
   readonly terminology: ChangeRequestTerminology;
 }) {
+  const uiText = useUiText();
   return props.pending ? (
     <AppActivityIndicator className="my-12" colorClassName="accent-icon" />
   ) : props.error ? (
     <EmptyState
-      title={`Couldn't load this ${props.terminology.singular}`}
+      title={uiText("Couldn't load this {0}", [props.terminology.singular])}
       detail={props.error}
       variant="plain"
     />
@@ -69,17 +71,18 @@ export function PullRequestDiffStats(props: {
   readonly deletions: number;
   readonly compact?: boolean;
 }) {
+  const uiText = useUiText();
   const textSize = props.compact ? "text-2xs" : "text-xs";
   return (
     <View className="shrink-0 flex-row items-center gap-2">
       {!props.compact || props.additions > 0 ? (
         <Text className={cn(textSize, "font-t3-medium tabular-nums text-adaptive-emerald-600-400")}>
-          +{props.additions.toLocaleString()}
+          +{props.additions.toLocaleString(uiText.language)}
         </Text>
       ) : null}
       {!props.compact || props.deletions > 0 ? (
         <Text className={cn(textSize, "font-t3-medium tabular-nums text-danger-foreground")}>
-          −{props.deletions.toLocaleString()}
+          −{props.deletions.toLocaleString(uiText.language)}
         </Text>
       ) : null}
     </View>

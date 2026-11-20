@@ -1,3 +1,5 @@
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../i18n/uiText";
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
 import {
   getNewProjectRepository,
@@ -17,13 +19,14 @@ import { useAtomCommand } from "~/state/use-atom-command";
 import { useNewThreadHandler } from "./useHandleNewThread";
 import { suggestAppAccessForRemote } from "../components/sourceControlAppAccessToast";
 
-function errorMessage(error: unknown): string {
+function errorMessage(error: unknown, uiText: UiTranslator = uiTranslators.en): string {
   return error instanceof Error && error.message.trim().length > 0
     ? error.message
-    : "An error occurred.";
+    : uiText("An error occurred.");
 }
 
 export function useNewProject() {
+  const uiText = useUiText();
   const createNew = useAtomCommand(projectEnvironment.createNew, { reportFailure: false });
   const publishRepository = useAtomCommand(sourceControlEnvironment.publishRepository, {
     reportFailure: false,
@@ -50,8 +53,10 @@ export function useNewProject() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: `Could not create the ${label} repository`,
-            description: `${errorMessage(squashAtomCommandFailure(result))} Use Publish Repository in the Git menu to try again.`,
+            title: uiText("Could not create the {0} repository", [label]),
+            description: uiText("{0} Use Publish Repository in the Git menu to try again.", [
+              errorMessage(squashAtomCommandFailure(result), uiText),
+            ]),
           }),
         );
       }
@@ -60,11 +65,11 @@ export function useNewProject() {
     toastManager.add(
       stackedThreadToast({
         type: "success",
-        title: `Published to ${label}`,
+        title: uiText("Published to {0}", [label]),
         description: result.value.repository.nameWithOwner,
       }),
     );
-    void suggestAppAccessForRemote(input.environmentId, result.value.remoteUrl);
+    void suggestAppAccessForRemote(input.environmentId, result.value.remoteUrl, uiText);
   };
 
   return async (input: {
@@ -81,8 +86,8 @@ export function useNewProject() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Could not create the project",
-            description: errorMessage(squashAtomCommandFailure(result)),
+            title: uiText("Could not create the project"),
+            description: errorMessage(squashAtomCommandFailure(result), uiText),
           }),
         );
       }
@@ -93,11 +98,15 @@ export function useNewProject() {
     toastManager.add(
       stackedThreadToast(
         commitError === undefined
-          ? { type: "success", title: `Created ${input.name}`, description: workspaceRoot }
+          ? {
+              type: "success",
+              title: uiText("Created {0}", [input.name]),
+              description: workspaceRoot,
+            }
           : {
               type: "warning",
-              title: `Created ${input.name} without a first commit`,
-              description: `${commitError} The project is in ${workspaceRoot}.`,
+              title: uiText("Created {0} without a first commit", [input.name]),
+              description: uiText("{0} The project is in {1}.", [commitError, workspaceRoot]),
             },
       ),
     );
@@ -115,8 +124,10 @@ export function useNewProject() {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Failed to open project",
-          description: `${errorMessage(error)} It will appear in the sidebar once this client catches up.`,
+          title: uiText("Failed to open project"),
+          description: uiText("{0} It will appear in the sidebar once this client catches up.", [
+            errorMessage(error, uiText),
+          ]),
         }),
       );
       return null;
@@ -126,8 +137,8 @@ export function useNewProject() {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Failed to open project",
-          description: errorMessage(error),
+          title: uiText("Failed to open project"),
+          description: errorMessage(error, uiText),
         }),
       );
     });

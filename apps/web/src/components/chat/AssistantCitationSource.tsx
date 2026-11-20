@@ -1,3 +1,7 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { readUiTranslator } from "../../i18n/uiText";
+
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { LegendListRef } from "@legendapp/list/react";
 import type { AssistantCitation, MessageId, ScopedThreadRef } from "@t3tools/contracts";
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
@@ -99,17 +103,20 @@ export interface AssistantCitationTarget extends AssistantCitationRequest {
   onComplete: () => void;
 }
 
-function observeAssistantCitationSource({
-  root,
-  itemKey,
-  request,
-  list,
-}: {
-  root: HTMLElement;
-  itemKey: string;
-  request: AssistantCitationTarget;
-  list: LegendListRef;
-}) {
+function observeAssistantCitationSource(
+  {
+    root,
+    itemKey,
+    request,
+    list,
+  }: {
+    root: HTMLElement;
+    itemKey: string;
+    request: AssistantCitationTarget;
+    list: LegendListRef;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+) {
   const activation = request.activationRef.current;
   if (activation.dismissed) return;
   const scrollNode = list.getScrollableNode();
@@ -194,8 +201,8 @@ function observeAssistantCitationSource({
             request.onComplete();
             toastManager.add({
               type: "warning",
-              title: "Could not open the cited response",
-              description: "Click the citation to try again.",
+              title: uiText("Could not open the cited response"),
+              description: uiText("Click the citation to try again."),
             });
           },
         );
@@ -207,8 +214,8 @@ function observeAssistantCitationSource({
       if (!range) {
         toastManager.add({
           type: "warning",
-          title: "The quoted text has changed",
-          description: "Showing the source response. The saved quote is unchanged.",
+          title: uiText("The quoted text has changed"),
+          description: uiText("Showing the source response. The saved quote is unchanged."),
         });
       }
     }
@@ -353,7 +360,7 @@ export function AssistantCitationSource({
     const root = rootRef.current;
     const list = listRef.current;
     if (!root || !list || !request || request.citation.messageId !== messageId) return;
-    return observeAssistantCitationSource({ root, itemKey, request, list });
+    return observeAssistantCitationSource({ root, itemKey, request, list }, readUiTranslator());
   }, [itemKey, listRef, messageId, request]);
 
   return (

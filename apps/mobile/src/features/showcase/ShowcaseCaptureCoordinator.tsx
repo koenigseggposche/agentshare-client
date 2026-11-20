@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { useSyncExternalStore } from "react";
 import { Appearance, Keyboard, View } from "react-native";
 import {
@@ -119,6 +121,7 @@ function showcaseNavigationAction(
  */
 export function installShowcaseCapture(
   pathnameFromState: (state: NavigationState) => string,
+  uiText: UiTranslator = uiTranslators.en,
 ): () => void {
   if (!SHOWCASE_ENABLED) return () => {};
 
@@ -228,6 +231,7 @@ export function installShowcaseCapture(
           appAtomRegistry.get(environmentThreadShells.threadShellsAtom),
           appAtomRegistry.get(environmentProjects.projectsAtom),
           now,
+          uiText,
         );
         const outcome =
           activity === null

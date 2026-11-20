@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useState } from "react";
 
 import {
@@ -12,6 +13,7 @@ import { SettingsRow } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
 
 export function CliCommandSettingsRow() {
+  const uiText = useUiText();
   const bridge = getDesktopCliCommandBridge();
   const query = useEnvironmentQuery(bridge ? desktopCliCommandStateAtom : null);
   const state = query.data;
@@ -28,9 +30,9 @@ export function CliCommandSettingsRow() {
             type: "error",
             title:
               action === "install"
-                ? "Could not install agentshare-client"
-                : "Could not remove agentshare-client",
-            description: error instanceof Error ? error.message : "Something went wrong.",
+                ? uiText("Could not install agentshare-client")
+                : uiText("Could not remove agentshare-client"),
+            description: error instanceof Error ? error.message : uiText("Something went wrong."),
           }),
         );
       })
@@ -58,7 +60,7 @@ export function CliCommandSettingsRow() {
           disabled={pending || query.isPending || (!installed && Boolean(state.shadowedBy))}
           onClick={() => change(installed ? "uninstall" : "install")}
         >
-          {installed ? "Remove" : "Install"}
+          {installed ? uiText("Remove") : uiText("Install")}
         </Button>
       }
     />

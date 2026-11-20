@@ -1,3 +1,4 @@
+import { readUiText } from "../i18n/uiText";
 import * as Dialog from "../components/ui/Dialog";
 import { useAtomValue } from "@effect/atom-react";
 import { useNavigation } from "@react-navigation/native";
@@ -72,7 +73,7 @@ export async function pairEnvironment(
     "reason" in error &&
     error.reason === "unsupported"
   ) {
-    Dialog.alert("Client not supported", message);
+    Dialog.alert(readUiText("Client not supported"), message);
     return { ok: false, error: null };
   }
   return { ok: false, error: message };
@@ -200,18 +201,24 @@ export function useRemoteConnections() {
         onPress: () => navigation.navigate("SettingsAuth"),
       };
       Dialog.alert(
-        "Remove from this device?",
-        `Forget ${environment.environmentLabel} and its cached threads on this device.\n\n${RELAY_REMOVAL_ACCOUNT_NOTE[registration]}`,
+        readUiText("Remove from this device?"),
+        readUiText("Forget {0} and its cached threads on this device.\n\n{1}", [
+          environment.environmentLabel,
+          RELAY_REMOVAL_ACCOUNT_NOTE[registration],
+        ]),
         registration === "unregistered" || !hasCloudPublicConfig()
-          ? [{ text: "Cancel", style: "cancel" }, remove]
-          : [{ text: "Cancel", style: "cancel" }, openAccount, remove],
+          ? [{ text: readUiText("Cancel"), style: "cancel" }, remove]
+          : [{ text: readUiText("Cancel"), style: "cancel" }, openAccount, remove],
       );
       return;
     }
     Dialog.alert(
-      "Remove from this device?",
-      `Forget ${environment.environmentLabel} and its cached threads on this device. Switch it off instead to keep it saved.`,
-      [{ text: "Cancel", style: "cancel" }, remove],
+      readUiText("Remove from this device?"),
+      readUiText(
+        "Forget {0} and its cached threads on this device. Switch it off instead to keep it saved.",
+        [environment.environmentLabel],
+      ),
+      [{ text: readUiText("Cancel"), style: "cancel" }, remove],
     );
   };
 

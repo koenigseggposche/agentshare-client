@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { LinkableMachine } from "@t3tools/client-runtime/link-request";
 import { useId } from "react";
 
@@ -10,17 +11,18 @@ export const ANOTHER_ADDRESS = "another-address";
 
 /** Whether a machine is linked already, or how this app knows it when not connected to it. */
 export function LinkMachineBadge({ machine }: { readonly machine: LinkableMachine }) {
+  const uiText = useUiText();
   if (machine.linked) {
     return (
       <Badge variant="success" size="sm">
-        Linked
+        {uiText("Linked")}
       </Badge>
     );
   }
   if (machine.connected) return null;
   return (
     <Badge variant="outline" size="sm">
-      {machine.connectOnly ? "T3 Connect" : "Not connected"}
+      {machine.connectOnly ? uiText("T3 Connect") : uiText("Not connected")}
     </Badge>
   );
 }
@@ -46,11 +48,12 @@ export function LinkMachineSelect({
   readonly onChange: (value: string) => void;
   readonly disabled: boolean;
 }) {
+  const uiText = useUiText();
   const labelId = useId();
   return (
     <div className="space-y-1.5">
       <span id={labelId} className="block text-xs font-medium text-foreground">
-        Machine
+        {uiText("Machine")}
       </span>
       <Select
         value={value}
@@ -78,7 +81,7 @@ export function LinkMachineSelect({
             </SelectItem>
           ))}
           <SelectItem value={ANOTHER_ADDRESS} hideIndicator>
-            Another address…
+            {uiText("Another address…")}
           </SelectItem>
         </SelectPopup>
       </Select>

@@ -1,3 +1,4 @@
+import { useUiText, readUiText } from "../../i18n/uiText";
 import { ThreadHoverCard, ThreadHoverCardPopup } from "../ThreadHoverCard";
 import { ThreadTerminalStatusButton } from "../ThreadStatusIndicators";
 import { discardComposerDraft } from "../../lib/discardComposerDraft";
@@ -261,6 +262,7 @@ function SidebarThreadTooltip({
   terminalStatus: TerminalStatusIndicator | null;
   terminalProcessCount: number;
 }) {
+  const uiText = useUiText();
   const driverKind = providerEntry?.driverKind ?? null;
   const previousProviderNames = thread.providerInstanceHistory
     .filter((instanceId) => instanceId !== modelInstanceId)
@@ -303,7 +305,7 @@ function SidebarThreadTooltip({
           <div className="flex min-w-0 items-start gap-2 text-warning">
             <CircleAlertIcon aria-hidden className="mt-0.5 size-3 shrink-0 stroke-current" />
             <div className="min-w-0 flex-1 wrap-break-word">
-              You're currently checked out on another branch.
+              {uiText("You're currently checked out on another branch.")}
             </div>
           </div>
         ) : null}
@@ -333,7 +335,8 @@ function SidebarThreadTooltip({
           <div className="flex min-w-0 items-center gap-2">
             <ArrowRightLeftIcon className="size-3 shrink-0 stroke-muted-foreground" />
             <div className="min-w-0 truncate text-foreground/75">
-              Handed off from {previousProviderNames.join(", ")}
+              {uiText("Handed off from ")}
+              {previousProviderNames.join(", ")}
             </div>
           </div>
         ) : null}
@@ -358,8 +361,8 @@ function SidebarThreadTooltip({
             <CircleAlertIcon className="size-3 shrink-0 stroke-current" />
             <div className="min-w-0 truncate">
               {thread.runtime.lastErrorClass === "usage_limit"
-                ? "Usage limit reached"
-                : "Error occurred"}
+                ? uiText("Usage limit reached")
+                : uiText("Error occurred")}
             </div>
           </div>
         ) : null}
@@ -375,6 +378,7 @@ function SnoozeMenuButton(props: {
   timestampFormat: TimestampFormat;
   environmentId: EnvironmentId;
 }) {
+  const uiText = useUiText();
   const { open, onOpenChange, onSnooze, timestampFormat, environmentId } = props;
   const presets = open
     ? // oxlint-disable-next-line react/purity -- Presets are resolved only while the menu is open, so each opening reads a fresh time.
@@ -389,7 +393,7 @@ function SnoozeMenuButton(props: {
               render={
                 <button
                   type="button"
-                  aria-label="Snooze thread"
+                  aria-label={uiText("Snooze thread")}
                   onClick={(event) => event.stopPropagation()}
                   onDoubleClick={(event) => event.stopPropagation()}
                   className="inline-flex h-full cursor-pointer items-center gap-0.5 rounded-md bg-transparent px-1.5 text-xs text-muted-foreground hover:text-foreground"
@@ -400,7 +404,7 @@ function SnoozeMenuButton(props: {
         >
           <ClockIcon className="size-3" />
         </TooltipTrigger>
-        <TooltipPopup>Snooze thread</TooltipPopup>
+        <TooltipPopup>{uiText("Snooze thread")}</TooltipPopup>
       </Tooltip>
       <MenuPopup side="bottom" align="end">
         {presets.map((preset) => (
@@ -408,7 +412,13 @@ function SnoozeMenuButton(props: {
             key={preset.id}
             onClick={(event) => {
               event.stopPropagation();
-              const picked = pickSnoozePreset(presets, preset.id, timestampFormat, environmentId);
+              const picked = pickSnoozePreset(
+                presets,
+                preset.id,
+                timestampFormat,
+                environmentId,
+                uiText,
+              );
               if (picked) onSnooze(picked);
             }}
           >
@@ -424,7 +434,7 @@ function SnoozeMenuButton(props: {
             if (choice) onSnooze(choice);
           }}
         >
-          Custom…
+          {uiText("Custom…")}
         </MenuItem>
       </MenuPopup>
     </Menu>
@@ -489,31 +499,31 @@ const dropVerbBadge: Record<SidebarDropVerb, ReactNode> = {
   pin: (
     <>
       <PinIcon aria-hidden className="size-3" />
-      Pin
+      {readUiText("Pin")}
     </>
   ),
   unpin: (
     <>
       <PinOffIcon aria-hidden className="size-3" />
-      Unpin
+      {readUiText("Unpin")}
     </>
   ),
   settle: (
     <>
       <CircleCheckIcon aria-hidden className="size-3" />
-      Settle
+      {readUiText("Settle")}
     </>
   ),
   unsettle: (
     <>
       <Undo2Icon aria-hidden className="size-3" />
-      Un-settle
+      {readUiText("Un-settle")}
     </>
   ),
   wake: (
     <>
       <AlarmClockOffIcon aria-hidden className="size-3" />
-      Wake
+      {readUiText("Wake")}
     </>
   ),
 };
@@ -597,6 +607,7 @@ function ThreadRenameInput(props: {
   onCommit: () => void;
   onCancel: () => void;
 }) {
+  const uiText = useUiText();
   // Enter and Escape blur the input as it unmounts; that blur must not commit again.
   const settledRef = useRef(false);
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -617,7 +628,7 @@ function ThreadRenameInput(props: {
       autoFocus
       value={props.title}
       dir="auto"
-      aria-label="Thread title"
+      aria-label={uiText("Thread title")}
       onChange={(event) => props.onTitleChange(event.target.value)}
       onFocus={(event) => event.currentTarget.select()}
       onKeyDown={handleKeyDown}
@@ -632,6 +643,7 @@ function ThreadRenameInput(props: {
 }
 
 const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowProps) {
+  const uiText = useUiText();
   const {
     isRenaming,
     onCancelRename,
@@ -673,7 +685,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     environmentId: thread.environmentId,
     threadId: thread.id,
   });
-  const terminalStatus = terminalStatusFromRunningIds(runningTerminalIds);
+  const terminalStatus = terminalStatusFromRunningIds(runningTerminalIds, uiText);
   const terminalProcessCount = runningTerminalIds.length;
   const labels = workbenchLabels[useClientSettings((settings) => settings.uiLanguage)];
   const hasUnsentDraft = useThreadHasUnsentDraft(threadRef) && !props.isRouteThread;
@@ -727,55 +739,55 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
   const topStatus =
     status === "working"
       ? {
-          label: thread.goal?.status === "active" ? "Goal" : "Working",
+          label: thread.goal?.status === "active" ? uiText("Goal") : uiText("Working"),
           icon: "working" as const,
           className: "text-info-foreground",
         }
       : status === "waiting"
         ? {
-            label: "Waiting",
+            label: uiText("Waiting"),
             icon: "waiting" as const,
             className: "text-muted-foreground",
           }
         : status === "approval"
           ? {
-              label: "Approval",
+              label: uiText("Approval"),
               icon: "approval" as const,
               className: "text-warning-foreground",
             }
           : status === "input"
             ? {
-                label: "Input",
+                label: uiText("Input"),
                 icon: "input" as const,
                 className: "text-indigo-600 dark:text-indigo-300",
               }
             : status === "request"
               ? {
-                  label: "Request",
+                  label: uiText("Request"),
                   icon: "request" as const,
                   className: "text-guest-foreground",
                 }
               : status === "limited"
                 ? {
-                    label: "Limited",
+                    label: uiText("Limited"),
                     icon: "failed" as const,
                     className: "text-warning-foreground",
                   }
                 : status === "failed"
                   ? {
-                      label: "Failed",
+                      label: uiText("Failed"),
                       icon: "failed" as const,
                       className: "text-error-foreground",
                     }
                   : isWoke
                     ? {
-                        label: "Woke",
+                        label: uiText("Woke"),
                         icon: "woke" as const,
                         className: "text-warning-foreground",
                       }
                     : isUnread
                       ? {
-                          label: "Done",
+                          label: uiText("Done"),
                           icon: "done" as const,
                           className: "text-success-foreground",
                         }
@@ -788,7 +800,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     activeThreadBranch: thread.branch,
     currentGitBranch: visibleGitStatus?.refName ?? null,
   });
-  const prStatus = prStatusIndicator(pr, linkedPullRequestStatus?.sourceControlProvider);
+  const prStatus = prStatusIndicator(pr, linkedPullRequestStatus?.sourceControlProvider, uiText);
 
   const modelInstanceId = thread.runtime?.providerInstanceId ?? thread.modelSelection.instanceId;
   const providerEntry = props.providerEntryByInstanceId.get(modelInstanceId) ?? null;
@@ -1101,7 +1113,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
           render={
             <button
               type="button"
-              aria-label="Unpin thread"
+              aria-label={uiText("Unpin thread")}
               onClick={handleUnpinClick}
               className="group/unpin inline-flex cursor-pointer items-center rounded-sm text-muted-foreground/65 outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             />
@@ -1116,11 +1128,11 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
             className="hidden size-3 shrink-0 group-hover/unpin:block group-focus-visible/unpin:block"
           />
         </TooltipTrigger>
-        <TooltipPopup>Unpin thread</TooltipPopup>
+        <TooltipPopup>{uiText("Unpin thread")}</TooltipPopup>
       </Tooltip>
     ) : (
       <PinIcon
-        aria-label="Pinned"
+        aria-label={uiText("Pinned")}
         role="img"
         className="size-3 shrink-0 text-muted-foreground/65"
       />
@@ -1257,7 +1269,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               {multiline ? null : terminalStatusIcon}
               {isRegeneratingTitle ? (
                 <span role="status" className="sr-only">
-                  Regenerating title
+                  {uiText("Regenerating title")}
                 </span>
               ) : null}
               {sortable?.isDragging ? (
@@ -1288,16 +1300,18 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
                           render={
                             <button
                               type="button"
-                              aria-label="Dismiss Woke notification"
+                              aria-label={uiText("Dismiss Woke notification")}
                               onClick={handleAcknowledgeWokeClick}
                               className="inline-flex cursor-pointer items-center gap-1 rounded-sm text-xs font-medium text-warning-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                             >
                               <AlarmClockIcon aria-hidden className="size-3" />
-                              <span role="status">Woke</span>
+                              <span role="status">{uiText("Woke")}</span>
                             </button>
                           }
                         />
-                        <TooltipPopup side="top">Dismiss Woke notification</TooltipPopup>
+                        <TooltipPopup side="top">
+                          {uiText("Dismiss Woke notification")}
+                        </TooltipPopup>
                       </Tooltip>
                     ) : inFolder && topStatus ? (
                       // Folder rows have no status line, so the status takes the time slot.
@@ -1326,7 +1340,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
                     !props.snoozeSupported ? null : (
                       <button
                         type="button"
-                        aria-label="Wake thread now"
+                        aria-label={uiText("Wake thread now")}
                         onClick={handleUnsnoozeClick}
                         onPointerDown={handleActionPointerDown}
                         className={cn(
@@ -1473,7 +1487,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
                             render={
                               <button
                                 type="button"
-                                aria-label="Dismiss Woke notification"
+                                aria-label={uiText("Dismiss Woke notification")}
                                 onClick={handleAcknowledgeWokeClick}
                                 className={cn(
                                   "inline-flex cursor-pointer items-center gap-1 rounded-sm font-medium outline-none hover:underline focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
@@ -1485,7 +1499,9 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
                               </button>
                             }
                           />
-                          <TooltipPopup side="top">Dismiss Woke notification</TooltipPopup>
+                          <TooltipPopup side="top">
+                            {uiText("Dismiss Woke notification")}
+                          </TooltipPopup>
                         </Tooltip>
                       ) : (
                         <span
@@ -1579,7 +1595,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               {title}
               {isRegeneratingTitle ? (
                 <span role="status" className="sr-only">
-                  Regenerating title
+                  {uiText("Regenerating title")}
                 </span>
               ) : null}
               {titleLineIcons}
@@ -1626,6 +1642,7 @@ export const SidebarSearchResultRow = memo(function SidebarSearchResultRow(props
   onSelect: () => void;
   onFileDropThreads: (threadRef: ScopedThreadRef, files: File[]) => void;
 }) {
+  const uiText = useUiText();
   const thread =
     useThreadShell(scopeThreadRef(props.thread.environmentId, props.thread.id)) ?? props.thread;
   const accessibility = resolveSidebarRowAccessibility({
@@ -1672,7 +1689,7 @@ export const SidebarSearchResultRow = memo(function SidebarSearchResultRow(props
     environmentId: thread.environmentId,
     threadId: thread.id,
   });
-  const terminalStatus = terminalStatusFromRunningIds(runningTerminalIds);
+  const terminalStatus = terminalStatusFromRunningIds(runningTerminalIds, uiText);
   const [isFileDragOver, setIsFileDragOver] = useState(false);
   const onFileDropThreads = props.onFileDropThreads;
   const fileDropHandlers = makeWorkspaceFileDropHandlers({

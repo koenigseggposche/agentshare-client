@@ -1,3 +1,5 @@
+import { readUiTranslator } from "../../i18n/uiText";
+
 import type { ScopedThreadRef } from "@t3tools/contracts";
 import { parseThreadLinkPrompt, withoutPromptLinkParams } from "@t3tools/shared/promptLinks";
 import { useLocation, useNavigate } from "@tanstack/react-router";
@@ -32,12 +34,12 @@ export function ThreadLinkPrompt({ threadRef }: { readonly threadRef: ScopedThre
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Could not open the linked prompt",
+            title: readUiTranslator()("Could not open the linked prompt"),
             description: parsed.error,
           }),
         );
       } else if (parsed.value !== null) {
-        placeLinkedPrompt(threadRef, parsed.value);
+        placeLinkedPrompt(threadRef, parsed.value, undefined, readUiTranslator());
       }
     }
     void navigate({

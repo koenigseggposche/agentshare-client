@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { HeaderBarButtonMailSearchToolbarItem } from "react-native-screens";
 
 import { NATIVE_LIQUID_GLASS_SUPPORTED } from "../../native/native-glass";
@@ -13,9 +15,10 @@ type NativeMailSearchToolbarInput = Omit<
 
 export function createNativeMailSearchToolbarItem(
   input: NativeMailSearchToolbarInput,
+  uiText: UiTranslator = uiTranslators.en,
 ): HeaderBarButtonMailSearchToolbarItem {
   return {
-    placeholder: "Search",
+    placeholder: uiText("Search"),
     ...input,
     type: "mailSearchToolbar",
     useFallbackSearchField: true,

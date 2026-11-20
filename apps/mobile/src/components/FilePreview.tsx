@@ -1,3 +1,5 @@
+import { readUiText } from "../i18n/uiText";
+import { useUiText } from "../i18n/uiText";
 import { Button } from "./ui/Button";
 import * as Dialog from "./ui/Dialog";
 import { useEffect, useEffectEvent } from "react";
@@ -16,6 +18,7 @@ function PdfDocumentPreview(props: {
   readonly source: ResolvedFilePreviewSource;
   readonly onRequestClose: () => void;
 }) {
+  const uiText = useUiText();
   const insets = useSafeAreaInsets();
   return (
     <Modal
@@ -30,9 +33,9 @@ function PdfDocumentPreview(props: {
       >
         <View className="flex-row items-center gap-3 border-b border-border px-4 py-2">
           <Text className="flex-1 font-t3-semibold text-foreground" numberOfLines={1}>
-            {props.source.name ?? "PDF"}
+            {props.source.name ?? uiText("PDF")}
           </Text>
-          <ControlPill label="Close" variant="pill" onPress={props.onRequestClose} />
+          <ControlPill label={uiText("Close")} variant="pill" onPress={props.onRequestClose} />
         </View>
         <PdfPreview uri={props.source.uri} />
       </View>
@@ -45,14 +48,15 @@ function DocumentPreview(props: {
   readonly onRequestClose: () => void;
   readonly onOpenError?: (error: unknown) => void;
 }) {
+  const uiText = useUiText();
   const { uri, name } = props.source;
   const onRequestClose = useEffectEvent(props.onRequestClose);
   const onOpenError = useEffectEvent((error: unknown) => {
     if (props.onOpenError) props.onOpenError(error);
     else
       Dialog.alert(
-        "Could not open document",
-        "A compatible viewer must be installed. Check your connection and try again.",
+        readUiText("Could not open document"),
+        readUiText("A compatible viewer must be installed. Check your connection and try again."),
       );
   });
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- opens the attachment in an external viewer and aborts the open on cleanup
@@ -82,12 +86,12 @@ function DocumentPreview(props: {
     <Modal transparent animationType="fade" onRequestClose={props.onRequestClose}>
       <View className="flex-1 items-center justify-center bg-backdrop p-6">
         <View className="w-full max-w-sm gap-4 rounded-2xl bg-sheet-solid p-6">
-          <Text className="font-t3-semibold text-foreground">Opening document…</Text>
+          <Text className="font-t3-semibold text-foreground">{uiText("Opening document…")}</Text>
           <Text className="text-foreground-muted" numberOfLines={2}>
-            {name ?? "Document"}
+            {name ?? uiText("Document")}
           </Text>
           <View className="items-end">
-            <Button label="Cancel" tone="text" onPress={props.onRequestClose} />
+            <Button label={uiText("Cancel")} tone="text" onPress={props.onRequestClose} />
           </View>
         </View>
       </View>

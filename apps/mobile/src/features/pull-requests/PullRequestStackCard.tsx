@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { StackActions, useNavigation } from "@react-navigation/native";
 import { useState } from "react";
 import { Platform, View } from "react-native";
@@ -14,6 +15,7 @@ export function PullRequestStackCard(props: {
   readonly params: PullRequestParams;
   readonly state: PullRequestStackState;
 }) {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const selectDetail = useSelectWorkspaceDetail();
   const [expanded, setExpanded] = useState(false);
@@ -27,7 +29,7 @@ export function PullRequestStackCard(props: {
     return (
       <PullRequestCardGroup>
         <PullRequestCardRow
-          title="Stack"
+          title={uiText("Stack")}
           icon={PullRequestGlyph.stack}
           value={`${summary.position} of ${summary.size}`}
           last
@@ -39,10 +41,14 @@ export function PullRequestStackCard(props: {
   return (
     <PullRequestCardGroup>
       <PullRequestCardRow
-        title="Stack"
+        title={uiText("Stack")}
         icon={PullRequestGlyph.stack}
         value={`${position} of ${stack.layers.length}`}
-        accessibilityLabel={`Stack, ${position} of ${stack.layers.length}${props.state.isFresh ? "" : ", showing saved stack"}`}
+        accessibilityLabel={uiText("Stack, {0} of {1}{2}", [
+          position,
+          stack.layers.length,
+          props.state.isFresh ? "" : ", showing saved stack",
+        ])}
         expanded={expanded}
         onPress={() => setExpanded(!expanded)}
         last={!expanded}
@@ -51,10 +57,13 @@ export function PullRequestStackCard(props: {
         <View>
           {stack.layers.map((layer, index) => {
             const selected = layer.number === props.params.number;
-            const status = pullRequestStatus({
-              state: layer.state,
-              isDraft: layer.isDraft === true,
-            });
+            const status = pullRequestStatus(
+              {
+                state: layer.state,
+                isDraft: layer.isDraft === true,
+              },
+              uiText,
+            );
             return (
               <View key={layer.number} className={selected ? "bg-thread-selected" : undefined}>
                 <PullRequestCardRow
@@ -79,7 +88,9 @@ export function PullRequestStackCard(props: {
             );
           })}
           <Text className="px-4 py-3 text-xs text-foreground-muted">
-            Base: {stack.base}. Open a layer to review it or merge the stack through that layer.
+            {uiText("Base: ")}
+            {stack.base}
+            {uiText(". Open a layer to review it or merge the stack through that layer.")}
           </Text>
         </View>
       ) : null}

@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import type {
   EnvironmentId,
   SourceControlAppAccess,
@@ -25,12 +26,15 @@ export async function suggestAppAccessForRemote(
   if (result._tag !== "Success" || result.value.status !== "not-covered") return;
   const owner = target.input.repository.split("/")[0] ?? target.input.repository;
   Alert.alert(
-    `Give ${target.appSignIn.appName} access to ${owner}`,
-    `It isn't installed there, so GitHub requests for ${target.input.repository} use your own login and its lower rate limit.`,
+    readUiText("Give {0} access to {1}", [target.appSignIn.appName, owner]),
+    readUiText(
+      "It isn't installed there, so GitHub requests for {0} use your own login and its lower rate limit.",
+      [target.input.repository],
+    ),
     [
-      { text: "Not now", style: "cancel" },
+      { text: readUiText("Not now"), style: "cancel" },
       {
-        text: "Install",
+        text: readUiText("Install"),
         onPress: () => void Linking.openURL(target.appSignIn.installUrl).catch(() => undefined),
       },
     ],

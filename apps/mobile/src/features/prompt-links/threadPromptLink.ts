@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import type { NavigationState, PartialState } from "@react-navigation/native";
 import { EnvironmentId, ThreadId, type ScopedThreadRef } from "@t3tools/contracts";
@@ -57,7 +58,7 @@ export function takeThreadPromptLink(
   if (environmentId === null || threadId === null) return nextState;
   const parsed = parseThreadLinkPrompt(search);
   if (!parsed.ok) {
-    Dialog.alert("Could not open link", parsed.error);
+    Dialog.alert(readUiText("Could not open link"), parsed.error);
     return nextState;
   }
   if (parsed.value !== null) {

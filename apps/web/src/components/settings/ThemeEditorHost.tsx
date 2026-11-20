@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { lazy, Suspense, useSyncExternalStore } from "react";
 
 import { useTheme } from "../../hooks/useTheme";
@@ -23,6 +24,7 @@ function useThemeDefinition(id: string | null | undefined) {
 }
 
 export function ThemeEditorHost() {
+  const uiText = useUiText();
   const session = useThemeEditorStore((store) => store.session);
   const closeThemeEditor = useThemeEditorStore((store) => store.closeThemeEditor);
   const { theme, setTheme, themeHalves, refreshTheme } = useTheme();
@@ -38,8 +40,8 @@ export function ThemeEditorHost() {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Could not save your theme",
-            description: "Browser storage is unavailable, so the change was not kept.",
+            title: uiText("Could not save your theme"),
+            description: uiText("Browser storage is unavailable, so the change was not kept."),
           }),
         );
         return false;
@@ -47,8 +49,8 @@ export function ThemeEditorHost() {
       toastManager.add(
         stackedThreadToast({
           type: "success",
-          title: `${savedTheme.label} updated`,
-          description: `Its ${mergedAppearance} palette was added.`,
+          title: uiText("{0} updated", [savedTheme.label]),
+          description: uiText("Its {0} palette was added.", [mergedAppearance]),
         }),
       );
       return true;
@@ -63,8 +65,10 @@ export function ThemeEditorHost() {
       toastManager.add(
         stackedThreadToast({
           type: "success",
-          title: `${savedTheme.label} saved`,
-          description: wasActive ? "Your changes are now active." : "Your changes are saved.",
+          title: uiText("{0} saved", [savedTheme.label]),
+          description: wasActive
+            ? uiText("Your changes are now active.")
+            : uiText("Your changes are saved."),
         }),
       );
       return true;
@@ -74,8 +78,8 @@ export function ThemeEditorHost() {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Could not save your theme",
-          description: "Browser storage is unavailable, so the change was not kept.",
+          title: uiText("Could not save your theme"),
+          description: uiText("Browser storage is unavailable, so the change was not kept."),
         }),
       );
       return false;
@@ -83,8 +87,8 @@ export function ThemeEditorHost() {
     toastManager.add(
       stackedThreadToast({
         type: "success",
-        title: `${savedTheme.label} created`,
-        description: "It’s now active.",
+        title: uiText("{0} created", [savedTheme.label]),
+        description: uiText("It’s now active."),
       }),
     );
     return true;

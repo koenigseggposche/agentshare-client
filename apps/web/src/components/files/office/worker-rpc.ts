@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 // Adapted from opencode (MIT). Copyright (c) 2025 opencode. See LICENSE.opencode.
 // The engines run in a worker per open file, so no layout, recalculation or painting holds the window. These are the
 // two ends of that worker's protocol: typed calls by method name, a key that lets a newer call replace a queued one
@@ -173,15 +175,18 @@ type ServerState = {
  * The worker's end: runs calls one at a time, in order, letting messages through between them. A handler's signal
  * aborts when its caller aborts the call.
  */
-export function serveWorker<M extends Methods>(handlers: {
-  readonly [K in keyof M]: (
-    input: M[K]["input"],
-    signal: AbortSignal,
-  ) =>
-    | M[K]["output"]
-    | Transfer<M[K]["output"]>
-    | Promise<M[K]["output"] | Transfer<M[K]["output"]>>;
-}) {
+export function serveWorker<M extends Methods>(
+  handlers: {
+    readonly [K in keyof M]: (
+      input: M[K]["input"],
+      signal: AbortSignal,
+    ) =>
+      | M[K]["output"]
+      | Transfer<M[K]["output"]>
+      | Promise<M[K]["output"] | Transfer<M[K]["output"]>>;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+) {
   const queue: Request[] = [];
 
   const state: ServerState = { running: false, current: undefined };
@@ -212,7 +217,7 @@ export function serveWorker<M extends Methods>(handlers: {
           id: request.id,
           ok: false,
           superseded: false,
-          message: `Unknown method ${request.method}`,
+          message: uiText("Unknown method {0}", [request.method]),
         });
         continue;
       }
@@ -276,7 +281,12 @@ export function serveWorker<M extends Methods>(handlers: {
       const [old] = queue.splice(replaced, 1);
 
       if (old)
-        reply({ id: old.id, ok: false, superseded: true, message: "Replaced by a newer call" });
+        reply({
+          id: old.id,
+          ok: false,
+          superseded: true,
+          message: uiText("Replaced by a newer call"),
+        });
     }
 
     queue.push(event.data);

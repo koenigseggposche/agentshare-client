@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -50,6 +52,7 @@ export function WorkspaceToolbar(props: {
   readonly sidebar?: boolean;
   readonly onNewTask: () => void;
 }) {
+  const uiText = useUiText();
   const workspace = useWorkspaceTabs();
   const input = useRef<TextInputInstance>(null);
   const [focusRequest, setFocusRequest] = useState(0);
@@ -93,7 +96,7 @@ export function WorkspaceToolbar(props: {
   if (!workspace) return null;
   const { state, dispatch } = workspace;
   const tab = state.tabs[state.selectedTab];
-  const activeTab = TABS.find((item) => item.id === state.selectedTab)!;
+  const activeTab = translateUiLabels(TABS, uiText).find((item) => item.id === state.selectedTab)!;
   const searching = tab.searchMode !== "resting";
   const expanded = tab.searchMode === "expanded" && !keyboardVisible;
   const showNavigation = !searching || expanded;
@@ -113,7 +116,7 @@ export function WorkspaceToolbar(props: {
           <View className="flex-row items-center" style={{ gap }}>
             {!keyboardVisible && !expanded ? (
               <ToolbarButton
-                label={`Show tabs, ${activeTab.label} selected`}
+                label={uiText("Show tabs, {0} selected", [activeTab.label])}
                 icon={activeTab.icon}
                 size={48}
                 onPress={() => dispatch({ type: "expand" })}
@@ -130,7 +133,12 @@ export function WorkspaceToolbar(props: {
                 focusSearch();
               }}
             />
-            <ToolbarButton label="Cancel search" icon="xmark" size={48} onPress={cancelSearch} />
+            <ToolbarButton
+              label={uiText("Cancel search")}
+              icon="xmark"
+              size={48}
+              onPress={cancelSearch}
+            />
           </View>
         ) : null}
         {showNavigation ? <WorkspaceDock onNewTask={props.onNewTask} /> : null}

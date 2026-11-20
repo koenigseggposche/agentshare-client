@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { settlePromise } from "@t3tools/client-runtime/state/runtime";
 import type { DesktopSshPasswordPromptRequest } from "@t3tools/contracts";
 import * as AsyncResult from "effect/reactivity/AsyncResult";
@@ -83,6 +84,7 @@ function ActiveSshPasswordPrompt({
 }: {
   readonly request: DesktopSshPasswordPromptRequest;
 }) {
+  const uiText = useUiText();
   const [password, setPassword] = useState("");
   const [isResponding, setIsResponding] = useState(false);
   const [responseError, setResponseError] = useState<string | null>(null);
@@ -156,11 +158,13 @@ function ActiveSshPasswordPrompt({
     >
       <DialogPopup className="max-w-md" initialFocus={inputRef} showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>SSH verification required</DialogTitle>
+          <DialogTitle>{uiText("SSH verification required")}</DialogTitle>
           <DialogDescription>
-            Enter the password or verification code required by <code>{target}</code>. T3 Code
-            passes your response to the local SSH process and keeps it in memory to reuse for this
-            host. T3 Code does not write it to disk.
+            {uiText("Enter the password or verification code required by ")}
+            <code>{target}</code>
+            {uiText(
+              ". T3 Code passes your response to the local SSH process and keeps it in memory to reuse for this host. T3 Code does not write it to disk.",
+            )}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel scrollFade={false}>
@@ -183,7 +187,7 @@ function ActiveSshPasswordPrompt({
                         : "shrink-0 text-xs text-muted-foreground"
                     }
                   >
-                    {isExpired ? "Expired" : remainingLabel}
+                    {isExpired ? uiText("Expired") : remainingLabel}
                   </span>
                 ) : null}
               </div>
@@ -201,18 +205,19 @@ function ActiveSshPasswordPrompt({
               <p className="text-sm text-destructive">{visibleResponseError}</p>
             ) : (
               <p className="text-sm text-muted-foreground">
-                SSH keys may replace a password, but your server can still require a verification
-                code.
+                {uiText(
+                  "SSH keys may replace a password, but your server can still require a verification code.",
+                )}
               </p>
             )}
           </form>
         </DialogPanel>
         <DialogFooter>
           <Button disabled={isResponding} type="button" variant="outline" onClick={cancelPrompt}>
-            {isExpired ? "Dismiss" : "Cancel"}
+            {isExpired ? uiText("Dismiss") : uiText("Cancel")}
           </Button>
           <Button disabled={isResponding || isExpired} form={formId} type="submit">
-            Continue
+            {uiText("Continue")}
           </Button>
         </DialogFooter>
       </DialogPopup>

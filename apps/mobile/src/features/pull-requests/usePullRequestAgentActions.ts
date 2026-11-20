@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { PullRequestDetail } from "@t3tools/contracts";
 import {
   pullRequestAgentActions,
@@ -13,9 +14,10 @@ export function usePullRequestAgentActions(
   pr: PullRequestDetail | null,
   filePath?: string,
 ) {
+  const uiText = useUiText();
   const links = usePullRequestThreads(params, pr, filePath);
   const connected = usePullRequestConnected(params.environmentId);
-  const actions = pr ? pullRequestAgentActions(pr, links.canWatch) : [];
+  const actions = pr ? pullRequestAgentActions(pr, links.canWatch, uiText) : [];
   const disabled = links.busy || !pr || (connected && links.isPending && !links.threads.length);
   const start = (task: PullRequestAgentTask, threadId?: string) => {
     if (disabled) return;
@@ -32,17 +34,19 @@ export function usePullRequestAgentActions(
     ...links.threads.map((thread) => ({
       id: `${task}:${thread.id}`,
       title: thread.title,
-      subtitle: thread.archivedAt ? "Archived thread" : "Continue thread",
+      subtitle: thread.archivedAt ? uiText("Archived thread") : uiText("Continue thread"),
       image: "bubble.left.and.bubble.right",
       attributes: { disabled: task !== "ask" && Boolean(thread.archivedAt) },
     })),
-    ...(links.canAsk ? [{ id: `${task}:new`, title: "Start a new thread", image: "plus" }] : []),
+    ...(links.canAsk
+      ? [{ id: `${task}:new`, title: uiText("Start a new thread"), image: "plus" }]
+      : []),
   ];
   const menuAction = (task: PullRequestAgentTask) => {
     const action = actions.find((action) => action.task === task);
     return {
       id: task,
-      title: action?.title ?? "Open thread",
+      title: action?.title ?? uiText("Open thread"),
       image: action?.icon,
       attributes: { disabled: disabled || !links.canAsk || action?.disabled },
       ...(links.threads.length > 1 ? { subactions: threadActions(task) } : {}),

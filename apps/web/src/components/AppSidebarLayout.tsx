@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import * as Schema from "effect/Schema";
 import {
@@ -313,6 +314,7 @@ function registerAppShellCommands(router: AnyRouter, shellElement: Element): () 
 }
 
 function SidebarControl() {
+  const uiText = useUiText();
   const router = useRouter();
   const usagePageOpen = useLocation({ select: (location) => location.pathname === "/usage" });
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
@@ -389,12 +391,13 @@ function SidebarControl() {
                 "pointer-events-auto",
                 isSidebarVisible && stageBackdropVariant && "relative top-auto translate-y-0",
               )}
-              aria-label="Toggle main sidebar"
+              aria-label={uiText("Toggle main sidebar")}
             />
           }
         />
         <TooltipPopup side="bottom">
-          Toggle main sidebar{shortcutLabel ? ` (${shortcutLabel})` : ""}
+          {uiText("Toggle main sidebar")}
+          {shortcutLabel ? ` (${shortcutLabel})` : ""}
         </TooltipPopup>
       </Tooltip>
     </div>
@@ -402,6 +405,7 @@ function SidebarControl() {
 }
 
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
+  const uiText = useUiText();
   const sidebarArea = workspaceAreaProps("sidebar", 0, "Threads");
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
     observedKey: null,
@@ -457,7 +461,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           data-app-sidebar=""
           {...sidebarArea}
           role="navigation"
-          aria-label="Threads"
+          aria-label={uiText("Threads")}
           resizable={{
             maxWidth: sidebarMaximumWidth,
             minWidth: sidebarMinimumWidth,

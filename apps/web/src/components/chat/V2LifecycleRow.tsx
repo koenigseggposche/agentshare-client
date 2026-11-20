@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { translateUiLabels, uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { ThreadHoverCardPopup } from "../ThreadHoverCard";
 import { AgentElapsed } from "./AgentElapsed";
 import { projectedSubagentsToRuntime } from "@t3tools/client-runtime/state/subagentRuntime";
@@ -73,11 +76,12 @@ export function V2LifecycleRow(props: {
   readonly runs: ReadonlyArray<HandoffTimelineRun>;
   readonly onOpenThread: (threadId: ThreadId) => void;
 }) {
+  const uiText = useUiText();
   const { item } = props;
   if (item.type === "run_interrupt_result") {
     return (
       <TimelineSystemDivider
-        label="Run interrupted"
+        label={uiText("Run interrupted")}
         detail={item.message}
         icon={CircleStopIcon}
         wrapDetail
@@ -97,7 +101,11 @@ export function V2LifecycleRow(props: {
     const relatedThreadId = item.source.type === "run" ? item.source.threadId : item.targetThreadId;
     return (
       <TimelineSystemDivider
-        label={item.source.type === "run" ? "Forked from conversation" : "Conversation fork"}
+        label={
+          item.source.type === "run"
+            ? uiText("Forked from conversation")
+            : uiText("Conversation fork")
+        }
         icon={GitForkIcon}
         actionLabel={item.source.type === "run" ? "Open source conversation" : "Open fork"}
         onAction={() => props.onOpenThread(relatedThreadId)}
@@ -115,15 +123,15 @@ export function V2LifecycleRow(props: {
             <MessageSquareIcon className="size-4 text-secondary-label" aria-hidden />
           </span>
           <span className="min-w-0 flex-1 truncate text-sm font-medium">
-            {item.title ?? "Created thread"}
+            {item.title ?? uiText("Created thread")}
           </span>
           <Button
             size="xs"
             variant="outline"
-            aria-label={`Open ${item.title ?? "created thread"}`}
+            aria-label={uiText("Open {0}", [item.title ?? "created thread"])}
             onClick={() => props.onOpenThread(item.targetThreadId)}
           >
-            Open chat
+            {uiText("Open chat")}
           </Button>
         </div>
       );
@@ -132,13 +140,18 @@ export function V2LifecycleRow(props: {
       <WorkLogRow
         data-v2-item-type={item.type}
         icon={<AgentShareMark className="size-4 text-icon-muted" aria-hidden />}
-        label={<>Created thread{item.title ? ` · ${item.title}` : ""}</>}
+        label={
+          <>
+            {uiText("Created thread")}
+            {item.title ? ` · ${item.title}` : ""}
+          </>
+        }
         trailing={
           <InlineButton
-            aria-label={`Open ${item.title ?? "created thread"}`}
+            aria-label={uiText("Open {0}", [item.title ?? "created thread"])}
             onClick={() => props.onOpenThread(item.targetThreadId)}
           >
-            Open chat
+            {uiText("Open chat")}
           </InlineButton>
         }
       />
@@ -181,8 +194,11 @@ const STATUS_VISUALS: Record<
   interrupted: { dotClass: "bg-muted-foreground/60", label: "Stopped" },
 };
 
-function subagentStatusVisual(status: OrchestrationV2TurnItem["status"]) {
-  return STATUS_VISUALS[status];
+function subagentStatusVisual(
+  status: OrchestrationV2TurnItem["status"],
+  uiText: UiTranslator = uiTranslators.en,
+) {
+  return translateUiLabels(STATUS_VISUALS, uiText)[status];
 }
 
 const SETTLED_SUBAGENT_STATUSES = new Set<OrchestrationV2TurnItem["status"]>([
@@ -228,6 +244,7 @@ function SubagentAvatar({
   status?: OrchestrationV2TurnItem["status"] | undefined;
   className?: string;
 }) {
+  const uiText = useUiText();
   return (
     <span
       aria-hidden
@@ -255,7 +272,7 @@ function SubagentAvatar({
           className={cn(
             "absolute size-2 rounded-full ring-2 ring-background",
             showBadge ? "-left-px -top-px" : "-right-px -bottom-px",
-            subagentStatusVisual(status).dotClass,
+            subagentStatusVisual(status, uiText).dotClass,
           )}
         />
       ) : null}
@@ -351,6 +368,7 @@ export function SubagentNotificationLink(props: {
   readonly onOpenThread: (threadId: ThreadId) => void;
   readonly fallback: ReactNode;
 }) {
+  const uiText = useUiText();
   // Follow-up tasks share a child conversation; this notice reports a particular task result.
   const agent = useAtomValue(
     environmentThreadDetails.threadAtom(props.parentRef),
@@ -386,7 +404,11 @@ export function SubagentNotificationLink(props: {
             event: {
               status: NOTIFICATION_OUTCOME_STATUS[props.outcome],
               label: NOTIFICATION_OUTCOME_LABEL[props.outcome],
-              timestamp: formatShortTimestamp(props.createdAt, props.timestampFormat),
+              timestamp: formatShortTimestamp(
+                props.createdAt,
+                props.timestampFormat,
+                uiText.language,
+              ),
             },
           })}
     />
@@ -415,6 +437,7 @@ function SubagentTimelineLink(props: {
     readonly timestamp: string;
   };
 }) {
+  const uiText = useUiText();
   const agent = useAtomValue(
     environmentThreadDetails.threadAtom(props.parentRef),
     (thread) => thread?.projection.subagents.find((agent) => agent.id === props.subagentId) ?? null,
@@ -436,7 +459,7 @@ function SubagentTimelineLink(props: {
         : null;
   const liveStatus = agent?.status ?? props.status;
   const status = props.event ? props.event.status : liveStatus;
-  const statusLabel = props.event?.label ?? subagentStatusVisual(liveStatus).label;
+  const statusLabel = props.event?.label ?? subagentStatusVisual(liveStatus, uiText).label;
   const result = (agent?.result ?? props.result)?.trim();
   const progress = (agent?.progress ?? props.progress)?.trim();
   const settled = SETTLED_SUBAGENT_STATUSES.has(status ?? liveStatus);
@@ -464,7 +487,10 @@ function SubagentTimelineLink(props: {
             {props.title}
           </span>
           {remote !== undefined ? (
-            <span className="shrink-0 text-xs text-muted-foreground">on {remote.label}</span>
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {uiText("on ")}
+              {remote.label}
+            </span>
           ) : null}
         </span>
         <span
@@ -515,7 +541,7 @@ function SubagentTimelineLink(props: {
             <button
               type="button"
               data-v2-item-type="subagent"
-              aria-label={`Open ${props.title}`}
+              aria-label={uiText("Open {0}", [props.title])}
               aria-description={statusLabel}
               onClick={open}
               className={cn(
@@ -628,13 +654,14 @@ export function HandoffRow(props: {
   readonly pending?: boolean;
   readonly failed?: boolean;
 }) {
+  const uiText = useUiText();
   const { from: fromEndpoints, to } = props.endpoints;
   const settings = useAtomValue(serverEnvironment.settingsValueAtom(props.environmentId));
   const derived = deriveProviderInstanceEntries(props.providers);
   const entries = settings ? applyProviderInstanceSettings(derived, settings, null) : derived;
   return (
     <TimelineSystemDivider
-      label={props.pending ? "Context handoff pending" : "Context handoff"}
+      label={props.pending ? uiText("Context handoff pending") : uiText("Context handoff")}
       icon={ArrowRightLeftIcon}
       showDetailSeparator={false}
       tone={props.failed ? "danger" : "neutral"}

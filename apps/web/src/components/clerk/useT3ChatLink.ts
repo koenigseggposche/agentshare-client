@@ -1,3 +1,6 @@
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
+
+import { useUiText } from "../../i18n/uiText";
 import { findErrorTraceId } from "@t3tools/client-runtime/errors";
 import {
   isAtomCommandInterrupted,
@@ -14,12 +17,12 @@ import { readLocalApi } from "../../localApi";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { toastManager } from "../ui/toast";
 
-function reportFailure(title: string, cause: unknown) {
+function reportFailure(title: string, cause: unknown, uiText: UiTranslator = uiTranslators.en) {
   const traceId = findErrorTraceId(cause);
   toastManager.add({
     type: "error",
     title,
-    description: cause instanceof Error ? cause.message : "Try again.",
+    description: cause instanceof Error ? cause.message : uiText("Try again."),
     data: traceId
       ? {
           secondaryActionProps: {
@@ -33,11 +36,14 @@ function reportFailure(title: string, cause: unknown) {
 
 /** Starts and removes the T3 Chat link that raises the T3 Connect tunnel cap. */
 export function useT3ChatLink() {
+  const uiText = useUiText();
   const linkState = useManagedRelayT3ChatLink();
   const createLinkRequest = useAtomCommand(createManagedRelayT3ChatLinkRequestCommand, {
     reportFailure: false,
   });
-  const unlinkCommand = useAtomCommand(unlinkManagedRelayT3ChatCommand, { reportFailure: false });
+  const unlinkCommand = useAtomCommand(unlinkManagedRelayT3ChatCommand, {
+    reportFailure: false,
+  });
   const [pending, setPending] = useState<"link" | "unlink" | null>(null);
   // Kept so a blocked popup still leaves the user a link to open.
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
@@ -53,7 +59,7 @@ export function useT3ChatLink() {
         ?.shell.openExternal(result.value)
         .catch(() => undefined);
     } else if (!isAtomCommandInterrupted(result)) {
-      reportFailure("Could not start linking", squashAtomCommandFailure(result));
+      reportFailure("Could not start linking", squashAtomCommandFailure(result), uiText);
     }
     setPending(null);
   };
@@ -67,7 +73,7 @@ export function useT3ChatLink() {
       setLinkUrl(null);
       linkState.refresh();
     } else if (!isAtomCommandInterrupted(result)) {
-      reportFailure("Could not unlink T3 Chat", squashAtomCommandFailure(result));
+      reportFailure("Could not unlink T3 Chat", squashAtomCommandFailure(result), uiText);
     }
     setPending(null);
   };

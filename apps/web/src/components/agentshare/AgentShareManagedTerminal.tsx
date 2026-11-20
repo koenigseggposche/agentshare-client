@@ -19,24 +19,26 @@ import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../
 
 export function AgentShareManagedTerminal({
   environmentId,
+  initialDirectory,
   owner,
   supported,
   visible,
   language,
 }: {
   environmentId: EnvironmentId;
+  initialDirectory: string;
   owner: string;
   supported: boolean;
   visible: boolean;
   language: "zh" | "en";
 }) {
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
-  const [expanded, setExpanded] = useState(false);
-  const [directory, setDirectory] = useState("");
+  const [expanded, setExpanded] = useState(true);
+  const [directory, setDirectory] = useState(initialDirectory);
   const [selection, setSelection] = useState("");
   const [active, setActive] = useState<{ terminalId: string; cwd: string } | null>(null);
   const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ zh: string; en: string } | null>(null);
   const busy = useRef(false);
   const threadId = managedTerminalThreadId(owner);
   const projects = useProjects().filter((project) => project.environmentId === environmentId);
@@ -75,19 +77,19 @@ export function AgentShareManagedTerminal({
     if (result !== "open-unconfirmed") setActive({ terminalId, cwd });
     setMessage(
       result === "submitted"
-        ? t(
-            "启动命令已发送。请在终端中继续操作。",
-            "Launch command sent. Continue in the terminal.",
-          )
+        ? {
+            zh: "启动命令已发送。请在终端中继续操作。",
+            en: "Launch command sent. Continue in the terminal.",
+          }
         : result === "open-unconfirmed"
-          ? t(
-              "未能确认终端已打开。请检查执行电脑上的目录及终端权限，或从列表连接已有终端；不会自动重发命令。",
-              "Terminal opening could not be confirmed. Check the host directory and terminal permissions, or select an existing terminal; the command will not be resent automatically.",
-            )
-          : t(
-              "无法确认启动结果。请先检查终端；不会自动重发命令。",
-              "Launch outcome is unknown. Check the terminal; the command will not be resent automatically.",
-            ),
+          ? {
+              zh: "未能确认终端已打开。请检查执行电脑上的目录及终端权限，或从列表连接已有终端；不会自动重发命令。",
+              en: "Terminal opening could not be confirmed. Check the host directory and terminal permissions, or select an existing terminal; the command will not be resent automatically.",
+            }
+          : {
+              zh: "无法确认启动结果。请先检查终端；不会自动重发命令。",
+              en: "Launch outcome is unknown. Check the terminal; the command will not be resent automatically.",
+            },
     );
     setPending(false);
     busy.current = false;
@@ -103,11 +105,11 @@ export function AgentShareManagedTerminal({
     if (result?._tag === "Success") setActive(null);
     setMessage(
       result?._tag === "Success"
-        ? t("终端已停止。", "Terminal stopped.")
-        : t(
-            "未能确认停止结果，请检查终端状态。",
-            "Stop outcome is unknown. Check terminal status.",
-          ),
+        ? { zh: "终端已停止。", en: "Terminal stopped." }
+        : {
+            zh: "未能确认停止结果，请检查终端状态。",
+            en: "Stop outcome is unknown. Check terminal status.",
+          },
     );
     setPending(false);
     busy.current = false;
@@ -208,7 +210,7 @@ export function AgentShareManagedTerminal({
             {query.error ? (
               <p role="alert">{t("模型目录暂时不可用。", "The model catalog is unavailable.")}</p>
             ) : null}
-            {message ? <p role="status">{message}</p> : null}
+            {message ? <p role="status">{message[language]}</p> : null}
             <div className="flex flex-wrap gap-2">
               {sessions.map((session) => (
                 <Button

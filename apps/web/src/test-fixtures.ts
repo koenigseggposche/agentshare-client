@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { presentThreadShell } from "@t3tools/client-runtime/state/shell";
 import {
   EnvironmentId,
@@ -22,7 +24,9 @@ export type ThreadFixtureOverrides = Partial<Thread> & {
   readonly proposedPlans?: ReadonlyArray<unknown>;
 };
 
-export function makeThreadProjectionFixture(): OrchestrationV2ThreadProjection {
+export function makeThreadProjectionFixture(
+  uiText: UiTranslator = uiTranslators.en,
+): OrchestrationV2ThreadProjection {
   const now = DateTime.makeUnsafe(DEFAULT_TIMESTAMP);
   const id = ThreadId.make("thread-test");
   const providerInstanceId = ProviderInstanceId.make("codex");
@@ -30,7 +34,7 @@ export function makeThreadProjectionFixture(): OrchestrationV2ThreadProjection {
     thread: {
       id,
       projectId: ProjectId.make("project-test"),
-      title: "Thread",
+      title: uiText("Thread"),
       providerInstanceId,
       modelSelection: { instanceId: providerInstanceId, model: "gpt-5.4" },
       runtimeMode: "full-access",

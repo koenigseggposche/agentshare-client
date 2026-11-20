@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import { localizeModelConnectionMessage } from "@t3tools/client-runtime/errors";
 import { useClientSettings } from "../../hooks/useSettings";
 import type { OrchestrationV2ProviderFailureClass } from "@t3tools/contracts";
@@ -21,10 +23,10 @@ function copyAdminRequest() {
     () =>
       toastManager.add({
         type: "success",
-        title: "Request copied",
-        description: "Send it to your workspace admin.",
+        title: readUiText("Request copied"),
+        description: readUiText("Send it to your workspace admin."),
       }),
-    () => toastManager.add({ type: "error", title: "Could not copy the request" }),
+    () => toastManager.add({ type: "error", title: readUiText("Could not copy the request") }),
   );
 }
 
@@ -82,6 +84,7 @@ export const ThreadErrorBanner = memo(function ThreadErrorBanner({
   errorCode?: string | null;
   onDismiss?: () => void;
 }) {
+  const uiText = useUiText();
   const language = useClientSettings((settings) => settings.uiLanguage);
   if (!error) return null;
   const workspaceLimit = errorCode === CHATGPT_WORKSPACE_USAGE_LIMIT_CODE;
@@ -98,11 +101,13 @@ export const ThreadErrorBanner = memo(function ThreadErrorBanner({
         <AlertDescription>
           {chatGptLimit ? (
             <div className="space-y-1">
-              <p className="font-medium">ChatGPT usage limit reached</p>
+              <p className="font-medium">{uiText("ChatGPT usage limit reached")}</p>
               <p>
                 {workspaceLimit
-                  ? "You've reached your workspace's limit for using your ChatGPT plan in other apps. Copy a request to ask your workspace admin for increased usage limits."
-                  : "Review your usage settings in ChatGPT."}
+                  ? uiText(
+                      "You've reached your workspace's limit for using your ChatGPT plan in other apps. Copy a request to ask your workspace admin for increased usage limits.",
+                    )
+                  : uiText("Review your usage settings in ChatGPT.")}
               </p>
             </div>
           ) : (
@@ -119,7 +124,7 @@ export const ThreadErrorBanner = memo(function ThreadErrorBanner({
           <AlertAction>
             {workspaceLimit ? (
               <Button variant="default" size="sm" onClick={copyAdminRequest}>
-                Copy request for admin
+                {uiText("Copy request for admin")}
               </Button>
             ) : chatGptLimit ? (
               <ChatGptUsageButton variant="default" size="sm" />

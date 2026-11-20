@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { EnvironmentServerConfig } from "@t3tools/client-runtime/connection";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
 import type { Dispatch } from "react";
@@ -137,6 +138,7 @@ interface ThreadLifecycleInput {
  * banners, opening related threads, and standalone slash commands.
  */
 export function useThreadLifecycle(input: ThreadLifecycleInput) {
+  const uiText = useUiText();
   const {
     environmentId,
     routeThreadKey,
@@ -246,8 +248,8 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Failed to un-settle thread",
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: uiText("Failed to un-settle thread"),
+          description: error instanceof Error ? error.message : uiText("An error occurred."),
         }),
       );
     }
@@ -291,8 +293,8 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Failed to wake thread",
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: uiText("Failed to wake thread"),
+          description: error instanceof Error ? error.message : uiText("An error occurred."),
         }),
       );
     }
@@ -359,8 +361,8 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Failed to switch checkout",
-            description: chatActionErrorMessage(squashAtomCommandFailure(checkoutResult)),
+            title: uiText("Failed to switch checkout"),
+            description: chatActionErrorMessage(squashAtomCommandFailure(checkoutResult), uiText),
           }),
         );
       }
@@ -383,8 +385,8 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
           toastManager.add(
             stackedThreadToast({
               type: "error",
-              title: "Checkout switched, but the thread could not be updated",
-              description: chatActionErrorMessage(squashAtomCommandFailure(updateResult)),
+              title: uiText("Checkout switched, but the thread could not be updated"),
+              description: chatActionErrorMessage(squashAtomCommandFailure(updateResult), uiText),
             }),
           );
         }
@@ -484,7 +486,7 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
     }
     const shell = readThreadShell(threadRef);
     if (shell === null ? !shellOmitsChildren && isEnvironmentLive() : shell.deletedAt != null) {
-      toastManager.add({ type: "info", title: "This thread is no longer available" });
+      toastManager.add({ type: "info", title: uiText("This thread is no longer available") });
       return;
     }
     if (activeThreadRef && openSideChatTab(activeThreadRef, shell)) return;
@@ -612,7 +614,11 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
   const threadStatusLine = activeThreadSnoozed ? (
     <ThreadStatusLine
       icon={<AlarmClockIcon />}
-      label={snoozeWake && snoozeWake !== "now" ? `Snoozed, ${snoozeWake} left` : "Snoozed"}
+      label={
+        snoozeWake && snoozeWake !== "now"
+          ? uiText("Snoozed, {0} left", [snoozeWake])
+          : uiText("Snoozed")
+      }
       clockMinute={nowMinute}
       actionLabel={isUnsnoozing ? "Waking..." : "Wake now"}
       actionDisabled={!canOperateThread || isUnsnoozing}
@@ -621,7 +627,9 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
   ) : activeThreadSettled ? (
     <ThreadStatusLine
       icon={<CheckCircle2Icon />}
-      label={settledAt ? `Settled ${formatRelativeTimeLabel(settledAt)}` : "Settled"}
+      label={
+        settledAt ? uiText("Settled {0}", [formatRelativeTimeLabel(settledAt)]) : uiText("Settled")
+      }
       clockMinute={nowMinute}
       actionLabel={isUnsettling ? "Un-settling..." : "Un-settle"}
       actionDisabled={!canOperateThread || isUnsettling}
@@ -630,7 +638,7 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
   ) : activeThreadWokeVisible ? (
     <ThreadStatusLine
       icon={<AlarmClockIcon />}
-      label="Woke from snooze"
+      label={uiText("Woke from snooze")}
       actionLabel="Dismiss"
       onAction={acknowledgeActiveThreadWokeStable}
     />
@@ -643,7 +651,7 @@ export function useThreadLifecycle(input: ThreadLifecycleInput) {
         stackedThreadToast({
           type: "error",
           title,
-          description: error instanceof Error ? error.message : "An error occurred.",
+          description: error instanceof Error ? error.message : uiText("An error occurred."),
         }),
       );
     };

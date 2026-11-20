@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { localizeModelConnectionMessage } from "@t3tools/client-runtime/errors";
 import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { TaskChargesButton } from "./TaskChargesButton";
@@ -850,6 +851,7 @@ function WorkspacePreparationRetryButton(props: {
   readonly threadId: ThreadId;
   readonly runId: RunId;
 }) {
+  const uiText = useUiText();
   const retryable = useAtomValue(
     environmentThreadDetails.threadAtom(scopeThreadRef(props.environmentId, props.threadId)),
     (thread) => {
@@ -863,9 +865,9 @@ function WorkspacePreparationRetryButton(props: {
   return (
     <View className="ml-7 mt-2">
       <Button
-        label="Retry"
+        label={uiText("Retry")}
         tone="secondary"
-        accessibilityLabel="Retry workspace preparation"
+        accessibilityLabel={uiText("Retry workspace preparation")}
         disabled={busy}
         onPress={() => {
           setBusy(true);
@@ -931,6 +933,7 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
     readonly expanded: boolean;
   },
 ) {
+  const uiText = useUiText();
   const { row, expanded } = props;
   const language = useWorkbenchLanguage();
   const openLinkedThread = useOpenLinkedThread();
@@ -949,7 +952,7 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
     const resetAt = failureItem.failure.resetAt;
     // The reset time is the viewer's local time; naming the zone keeps it unambiguous.
     const resetTime = resetAt
-      ? `${new Date(resetAt).toLocaleString(undefined, {
+      ? `${new Date(resetAt).toLocaleString(uiText.language, {
           month: "short",
           day: "numeric",
           hour: "numeric",
@@ -966,7 +969,7 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
     const errorRow = (
       <WorkLogPressable
         accessibilityLabel={warning ? label : `${label}: ${detail}`}
-        accessibilityHint="Long press to copy."
+        accessibilityHint={uiText("Long press to copy.")}
         onLongPress={() => props.onCopyRow(row.id, row.getCopyText())}
       >
         <View className="flex-1 py-1">
@@ -989,14 +992,14 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
             </Text>
             {props.copied ? (
               <Text className="pr-1 font-t3-medium text-3xs text-adaptive-emerald-600-400">
-                Copied
+                {uiText("Copied")}
               </Text>
             ) : null}
             <Text
-              accessibilityLabel={timestamp.toLocaleString()}
+              accessibilityLabel={timestamp.toLocaleString(uiText.language)}
               className="shrink-0 text-xs text-foreground-subtle"
             >
-              {timestamp.toLocaleString(undefined, {
+              {timestamp.toLocaleString(uiText.language, {
                 month: "short",
                 day: "numeric",
                 hour: "numeric",
@@ -1081,7 +1084,8 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
   const exitLine =
     failedExitCode === null ? null : (
       <Text className="mt-1.5 font-mono text-2xs leading-normal text-danger-foreground">
-        exit {failedExitCode}
+        {uiText("exit ")}
+        {failedExitCode}
       </Text>
     );
   const toolPresentation = resolveWorkEntryToolPresentation(row.workEntry);
@@ -1112,13 +1116,17 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
         accessibilityRole={
           notifiedSubagentThreadId !== undefined ? "link" : canExpand ? "button" : undefined
         }
-        accessibilityLabel={failed ? `${accessiblePreview}, tool call failed` : accessiblePreview}
+        accessibilityLabel={
+          failed ? uiText("{0}, tool call failed", [accessiblePreview]) : accessiblePreview
+        }
         accessibilityHint={
           notifiedSubagentThreadId !== undefined
-            ? "Opens this agent's thread. Long press to copy."
+            ? uiText("Opens this agent's thread. Long press to copy.")
             : canExpand
-              ? `Double tap to ${expanded ? "hide" : "show"} full details. Long press to copy.`
-              : "Long press to copy."
+              ? uiText("Double tap to {0} full details. Long press to copy.", [
+                  expanded ? "hide" : "show",
+                ])
+              : uiText("Long press to copy.")
         }
         accessibilityState={canExpand ? { expanded } : undefined}
         onPress={() => {
@@ -1195,7 +1203,7 @@ const ThreadWorkLogRow = function ThreadWorkLogRow(
         <View className="shrink-0 flex-row items-center gap-px">
           {props.copied ? (
             <Text className="pr-1 font-t3-medium text-3xs text-adaptive-emerald-600-400">
-              Copied
+              {uiText("Copied")}
             </Text>
           ) : null}
           {failed && toolIcon !== undefined ? (
@@ -1393,6 +1401,7 @@ export function ThreadWorkGroupToggle(props: {
   readonly trailing?: ReactNode;
   readonly onToggle: () => void;
 }) {
+  const uiText = useUiText();
   const statusLabel = props.hasFailure ? `${props.summary}, tool call failed` : props.summary;
   const accessibilityLabel = props.thought ? `${props.thought} ${statusLabel}` : statusLabel;
   const icon =
@@ -1429,7 +1438,11 @@ export function ThreadWorkGroupToggle(props: {
             accessibilityRole="button"
             accessibilityState={{ expanded: props.expanded }}
             accessibilityLabel={accessibilityLabel}
-            accessibilityHint={`Double tap to ${props.expanded ? "hide" : "show"} ${props.hiddenCount} tool ${props.hiddenCount === 1 ? "call" : "calls"}.`}
+            accessibilityHint={uiText("Double tap to {0} {1} tool {2}.", [
+              props.expanded ? "hide" : "show",
+              props.hiddenCount,
+              props.hiddenCount === 1 ? "call" : "calls",
+            ])}
             onPress={() => {
               void Haptics.selectionAsync();
               props.onToggle();
@@ -1479,10 +1492,11 @@ export function ThreadThinkingRow(props: {
   readonly rowSizing: ReturnType<typeof deriveThreadWorkLogSizing>;
   readonly iconSubtleColor: ColorValue;
 }) {
+  const uiText = useUiText();
   return (
     <View
       accessible
-      accessibilityLabel="Thinking"
+      accessibilityLabel={uiText("Thinking")}
       className="-mx-1 min-h-8 flex-row items-center px-1.5 py-0"
       style={{ minHeight: props.rowSizing.estimatedRowHeight }}
     >
@@ -1490,7 +1504,7 @@ export function ThreadThinkingRow(props: {
         key={props.rowSizing.textSizeKey}
         icon="brain"
         iconSubtleColor={props.iconSubtleColor}
-        label="Thinking"
+        label={uiText("Thinking")}
         showIcon
       />
     </View>

@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import {
   StackActions,
@@ -225,7 +226,10 @@ async function openProjectDraft(project: EnvironmentProject, request: LinkedDraf
   try {
     await waitForComposerDraftsLoaded();
   } catch {
-    Dialog.alert("Could not open link", "Drafts could not be loaded, so the prompt was not added.");
+    Dialog.alert(
+      readUiText("Could not open link"),
+      readUiText("Drafts could not be loaded, so the prompt was not added."),
+    );
     return;
   }
   const draftKey = createNewTaskDraft({
@@ -263,7 +267,9 @@ async function openProjectDraft(project: EnvironmentProject, request: LinkedDraf
     StackActions.push("Thread", {
       draft: {
         draftId: draftKey,
-        title: request.pullRequest ? `PR #${request.pullRequest.number}` : project.title,
+        title: request.pullRequest
+          ? readUiText("PR #{0}", [request.pullRequest.number])
+          : project.title,
       },
     }),
   );
@@ -295,8 +301,8 @@ async function openScratchDraft(request: LinkedDraftRequest) {
   );
   if (environmentId === null) {
     Dialog.alert(
-      "Could not start without a project",
-      "No connected environment offers threads without a project.",
+      readUiText("Could not start without a project"),
+      readUiText("No connected environment offers threads without a project."),
     );
     return;
   }
@@ -310,10 +316,10 @@ async function openScratchDraft(request: LinkedDraftRequest) {
     if (!isAtomCommandInterrupted(result)) {
       const error = squashAtomCommandFailure(result);
       Dialog.alert(
-        "Could not start without a project",
+        readUiText("Could not start without a project"),
         error instanceof Error
           ? error.message
-          : "The folder for threads without a project could not be created.",
+          : readUiText("The folder for threads without a project could not be created."),
       );
     }
     return;
@@ -328,7 +334,7 @@ function cloneRepository(repository: PromptLinkRepository, request: LinkedDraftR
     appAtomRegistry.get(workspaceConnections.environmentsAtom)[0]?.environmentId ??
     null;
   if (environmentId === null) {
-    Dialog.alert("Could not clone", "Connect an environment first.");
+    Dialog.alert(readUiText("Could not clone"), readUiText("Connect an environment first."));
     return;
   }
   const prompt =
@@ -364,7 +370,7 @@ function resolveLink(linkSearch: string) {
   const threads = appAtomRegistry.get(environmentThreadShells.threadShellsAtom);
   const parsed = parseNewThreadLink(linkSearch);
   if (!parsed.ok) {
-    Dialog.alert("Could not open link", parsed.error);
+    Dialog.alert(readUiText("Could not open link"), parsed.error);
     return;
   }
   const link = parsed.value;
@@ -409,11 +415,20 @@ function resolveLink(linkSearch: string) {
     })();
     return;
   }
-  Dialog.alert(`You don't have ${promptLinkRepositoryName(repository)}`, undefined, [
-    { text: "Cancel", style: "cancel" },
-    ...(request.prompt
-      ? [{ text: "Use without project", onPress: () => void openScratchDraft(request) }]
-      : []),
-    { text: "Clone", onPress: () => cloneRepository(repository, request) },
-  ]);
+  Dialog.alert(
+    readUiText("You don't have {0}", [promptLinkRepositoryName(repository)]),
+    undefined,
+    [
+      { text: readUiText("Cancel"), style: "cancel" },
+      ...(request.prompt
+        ? [
+            {
+              text: readUiText("Use without project"),
+              onPress: () => void openScratchDraft(request),
+            },
+          ]
+        : []),
+      { text: readUiText("Clone"), onPress: () => cloneRepository(repository, request) },
+    ],
+  );
 }

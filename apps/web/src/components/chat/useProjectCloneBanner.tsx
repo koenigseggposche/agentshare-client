@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useStableCallback } from "../../hooks/useStableCallback";
 import {
   isAtomCommandInterrupted,
@@ -23,6 +24,7 @@ import { Button } from "../ui/button";
  * retry, and remove actions, and the reason sending waits until it is done.
  */
 export function useProjectCloneBanner(activeProjectRef: ScopedProjectRef | null) {
+  const uiText = useUiText();
   const activeProjectClone = useProjectClone(activeProjectRef);
   const cancelProjectClone = useAtomCommand(sourceControlEnvironment.cancelProjectClone, {
     reportFailure: false,
@@ -42,7 +44,7 @@ export function useProjectCloneBanner(activeProjectRef: ScopedProjectRef | null)
         stackedThreadToast({
           type: "error",
           title,
-          description: error instanceof Error ? error.message : "An error occurred.",
+          description: error instanceof Error ? error.message : uiText("An error occurred."),
         }),
       );
     }
@@ -78,7 +80,7 @@ export function useProjectCloneBanner(activeProjectRef: ScopedProjectRef | null)
         id: `project-clone:${projectId}`,
         variant: "info",
         icon: <DownloadIcon />,
-        title: `Cloning ${name}`,
+        title: uiText("Cloning {0}", [name]),
         description: projectCloneProgressSummary(activeProjectClone),
         actions: (
           <Button
@@ -90,7 +92,7 @@ export function useProjectCloneBanner(activeProjectRef: ScopedProjectRef | null)
               )
             }
           >
-            Cancel
+            {uiText("Cancel")}
           </Button>
         ),
       };
@@ -100,8 +102,12 @@ export function useProjectCloneBanner(activeProjectRef: ScopedProjectRef | null)
       id: `project-clone:${projectId}`,
       variant: cancelled ? "warning" : "error",
       icon: <DownloadIcon />,
-      title: cancelled ? `Cancelled cloning ${name}` : `Failed to clone ${name}`,
-      description: cancelled ? "Retry to bring in the repository." : activeProjectClone.error,
+      title: cancelled
+        ? uiText("Cancelled cloning {0}", [name])
+        : uiText("Failed to clone {0}", [name]),
+      description: cancelled
+        ? uiText("Retry to bring in the repository.")
+        : activeProjectClone.error,
       actions: (
         <>
           <Button
@@ -109,7 +115,7 @@ export function useProjectCloneBanner(activeProjectRef: ScopedProjectRef | null)
             variant="ghost"
             onClick={() => void removeClonedProject({ environmentId, projectId })}
           >
-            Remove project
+            {uiText("Remove project")}
           </Button>
           <Button
             size="xs"
@@ -120,7 +126,7 @@ export function useProjectCloneBanner(activeProjectRef: ScopedProjectRef | null)
               )
             }
           >
-            Retry
+            {uiText("Retry")}
           </Button>
         </>
       ),

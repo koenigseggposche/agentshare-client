@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { type EnvironmentContextRecord, resolveEnvironmentMachineKind } from "@t3tools/contracts";
 
 import { useEnvironment } from "~/state/environments";
@@ -13,6 +14,7 @@ export function EnvironmentContextChip(props: {
   record: Pick<EnvironmentContextRecord, "environmentId" | "label">;
   copyMarkdown?: string;
 }) {
+  const uiText = useUiText();
   const environment = useEnvironment(props.record.environmentId);
   const label = environment?.label.trim() || props.record.label;
   return (
@@ -22,7 +24,7 @@ export function EnvironmentContextChip(props: {
           <ContextChip
             kind="environment"
             tabIndex={0}
-            aria-label={`Machine, ${label}`}
+            aria-label={uiText("Machine, {0}", [label])}
             data-markdown-copy={props.copyMarkdown}
           >
             <EnvironmentMachineIcon
@@ -33,7 +35,7 @@ export function EnvironmentContextChip(props: {
         }
       />
       <TooltipPopup side="top">
-        {environment ? "T3 Code environment" : "Machine not in this app"}
+        {environment ? uiText("T3 Code environment") : uiText("Machine not in this app")}
       </TooltipPopup>
     </Tooltip>
   );

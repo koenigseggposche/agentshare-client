@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import { useAtom, useAtomValue } from "@effect/atom-react";
 import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
@@ -53,6 +55,7 @@ export function SettingsEnvironmentDetailRouteScreen({
 }
 
 function EnvironmentDetail({ environmentId }: { readonly environmentId: EnvironmentId }) {
+  const uiText = useUiText();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const connections = useRemoteConnections();
@@ -122,12 +125,17 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
     if (disabled || !targetVersion || !capabilities || !supportsEnvironmentUpdate(capabilities))
       return;
     Dialog.alert(
-      `Update ${environment?.environmentLabel ?? "environment"}?`,
-      `Install AgentShare Client ${targetVersion}. ${capabilities.serverSelfUpdate === "desktop-managed" ? "The desktop app will close and relaunch." : "The server will restart and reconnect."} Running threads may be interrupted.`,
+      readUiText("Update {0}?", [environment?.environmentLabel ?? "environment"]),
+      readUiText("Install AgentShare Client {0}. {1} Running threads may be interrupted.", [
+        targetVersion,
+        capabilities.serverSelfUpdate === "desktop-managed"
+          ? "The desktop app will close and relaunch."
+          : "The server will restart and reconnect.",
+      ]),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: readUiText("Cancel"), style: "cancel" },
         {
-          text: "Update",
+          text: readUiText("Update"),
           onPress: () =>
             void run("server", async () => {
               if (
@@ -172,7 +180,7 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
   }
 
   return (
-    <SettingsScreen title={environment?.environmentLabel ?? "Environment"}>
+    <SettingsScreen title={environment?.environmentLabel ?? uiText("Environment")}>
       <ScreenScrollView
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1"
@@ -181,11 +189,11 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
       >
         {!environment ? (
           <Text className="text-base text-foreground-muted">
-            This environment is no longer saved on this device.
+            {uiText("This environment is no longer saved on this device.")}
           </Text>
         ) : (
           <>
-            <SettingsSection title="Connection">
+            <SettingsSection title={uiText("Connection")}>
               <ConnectionEnvironmentRow
                 environment={environment}
                 expanded={connectionExpanded}
@@ -214,7 +222,7 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
               />
             ) : !connected ? (
               <Text className="px-2 text-sm text-foreground-muted">
-                Connect this environment to manage it.
+                {uiText("Connect this environment to manage it.")}
               </Text>
             ) : !allowed ? (
               <Text className="px-2 text-sm text-foreground-muted">
@@ -225,7 +233,7 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                       rejected:
                         !AsyncResult.isFailure(sessionResult) && session?.authenticated === false,
                     })
-                  : "This connection does not have permission to manage the environment."}
+                  : uiText("This connection does not have permission to manage the environment.")}
               </Text>
             ) : null}
             {error ? (
@@ -236,12 +244,16 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
             {notice ? <Text className="px-2 text-sm text-foreground-muted">{notice}</Text> : null}
             {config && !outdated ? (
               <>
-                <SettingsSection title="AgentShare Client">
+                <SettingsSection title={uiText("AgentShare Client")}>
                   <View className="gap-1 p-4">
-                    <Text className="text-base text-foreground">Version {version}</Text>
+                    <Text className="text-base text-foreground">
+                      {uiText("Version ")}
+                      {version}
+                    </Text>
                     {managedPolicy ? (
                       <Text className="text-sm text-foreground-muted">
-                        Managed by {managedPolicy.organization}
+                        {uiText("Managed by ")}
+                        {managedPolicy.organization}
                       </Text>
                     ) : null}
                     {updatesDenial ? (
@@ -250,8 +262,8 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                     {running ? (
                       <Text className="text-sm text-foreground-muted">
                         {updateState.stage === "resuming"
-                          ? "Restarting and reconnecting…"
-                          : "Downloading update…"}
+                          ? uiText("Restarting and reconnecting…")
+                          : uiText("Downloading update…")}
                       </Text>
                     ) : updateState.status === "failed" ? (
                       <Text selectable className="text-sm text-danger-foreground">
@@ -261,8 +273,8 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                     {checkedRelease && !updatesDenial ? (
                       <Text className="text-sm text-foreground-muted">
                         {checkedRelease.targetVersion
-                          ? `Version ${checkedRelease.targetVersion} is available.`
-                          : "You are up to date."}
+                          ? uiText("Version {0} is available.", [checkedRelease.targetVersion])
+                          : uiText("You are up to date.")}
                       </Text>
                     ) : null}
                     {checkedRelease?.targetVersion &&
@@ -270,22 +282,22 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                     !supportsEnvironmentUpdate(config.environment.capabilities) ? (
                       <Text className="text-sm text-foreground-muted">
                         {capabilities?.serverSelfUpdate === "desktop-managed"
-                          ? "Update the desktop app on this machine."
-                          : "Update and restart AgentShare Client on this machine."}
+                          ? uiText("Update the desktop app on this machine.")
+                          : uiText("Update and restart AgentShare Client on this machine.")}
                       </Text>
                     ) : null}
                   </View>
                   {supportUrl ? (
                     <SettingsActionRow
                       icon="questionmark.bubble"
-                      label={`Get help from ${managedPolicy.organization}`}
+                      label={uiText("Get help from {0}", [managedPolicy.organization])}
                       onPress={() => void Linking.openURL(supportUrl).catch(() => undefined)}
                     />
                   ) : null}
                   {updatesDenial ? null : (
                     <SettingsActionRow
                       icon="arrow.clockwise"
-                      label="Check for updates"
+                      label={uiText("Check for updates")}
                       disabled={disabled}
                       loading={pending === "check"}
                       onPress={() => {
@@ -304,17 +316,17 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                   supportsEnvironmentUpdate(config.environment.capabilities) ? (
                     <SettingsActionRow
                       icon="arrow.up.circle"
-                      label={`Update to ${checkedRelease.targetVersion}`}
+                      label={uiText("Update to {0}", [checkedRelease.targetVersion])}
                       disabled={disabled}
                       loading={pending === "server" || running}
                       onPress={requestServerUpdate}
                     />
                   ) : null}
                 </SettingsSection>
-                <SettingsSection title="Providers">
+                <SettingsSection title={uiText("Providers")}>
                   <SettingsActionRow
                     icon="arrow.clockwise"
-                    label="Refresh providers"
+                    label={uiText("Refresh providers")}
                     disabled={busy || !canRead}
                     loading={pending === "refresh"}
                     onPress={() => {
@@ -348,10 +360,10 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                           </View>
                           <Text className="text-sm text-foreground-muted">
                             {provider.installed
-                              ? (provider.version ?? "Version unknown")
-                              : "Not installed"}
+                              ? (provider.version ?? uiText("Version unknown"))
+                              : uiText("Not installed")}
                             {provider.versionAdvisory?.latestVersion
-                              ? ` · Latest ${provider.versionAdvisory.latestVersion}`
+                              ? uiText(" · Latest {0}", [provider.versionAdvisory.latestVersion])
                               : ""}
                           </Text>
                           {provider.updateState && provider.updateState.status !== "idle" ? (
@@ -364,7 +376,7 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                               }
                             >
                               {provider.updateState.message ??
-                                `Update ${provider.updateState.status}`}
+                                uiText("Update {0}", [provider.updateState.status])}
                             </Text>
                           ) : null}
                           {provider.compatibilityAdvisory?.message ? (
@@ -380,14 +392,14 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
                           {provider.versionAdvisory?.status === "behind_latest" &&
                           !provider.versionAdvisory.canUpdate ? (
                             <Text className="text-sm text-foreground-muted">
-                              Update this provider on the environment's machine.
+                              {uiText("Update this provider on the environment's machine.")}
                             </Text>
                           ) : null}
                         </View>
                         {canUpdateEnvironmentProvider(provider) ? (
                           <SettingsActionRow
                             icon="arrow.up.circle"
-                            label={`Update ${provider.displayName ?? provider.driver}`}
+                            label={uiText("Update {0}", [provider.displayName ?? provider.driver])}
                             disabled={busy || !canManageProviders}
                             loading={pending === provider.instanceId}
                             onPress={() => requestProviderUpdate(provider)}

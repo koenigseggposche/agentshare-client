@@ -1,3 +1,4 @@
+import { readUiText } from "../i18n/uiText";
 import { useAtomRefresh, useAtomValue } from "@effect/atom-react";
 import { Atom, AsyncResult } from "effect/reactivity";
 import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
@@ -153,8 +154,8 @@ export function useAttachmentDocument(input: {
     if (AsyncResult.isFailure(result)) {
       const cause = squashAtomCommandFailure(result);
       Dialog.alert(
-        "Could not share file",
-        cause instanceof Error ? cause.message : "Please try again.",
+        readUiText("Could not share file"),
+        cause instanceof Error ? cause.message : readUiText("Please try again."),
       );
     }
   };

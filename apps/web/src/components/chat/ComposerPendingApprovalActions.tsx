@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import {
   type ProviderApprovalDecision,
   type ProviderApprovalOption,
@@ -36,9 +38,12 @@ export const ComposerPendingApprovalActions = memo(function ComposerPendingAppro
   isResponding,
   canRespond,
   disabled = false,
-  options = DEFAULT_APPROVAL_OPTIONS,
+  options: suppliedOptions,
   onRespondToApproval,
 }: ComposerPendingApprovalActionsProps) {
+  const uiText = useUiText();
+  const options: ReadonlyArray<ProviderApprovalOption> =
+    suppliedOptions ?? translateUiLabels(DEFAULT_APPROVAL_OPTIONS, uiText);
   const primaryOptions = options.filter(
     (option) => option.decision === "decline" || option.decision === "accept",
   );
@@ -100,13 +105,17 @@ export const ComposerPendingApprovalActions = memo(function ComposerPendingAppro
             disabled={disabled || isResponding || !canRespond}
             render={
               presentation === "inline" ? (
-                <InlineButton tone="muted" aria-label="More approval options" />
+                <InlineButton tone="muted" aria-label={uiText("More approval options")} />
               ) : (
-                <Button size="icon-xs" variant="outline" aria-label="More approval options" />
+                <Button
+                  size="icon-xs"
+                  variant="outline"
+                  aria-label={uiText("More approval options")}
+                />
               )
             }
           >
-            {presentation === "inline" ? "More" : <EllipsisIcon />}
+            {presentation === "inline" ? uiText("More") : <EllipsisIcon />}
           </MenuTrigger>
           <MenuPopup {...composerFloatingLayerProps} side="top" align="end" width="content">
             {moreOptions.map((option) => {

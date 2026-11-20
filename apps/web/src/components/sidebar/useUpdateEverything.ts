@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import { PROVIDER_DISPLAY_NAMES } from "@t3tools/contracts";
 
@@ -52,6 +53,7 @@ export function useUpdateEverything(
   localUpdateVersion: string | null,
   channelSwitch?: ChannelSwitchRelease,
 ) {
+  const uiText = useUiText();
   const targetVersion = localUpdateVersion ?? APP_VERSION;
   const { environments } = useEnvironments();
   const environmentIds = environmentIdsKey(environments.map(({ environmentId }) => environmentId));
@@ -67,8 +69,8 @@ export function useUpdateEverything(
     updateState: updateStates[index]!,
   }));
   const { targets: servers, skipped } = channelSwitch
-    ? collectChannelSwitchTargets(machines, channelSwitch)
-    : collectServerUpdateTargets(machines, targetVersion);
+    ? collectChannelSwitchTargets(machines, channelSwitch, uiText)
+    : collectServerUpdateTargets(machines, targetVersion, uiText);
   // Track-only hosts save a setting and restart nothing, so they are neither listed nor counted.
   const moving = servers.filter((server) => server.trackOnly !== true);
   const restarts = collectRestartingMachines(machines, moving, localUpdateVersion !== null);

@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { isWebhookDedupeTemplate } from "@t3tools/contracts";
 import {
   EnvironmentId,
@@ -106,15 +108,18 @@ export function toDateTimeLocalValue(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export function scheduleDraftErrors(draft: DraftState) {
+export function scheduleDraftErrors(draft: DraftState, uiText: UiTranslator = uiTranslators.en) {
   if (draft.scheduleMode === "once") {
     const runAt = new Date(draft.runAt);
     if (Number.isNaN(runAt.getTime()))
-      return [{ title: "Invalid run time", description: "Pick a date and time." }];
+      return [{ title: uiText("Invalid run time"), description: uiText("Pick a date and time.") }];
     // A time skipped by a daylight saving change parses to a different clock time.
     if (toDateTimeLocalValue(runAt) !== draft.runAt)
       return [
-        { title: "Invalid run time", description: "That time does not exist in your time zone." },
+        {
+          title: uiText("Invalid run time"),
+          description: uiText("That time does not exist in your time zone."),
+        },
       ];
     return [];
   }
@@ -122,8 +127,10 @@ export function scheduleDraftErrors(draft: DraftState) {
   if (parseMaxDeliveryAge(draft.maxDeliveryAgeMinutes) === undefined)
     return [
       {
-        title: "Invalid age limit",
-        description: `Enter whole minutes from 1 to ${MAX_WEBHOOK_DELIVERY_AGE_MINUTES}, or leave it blank.`,
+        title: uiText("Invalid age limit"),
+        description: uiText("Enter whole minutes from 1 to {0}, or leave it blank.", [
+          MAX_WEBHOOK_DELIVERY_AGE_MINUTES,
+        ]),
       },
     ];
   const errors: Array<{ title: string; description: string }> = [];
@@ -133,15 +140,15 @@ export function scheduleDraftErrors(draft: DraftState) {
   ] as const) {
     if (value.trim() && !isWebhookDedupeTemplate(value.trim()))
       errors.push({
-        title: "Invalid webhook settings",
-        description: `${label} must contain a valid request placeholder.`,
+        title: uiText("Invalid webhook settings"),
+        description: uiText("{0} must contain a valid request placeholder.", [label]),
       });
   }
   const window = draft.coalesceWindowSeconds.trim();
   if (window && (!Number.isInteger(Number(window)) || Number(window) < 10 || Number(window) > 3600))
     errors.push({
-      title: "Invalid webhook settings",
-      description: "Coalesce window must be whole seconds from 10 to 3600.",
+      title: uiText("Invalid webhook settings"),
+      description: uiText("Coalesce window must be whole seconds from 10 to 3600."),
     });
   return errors;
 }
@@ -164,8 +171,11 @@ export function webhookDeliveryLabel(delivery: {
   return labels[delivery.outcome] ?? delivery.outcome.replaceAll("_", " ");
 }
 
-export function scheduleFromDraft(draft: DraftState): ScheduledTaskUpsertSchedule | null {
-  if (scheduleDraftErrors(draft).length > 0) return null;
+export function scheduleFromDraft(
+  draft: DraftState,
+  uiText: UiTranslator = uiTranslators.en,
+): ScheduledTaskUpsertSchedule | null {
+  if (scheduleDraftErrors(draft, uiText).length > 0) return null;
   if (draft.scheduleMode === "once") {
     const saved = draft.savedRunAt ? new Date(draft.savedRunAt) : null;
     if (saved !== null && toDateTimeLocalValue(saved) === draft.runAt)

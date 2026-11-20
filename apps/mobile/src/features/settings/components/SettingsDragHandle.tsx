@@ -1,3 +1,4 @@
+import { useUiText } from "../../../i18n/uiText";
 import { useEffectEvent, useState } from "react";
 import { View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -13,6 +14,7 @@ export function SettingsDragHandle(props: {
   readonly onEnd: (translation: number, cancelled: boolean) => void;
   readonly onStep: (direction: "up" | "down") => void;
 }) {
+  const uiText = useUiText();
   const onStart = useEffectEvent(() => props.onStart());
   const onMove = useEffectEvent((translation: number) => props.onMove(translation));
   const onEnd = useEffectEvent((translation: number, cancelled: boolean) =>
@@ -35,10 +37,10 @@ export function SettingsDragHandle(props: {
         collapsable={false}
         accessible
         accessibilityRole="adjustable"
-        accessibilityLabel={`Reorder ${props.title}`}
+        accessibilityLabel={uiText("Reorder {0}", [props.title])}
         accessibilityActions={[
-          ...(props.canMoveUp ? [{ name: "decrement", label: "Move up" }] : []),
-          ...(props.canMoveDown ? [{ name: "increment", label: "Move down" }] : []),
+          ...(props.canMoveUp ? [{ name: "decrement", label: uiText("Move up") }] : []),
+          ...(props.canMoveDown ? [{ name: "increment", label: uiText("Move down") }] : []),
         ]}
         onAccessibilityAction={({ nativeEvent }) => {
           if (nativeEvent.actionName === "decrement" && props.canMoveUp) props.onStep("up");

@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { AuthSettingsWriteScope, EnvironmentAuthorizationError } from "@t3tools/contracts";
 import { readEnvironmentScope } from "../../state/session";
 import {
@@ -35,13 +38,16 @@ import { useAtomCommand } from "../../state/use-atom-command";
 import type { NewProjectScriptInput } from "../projectScriptEditor";
 import { toastManager } from "../ui/toast";
 
-function reportScriptFailure(result: AtomCommandResult<unknown, unknown>) {
+function reportScriptFailure(
+  result: AtomCommandResult<unknown, unknown>,
+  uiText: UiTranslator = uiTranslators.en,
+) {
   if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
     const error = squashAtomCommandFailure(result);
     toastManager.add({
       type: "error",
-      title: "Failed to save project actions",
-      description: error instanceof Error ? error.message : "An error occurred.",
+      title: uiText("Failed to save project actions"),
+      description: error instanceof Error ? error.message : uiText("An error occurred."),
     });
   }
   return mapAtomCommandResult(result, () => undefined);
@@ -55,6 +61,7 @@ export function useProjectScriptSettings(
     project?: { id: ProjectId; scripts: readonly ProjectScript[] };
   }[],
 ) {
+  const uiText = useUiText();
   const projects = useProjects();
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
@@ -75,7 +82,7 @@ export function useProjectScriptSettings(
   ): Promise<AtomCommandResult<void, unknown>> {
     if (savingRef.current || targets.length === 0) {
       const message = "No available machine, or another action change is saving.";
-      toastManager.add({ type: "error", title: "Actions not saved", description: message });
+      toastManager.add({ type: "error", title: uiText("Actions not saved"), description: message });
       return AsyncResult.failure(Cause.fail(new Error(message)));
     }
     if (
@@ -88,10 +95,11 @@ export function useProjectScriptSettings(
           Cause.fail(
             new EnvironmentAuthorizationError({
               requiredScope: AuthSettingsWriteScope,
-              message: "This connection cannot change environment settings.",
+              message: uiText("This connection cannot change environment settings."),
             }),
           ),
         ),
+        uiText,
       );
     }
     savingRef.current = true;
@@ -133,7 +141,7 @@ export function useProjectScriptSettings(
             : { defaultProjectScripts: nextScripts ?? [] },
         },
       });
-      if (result._tag === "Failure") return reportScriptFailure(result);
+      if (result._tag === "Failure") return reportScriptFailure(result, uiText);
       const changedIds = scriptId
         ? [scriptId]
         : current
@@ -173,7 +181,7 @@ export function useProjectScriptSettings(
           : previous && !retainedElsewhere
             ? await removeKeybinding({ environmentId, input: previous })
             : null;
-        if (bindingResult?._tag === "Failure") return reportScriptFailure(bindingResult);
+        if (bindingResult?._tag === "Failure") return reportScriptFailure(bindingResult, uiText);
       }
     }
     return AsyncResult.success(undefined);

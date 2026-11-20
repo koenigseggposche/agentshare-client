@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { AuthProvidersManageScope, PROVIDER_DISPLAY_NAMES } from "@t3tools/contracts";
 import { settlePromise } from "@t3tools/client-runtime/state/runtime";
 import { useRef, useState } from "react";
@@ -70,6 +71,7 @@ export function useProviderUpdates() {
 }
 
 export function ProviderUpdatesAction() {
+  const uiText = useUiText();
   const { machines, updateAll } = useProviderUpdates();
   const pending = useRef(false);
   const [isPending, setIsPending] = useState(false);
@@ -96,7 +98,7 @@ export function ProviderUpdatesAction() {
             disabled={isPending}
             onClick={() => void handleUpdate()}
           >
-            {isPending ? "Updating…" : "Update all"}
+            {isPending ? uiText("Updating…") : uiText("Update all")}
           </Button>
         }
       />

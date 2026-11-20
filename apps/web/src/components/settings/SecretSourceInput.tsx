@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   SecretReference,
   type EnvironmentId,
@@ -82,6 +83,7 @@ export function SecretSourceInput({
   children,
   ...rest
 }: SecretSourceInputProps) {
+  const uiText = useUiText();
   // A provider picked here applies once a reference for it is committed.
   const [pendingProvider, setPendingProvider] = useState<SecretProviderId | null>(null);
   const [rejectedReference, setRejectedReference] = useState<string | null>(null);
@@ -117,8 +119,8 @@ export function SecretSourceInput({
         <SelectTrigger
           size="sm"
           className="w-auto min-w-0 shrink-0"
-          aria-label={`${label} source`}
-          title={provider === null ? "Value" : providerLabel(provider)}
+          aria-label={uiText("{0} source", [label])}
+          title={provider === null ? uiText("Value") : providerLabel(provider)}
         >
           <SelectValue>
             <SourceIcon icon={provider === null ? TypeIcon : providerIcon(provider)} />
@@ -126,7 +128,7 @@ export function SecretSourceInput({
         </SelectTrigger>
         <SelectPopup align="start" alignItemWithTrigger={false}>
           <SelectItem value={STORED_VALUE}>
-            <SourceLabel icon={TypeIcon} label="Value" />
+            <SourceLabel icon={TypeIcon} label={uiText("Value")} />
           </SelectItem>
           {sources.map((source) => (
             <SelectItem key={source.id} value={source.id}>
@@ -176,12 +178,12 @@ export function SecretSourceInput({
           autoComplete="off"
           placeholder={definition?.referencePlaceholder}
           spellCheck={false}
-          aria-label={`${label} reference`}
+          aria-label={uiText("{0} reference", [label])}
           aria-invalid={rejectedReference !== null}
         />
         {rejectedReference !== null ? (
           <p className="text-2xs text-destructive">
-            {definition?.invalidReferenceMessage ?? "Enter a valid secret reference."}
+            {definition?.invalidReferenceMessage ?? uiText("Enter a valid secret reference.")}
           </p>
         ) : null}
       </div>

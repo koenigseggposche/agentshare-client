@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import {
   type AtomCommandResult,
   isAtomCommandInterrupted,
@@ -248,7 +249,8 @@ const filesViewedStore = createFilesViewedStore({
       { reportFailure: false },
     ),
   refresh: (target) => appAtomRegistry.refresh(filesViewedAtom(target)),
-  reportFailure: () => toastManager.add({ type: "error", title: "Could not update viewed files" }),
+  reportFailure: () =>
+    toastManager.add({ type: "error", title: readUiText("Could not update viewed files") }),
 });
 
 export function filesViewedScope(target: FilesViewedTarget): FilesViewedScopeHandle {

@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { SettingsGroup } from "./SettingsGroup";
 import { AuthSettingsWriteScope } from "@t3tools/contracts";
 import { usePrimaryEnvironmentId, usePrimaryEnvironment } from "../../state/environments";
@@ -187,12 +188,17 @@ export const SETTINGS_PICKER_TRIGGER_CLASSNAME =
   "min-w-0 max-w-none shrink-0 border-input bg-background font-normal text-foreground shadow-xs/5 hover:bg-accent/50 dark:bg-input/32 [&_svg[data-composer-control-chevron]]:stroke-[1.75] [&_svg[data-composer-control-chevron]]:opacity-70";
 
 export function PolicyTooltip({ children }: { readonly children: string }) {
+  const uiText = useUiText();
   return (
     <Tooltip>
       <TooltipTrigger
         delay={200}
         render={
-          <Button size="icon-micro" variant="ghost-muted" aria-label="Background policy details">
+          <Button
+            size="icon-micro"
+            variant="ghost-muted"
+            aria-label={uiText("Background policy details")}
+          >
             <InfoIcon className="size-3.5" />
           </Button>
         }
@@ -331,6 +337,7 @@ export function SettingsRow({
   managed?: string | undefined;
   children?: ReactNode;
 }) {
+  const uiText = useUiText();
   const targetRef = useSettingsSearchTarget<HTMLDivElement>(rowProps.id);
   const primarySettingsAvailable = usePrimarySettingsAvailable();
   const context = useOptionalSettingsScope();
@@ -394,8 +401,8 @@ export function SettingsRow({
       scopedKeys.length > 0 ? (
       source === "project" || source === "mixed" ? (
         <SettingResetButton
-          label={typeof title === "string" ? title : "override"}
-          tooltip="Reset to inherited value"
+          label={typeof title === "string" ? title : uiText("override")}
+          tooltip={uiText("Reset to inherited value")}
           onClick={() => (onResetOverride ? onResetOverride() : clearOverrides(scopedKeys))}
         />
       ) : null
@@ -556,6 +563,7 @@ export function SettingResetButton({
   disabled?: boolean;
   onClick: () => void;
 }) {
+  const uiText = useUiText();
   return (
     <Tooltip>
       <TooltipTrigger
@@ -563,7 +571,7 @@ export function SettingResetButton({
           <Button
             size="icon-micro"
             variant="ghost-muted"
-            aria-label={`Reset ${label} to default`}
+            aria-label={uiText("Reset {0} to default", [label])}
             disabled={disabled}
             onClick={(event) => {
               event.stopPropagation();

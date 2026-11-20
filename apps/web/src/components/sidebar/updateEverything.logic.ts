@@ -1,3 +1,6 @@
+import { readUiText } from "../../i18n/uiText";
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { ServerUpdateState } from "@t3tools/client-runtime/state/server";
 import {
   type DesktopUpdateChannel,
@@ -72,6 +75,7 @@ export interface SkippedMachine {
 export function collectServerUpdateTargets(
   machines: ReadonlyArray<UpdateEverythingMachine>,
   targetVersion: string,
+  uiText: UiTranslator = uiTranslators.en,
 ): {
   readonly targets: ServerUpdateTarget[];
   readonly skipped: SkippedMachine[];
@@ -83,7 +87,7 @@ export function collectServerUpdateTargets(
     if (machine.hostedByThisApp) continue;
     if (
       config !== null &&
-      resolveVersionMismatch(config.environment.serverVersion, targetVersion) === null
+      resolveVersionMismatch(config.environment.serverVersion, targetVersion, uiText) === null
     ) {
       continue;
     }
@@ -226,6 +230,7 @@ function managedMachineUpdateDenial(
 export function collectChannelSwitchTargets(
   machines: ReadonlyArray<UpdateEverythingMachine>,
   release: ChannelSwitchRelease,
+  uiText: UiTranslator = uiTranslators.en,
 ): { readonly targets: ServerUpdateTarget[]; readonly skipped: SkippedMachine[] } {
   const targets: ServerUpdateTarget[] = [];
   const skipped: SkippedMachine[] = [];
@@ -254,7 +259,7 @@ export function collectChannelSwitchTargets(
     if (
       config !== null &&
       sameTrack &&
-      resolveVersionMismatch(serverVersion, release.version) === null
+      resolveVersionMismatch(serverVersion, release.version, uiText) === null
     ) {
       const move = trackSwitchMove(config, true);
       if (
@@ -457,13 +462,14 @@ export function describeUpdateCapsule(
   machines: ReadonlyArray<UpdateRunMachineView>,
   local: UpdateRunLocalState,
   now: number,
+  uiText: UiTranslator = uiTranslators.en,
 ): UpdateCapsuleView {
   if (run.phase === "countdown" && run.restartAt !== null) {
     const seconds = Math.max(0, Math.ceil((run.restartAt - now) / 1000));
-    return { tone: "default", label: `Restart in ${seconds}s`, action: "later" };
+    return { tone: "default", label: uiText("Restart in {0}s", [seconds]), action: "later" };
   }
   if (run.phase === "installing") {
-    return { tone: "default", label: "Restarting…", action: null };
+    return { tone: "default", label: uiText("Restarting…"), action: null };
   }
   const active = machines.filter(({ status }) => isActive(status) && status !== "waiting");
   const slowest = active.toSorted((a, b) => a.machine.startedAt - b.machine.startedAt)[0];
@@ -480,12 +486,18 @@ export function describeUpdateCapsule(
   }
   const done = machines.filter(({ status }) => status === "done").length;
   if (machines.some(({ status }) => isActive(status))) {
-    return { tone: "default", label: `${done} of ${machines.length} updated`, action: null };
+    return {
+      tone: "default",
+      label: uiText("{0} of {1} updated", [done, machines.length]),
+      action: null,
+    };
   }
   if (local?.status === "downloading") {
     return {
       tone: "default",
-      label: `Downloading${local.percent === null ? "" : ` ${Math.floor(local.percent)}%`}`,
+      label: uiText("Downloading{0}", [
+        local.percent === null ? "" : ` ${Math.floor(local.percent)}%`,
+      ]),
       action: null,
     };
   }
@@ -493,14 +505,21 @@ export function describeUpdateCapsule(
   if (failed.length > 0) {
     return {
       tone: "failed",
-      label: failed.length === 1 ? `${failed[0]!.machine.label} failed` : `${failed.length} failed`,
+      label:
+        failed.length === 1
+          ? uiText("{0} failed", [failed[0]!.machine.label])
+          : uiText("{0} failed", [failed.length]),
       action:
         !run.trackSwitch && failed.some(({ machine }) => machine.server !== null)
           ? "retry"
           : "dismiss",
     };
   }
-  return { tone: "default", label: `${done} of ${machines.length} updated`, action: null };
+  return {
+    tone: "default",
+    label: uiText("{0} of {1} updated", [done, machines.length]),
+    action: null,
+  };
 }
 
 export const RUN_STATUS_LABELS: Record<UpdateRunMachineStatus, string> = {
@@ -570,13 +589,16 @@ export function getUpdateEverythingToastView(
     if (parts.length === 0) return null;
     return {
       type: "success",
-      title: `Updated ${joinList(parts)}`,
+      title: readUiText("Updated {0}", [joinList(parts)]),
       ...(restarting.length === 0 ? {} : { description: restarting.join("\n") }),
     };
   }
   return {
     type: "error",
-    title: parts.length === 0 ? "Update failed" : `Updated ${joinList(parts)}`,
+    title:
+      parts.length === 0
+        ? readUiText("Update failed")
+        : readUiText("Updated {0}", [joinList(parts)]),
     description: [...result.failures, ...restarting].join("\n"),
   };
 }

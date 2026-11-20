@@ -1,3 +1,4 @@
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
 import type { ClientSettingsPatch, DesktopSnapShotState, SnapShotSound } from "@t3tools/contracts";
 import {
   captureSetupBackend,
@@ -6,14 +7,22 @@ import {
   captureSetupMacPermissionsReady,
 } from "./SnapShotSetupDialog.logic";
 
-export function snapShotStatus(state: DesktopSnapShotState | null, enabled: boolean): string {
+export function snapShotStatus(
+  state: DesktopSnapShotState | null,
+  enabled: boolean,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
   if (!state) return "Checking snapshots…";
   if (state.mode === "unavailable") return state.message ?? "Not supported on this platform.";
   if (!enabled) return "Turn this on to set up snapshots.";
-  return snapShotSetupSummary(state, enabled);
+  return snapShotSetupSummary(state, enabled, uiText);
 }
 
-export function snapShotSetupSummary(state: DesktopSnapShotState, enabled: boolean): string {
+export function snapShotSetupSummary(
+  state: DesktopSnapShotState,
+  enabled: boolean,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
   if (state.message) return "Capture needs attention";
   if (state.linuxBackend === "hyprland" && state.hyprlandHelper?.status !== "ready")
     return state.hyprlandHelper?.status === "error"
@@ -37,7 +46,8 @@ export function snapShotSetupSummary(state: DesktopSnapShotState, enabled: boole
     return "Use your shortcut from another app";
   if (state.linuxBackend === "hyprland" && state.shortcutActionRegistered)
     return "Use your shortcut from another app";
-  if (state.shortcutRegistered) return state.shortcutLabel ? "Ready to capture" : "Shortcut saved";
+  if (state.shortcutRegistered)
+    return state.shortcutLabel ? "Ready to capture" : uiText("Shortcut saved");
   return "Finish shortcut setup";
 }
 

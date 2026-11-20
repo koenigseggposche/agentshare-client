@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { parsePatchFiles } from "@pierre/diffs/utils/parsePatchFiles";
 import type { ChangeTypes, FileDiffMetadata } from "@pierre/diffs/types";
 import {
@@ -264,14 +266,17 @@ function countReviewRenderableCharacters(file: ReviewRenderableFile): number {
   );
 }
 
-export function getReviewFilePreviewState(file: ReviewRenderableFile): ReviewFilePreviewState {
+export function getReviewFilePreviewState(
+  file: ReviewRenderableFile,
+  uiText: UiTranslator = uiTranslators.en,
+): ReviewFilePreviewState {
   const extension = getFileExtension(file.path);
   if (extension && NON_TEXT_FILE_EXTENSIONS.has(extension)) {
     return {
       kind: "suppressed",
       reason: "non-text",
-      title: "Non-text file",
-      message: "Diff preview is not available for this file format.",
+      title: uiText("Non-text file"),
+      message: uiText("Diff preview is not available for this file format."),
       actionLabel: null,
     };
   }
@@ -282,8 +287,8 @@ export function getReviewFilePreviewState(file: ReviewRenderableFile): ReviewFil
     return {
       kind: "suppressed",
       reason: "large",
-      title: "Large diff",
-      message: "Large diffs are not rendered by default.",
+      title: uiText("Large diff"),
+      message: uiText("Large diffs are not rendered by default."),
       actionLabel: "Load diff",
     };
   }

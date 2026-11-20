@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useState } from "react";
 import type { NativeSyntheticEvent } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -28,6 +29,7 @@ export function useReviewCommentSelectionController(input: {
   readonly selectedSection: ReviewSectionItem | null;
   readonly nativeReviewDiffData: NativeReviewDiffData;
 }) {
+  const uiText = useUiText();
   const { environmentId, nativeReviewDiffData, selectedSection, threadId } = input;
   const navigation = useNavigation();
   const [sheetId] = useState(nextReviewSheetId);
@@ -72,11 +74,11 @@ export function useReviewCommentSelectionController(input: {
 
   const selectionAction = hasRangeTarget
     ? {
-        title: `Comment on ${formatReviewSelectedRangeLabel(activeCommentTarget)}`,
+        title: uiText("Comment on {0}", [formatReviewSelectedRangeLabel(activeCommentTarget)]),
         onOpenComment: openReviewCommentSheet,
       }
     : pendingRange
-      ? { title: "Select range end", onOpenComment: null }
+      ? { title: uiText("Select range end"), onOpenComment: null }
       : null;
 
   const onPressLine = (

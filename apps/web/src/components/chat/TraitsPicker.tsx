@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   buildTraitsTriggerDisplay,
   getDescriptorStringValue,
@@ -101,9 +102,10 @@ type TraitsPersistence =
     };
 
 function DefaultBadge() {
+  const uiText = useUiText();
   return (
     <Badge variant="outline" size="sm" className="min-w-0">
-      Default
+      {uiText("Default")}
     </Badge>
   );
 }
@@ -373,6 +375,7 @@ export const ULTRATHINK_IN_BODY_NOTE =
   'Your prompt contains "ultrathink" in the text. Remove it to change this option.';
 
 const TraitsMenuContent = memo(function TraitsMenuContentImpl(props: TraitsSelectionInput) {
+  const uiText = useUiText();
   const traits = useTraitsSelection(props);
   const {
     descriptors,
@@ -467,7 +470,7 @@ const TraitsMenuContent = memo(function TraitsMenuContentImpl(props: TraitsSelec
               {(["on", "off"] as const).map((value) => (
                 <MenuRadioItem key={value} value={value} hideIndicator closeOnClick>
                   <span className="flex w-full min-w-0 items-center justify-between gap-3">
-                    <span>{value === "on" ? "On" : "Off"}</span>
+                    <span>{value === "on" ? uiText("On") : uiText("Off")}</span>
                   </span>
                 </MenuRadioItem>
               ))}

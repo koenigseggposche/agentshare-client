@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { usePullRequestConnected } from "./usePullRequestConnected";
 import { useAtomValue } from "@effect/atom-react";
 import { useNavigation } from "@react-navigation/native";
@@ -54,15 +55,16 @@ const CHECK_PRIORITY = {
 };
 
 export function PullRequestStatusMenu(props: RowProps) {
+  const uiText = useUiText();
   const action = usePullRequestAction(props.params, props.pr);
   const actions = STATUS_ACTIONS.filter(action.available);
-  const status = pullRequestStatus(props.pr);
+  const status = pullRequestStatus(props.pr, uiText);
   const terminology = sourceControlClients.get(props.pr.provider).changeRequest;
   const term = capitalizeTerm(terminology.singular);
   const trigger = (
     <Pressable
       accessibilityRole={actions.length ? "button" : undefined}
-      accessibilityLabel={`${term} status, ${status.label}`}
+      accessibilityLabel={uiText("{0} status, {1}", [term, status.label])}
       disabled={!actions.length}
       className="min-h-8 flex-row items-center gap-1.5 active:opacity-70"
     >
@@ -76,10 +78,10 @@ export function PullRequestStatusMenu(props: RowProps) {
   if (!actions.length) return trigger;
   return (
     <Menu
-      title={`${term} status`}
+      title={uiText("{0} status", [term])}
       actions={actions.map((id) => ({
         id,
-        title: pullRequestActionLabel(id, terminology),
+        title: pullRequestActionLabel(id, terminology, uiText),
         image: PR_ACTION_ICONS[id],
         attributes: { destructive: id === "close" },
       }))}
@@ -90,7 +92,7 @@ export function PullRequestStatusMenu(props: RowProps) {
         else if (selected === "revert")
           action.confirm(
             selected,
-            pullRequestActionLabel("revert", terminology),
+            pullRequestActionLabel("revert", terminology, uiText),
             `Open a new ${terminology.singular} that reverses these changes?`,
           );
         else void action.perform(selected);
@@ -102,8 +104,9 @@ export function PullRequestStatusMenu(props: RowProps) {
 }
 
 export function PullRequestChecksRow(props: RowProps) {
+  const uiText = useUiText();
   const [expanded, setExpanded] = useState(false);
-  const checks = pullRequestChecksSummary(props.pr);
+  const checks = pullRequestChecksSummary(props.pr, uiText);
   const action = usePullRequestAction(props.params, props.pr);
   const definition = sourceControlClients.get(props.pr.provider);
   return (
@@ -114,7 +117,7 @@ export function PullRequestChecksRow(props: RowProps) {
         tint={checks.tint}
         value={checks.count}
         compact
-        accessibilityLabel={`Checks, ${checks.label}`}
+        accessibilityLabel={uiText("Checks, {0}", [checks.label])}
         expanded={expanded}
         onPress={() => setExpanded(!expanded)}
       />
@@ -127,11 +130,11 @@ export function PullRequestChecksRow(props: RowProps) {
         >
           {props.pr.state === "open" &&
           props.pr.checks.some((check) => check.status === "failure") ? (
-            <PullRequestAgentRow {...props} task="feedback" title="Fix failing checks" />
+            <PullRequestAgentRow {...props} task="feedback" title={uiText("Fix failing checks")} />
           ) : null}
           {action.available("approve-workflows") ? (
             <PullRequestCardRow
-              title="Approve workflows"
+              title={uiText("Approve workflows")}
               icon="checkmark"
               detail={`${props.pr.workflowApprovalsRequired} waiting for approval`}
               onPress={() =>
@@ -146,7 +149,7 @@ export function PullRequestChecksRow(props: RowProps) {
           {[...props.pr.checks]
             .sort((a, b) => CHECK_PRIORITY[a.status] - CHECK_PRIORITY[b.status])
             .map((check) => {
-              const status = checkStatus(check);
+              const status = checkStatus(check, uiText);
               const url = check.url;
               return (
                 <PullRequestCardRow
@@ -161,10 +164,12 @@ export function PullRequestChecksRow(props: RowProps) {
               );
             })}
           {!props.pr.checks.length ? (
-            <Text className="px-4 py-3 text-xs text-foreground-muted">No checks reported.</Text>
+            <Text className="px-4 py-3 text-xs text-foreground-muted">
+              {uiText("No checks reported.")}
+            </Text>
           ) : null}
           <PullRequestCardRow
-            title="Open checks on provider"
+            title={uiText("Open checks on provider")}
             icon="arrow.up.right"
             onPress={() =>
               void Linking.openURL(
@@ -179,6 +184,7 @@ export function PullRequestChecksRow(props: RowProps) {
 }
 
 export function PullRequestBranchRow(props: RowProps) {
+  const uiText = useUiText();
   const action = usePullRequestAction(props.params, props.pr);
   const agent = usePullRequestAgentActions(props.params, props.pr);
   const methods = action.available("update-branch") ? allowedUpdateMethods(props.pr) : [];
@@ -191,10 +197,10 @@ export function PullRequestBranchRow(props: RowProps) {
     <PullRequestCardRow
       title={
         props.pr.mergeability === "conflicting"
-          ? `Conflicts with ${props.pr.baseBranch}`
+          ? uiText("Conflicts with {0}", [props.pr.baseBranch])
           : clean
-            ? `No conflicts with ${props.pr.baseBranch}`
-            : "Branch"
+            ? uiText("No conflicts with {0}", [props.pr.baseBranch])
+            : uiText("Branch")
       }
       icon={
         conflicting ? PullRequestGlyph.conflicting : clean ? "checkmark.circle" : "arrow.branch"
@@ -213,16 +219,20 @@ export function PullRequestBranchRow(props: RowProps) {
       }
       compact
       menu={methods.length > 0 || canResolve}
-      accessibilityLabel={`Branch, ${summary}`}
+      accessibilityLabel={uiText("Branch, {0}", [summary])}
     />
   );
   if (!methods.length && !canResolve) return row;
   return (
     <Menu
-      title="Branch"
+      title={uiText("Branch")}
       actions={[
         ...(canResolve ? [agent.menuAction("conflicts")] : []),
-        ...methods.map((id) => ({ id, title: `Update with ${id}`, image: "arrow.up.circle" })),
+        ...methods.map((id) => ({
+          id,
+          title: uiText("Update with {0}", [id]),
+          image: "arrow.up.circle",
+        })),
       ]}
       onPressAction={({ nativeEvent }) => {
         const method = methods.find((id) => id === nativeEvent.event);
@@ -236,12 +246,13 @@ export function PullRequestBranchRow(props: RowProps) {
 }
 
 export function PullRequestReviewersRow(props: RowProps) {
+  const uiText = useUiText();
   const [expanded, setExpanded] = useState(false);
   const navigation = useNavigation();
   const activity = useEnvironmentQuery(
     composerPullRequests.activity(pullRequestTarget(props.params)),
   );
-  const summary = pullRequestReviewSummary(props.pr, activity.data);
+  const summary = pullRequestReviewSummary(props.pr, activity.data, uiText);
   const canWrite = useAtomValue(
     composerPullRequests.requestReviewers.permissionAtom(
       pullRequestTarget(props.params).environmentId,
@@ -297,7 +308,7 @@ export function PullRequestReviewersRow(props: RowProps) {
               />
               <PullRequestAvatar actor={review.author} size={32} />
               <Text className="min-w-0 flex-1 text-sm font-t3-medium" numberOfLines={1}>
-                {review.author?.login ?? "Unknown reviewer"}
+                {review.author?.login ?? uiText("Unknown reviewer")}
               </Text>
             </View>
           ))}
@@ -309,7 +320,7 @@ export function PullRequestReviewersRow(props: RowProps) {
             .map((reviewer) => (
               <View
                 key={reviewer.login}
-                accessibilityLabel={`${reviewer.login}, Review requested`}
+                accessibilityLabel={uiText("{0}, Review requested", [reviewer.login])}
                 className="min-h-14 flex-row items-center gap-3 px-4 py-2"
               >
                 <SymbolView name="clock" size={18} tintColorClassName="accent-icon-muted" />
@@ -321,13 +332,13 @@ export function PullRequestReviewersRow(props: RowProps) {
             ))}
           {canRequest ? (
             <PullRequestCardRow
-              title="Request review"
+              title={uiText("Request review")}
               icon="person.badge.plus"
               onPress={() => navigation.navigate("PullRequestReviewers", props.params)}
             />
           ) : (
             <PullRequestCardRow
-              title="View reviewers on provider"
+              title={uiText("View reviewers on provider")}
               icon="arrow.up.right"
               onPress={() => void Linking.openURL(props.pr.url)}
             />

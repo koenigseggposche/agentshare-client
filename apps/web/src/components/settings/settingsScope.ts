@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { EnvironmentId } from "@t3tools/contracts";
 
 import type {
@@ -59,6 +61,7 @@ export function resolveSettingsScope(
   search: SettingsScopeSearch,
   groups: readonly SidebarProjectSnapshot[],
   environments: readonly Pick<EnvironmentPresentation, "environmentId" | "label">[],
+  uiText: UiTranslator = uiTranslators.en,
 ): ResolvedSettingsScope {
   const unavailable = (
     reason: Extract<ResolvedSettingsScope, { kind: "unavailable" }>["reason"],
@@ -66,7 +69,7 @@ export function resolveSettingsScope(
   ): ResolvedSettingsScope => ({
     kind: "unavailable",
     reason,
-    label: "Unavailable selection",
+    label: uiText("Unavailable selection"),
     message,
     members: [],
     environmentIds: [],
@@ -143,7 +146,7 @@ export function resolveSettingsScope(
   }
   return {
     kind: "all",
-    label: "All environments",
+    label: uiText("All environments"),
     members: [],
     environmentIds: environments.map((candidate) => candidate.environmentId),
   };

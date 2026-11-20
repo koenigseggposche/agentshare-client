@@ -1,3 +1,4 @@
+import { readUiText } from "../i18n/uiText";
 import {
   defaultInstanceIdForDriver,
   PROVIDER_DISPLAY_NAMES,
@@ -239,7 +240,10 @@ export function getProviderUpdateRunToastView(runs: ReadonlyArray<ProviderUpdate
   if (failureLines.length === 0) {
     return {
       type: "success",
-      title: settled.length === 1 ? "Provider updated" : `${settled.length} providers updated`,
+      title:
+        settled.length === 1
+          ? readUiText("Provider updated")
+          : readUiText("{0} providers updated", [settled.length]),
       description: getProviderUpdatedDescription(settled.length),
     };
   }
@@ -247,10 +251,10 @@ export function getProviderUpdateRunToastView(runs: ReadonlyArray<ProviderUpdate
     type: "error",
     title:
       failureLines.length < settled.length
-        ? `${failureLines.length} of ${settled.length} provider updates failed`
+        ? readUiText("{0} of {1} provider updates failed", [failureLines.length, settled.length])
         : settled.length === 1
-          ? "Provider update failed"
-          : "Provider updates failed",
+          ? readUiText("Provider update failed")
+          : readUiText("Provider updates failed"),
     description: failureLines.join("\n"),
   };
 }
@@ -316,12 +320,12 @@ export function getProviderUpdateSidebarPillView(
       tone: "loading",
       title:
         activeProviders.length === 1
-          ? `Updating ${activeProviderName}`
-          : `Updating ${activeProviders.length} providers`,
+          ? readUiText("Updating {0}", [activeProviderName])
+          : readUiText("Updating {0} providers", [activeProviders.length]),
       description:
         activeProviders.length === 1
-          ? `${formatProviderList(activeProviders)} update in progress.`
-          : `${formatProviderList(activeProviders)} updates are in progress.`,
+          ? readUiText("{0} update in progress.", [formatProviderList(activeProviders)])
+          : readUiText("{0} updates are in progress.", [formatProviderList(activeProviders)]),
     };
   }
 
@@ -347,7 +351,7 @@ export function getProviderUpdateSidebarPillView(
       title:
         failedProviders.length === 1
           ? getProviderFailedUpdateTitle(failedProvider)
-          : `${failedProviders.length} provider updates failed`,
+          : readUiText("{0} provider updates failed", [failedProviders.length]),
       description: getFailedProviderUpdateDescription(failedProviders),
       dismissible: true,
     });
@@ -371,11 +375,12 @@ export function getProviderUpdateSidebarPillView(
       tone: "warning",
       title:
         unchangedProviders.length === 1
-          ? `${unchangedProviderName} still needs an update`
-          : `${unchangedProviders.length} providers still need updates`,
-      description: `${formatProviderList(unchangedProviders)} ${
-        unchangedProviders.length === 1 ? "still appears" : "still appear"
-      } outdated. Review provider settings for details.`,
+          ? readUiText("{0} still needs an update", [unchangedProviderName])
+          : readUiText("{0} providers still need updates", [unchangedProviders.length]),
+      description: readUiText("{0} {1} outdated. Review provider settings for details.", [
+        formatProviderList(unchangedProviders),
+        unchangedProviders.length === 1 ? "still appears" : "still appear",
+      ]),
       dismissible: true,
     });
   }
@@ -397,7 +402,7 @@ export function getProviderUpdateSidebarPillView(
       title:
         succeededProviders.length === 1
           ? getProviderUpdatedTitle(succeededProvider)
-          : `${succeededProviders.length} providers updated`,
+          : readUiText("{0} providers updated", [succeededProviders.length]),
       description: getProviderUpdatedDescription(succeededProviders.length),
       dismissAfterVisibleMs: PROVIDER_UPDATE_SUCCESS_VISIBLE_MS,
     });

@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import { applyPullRequestDraftFilterChange } from "@t3tools/client-runtime/pull-request-query";
 import { Spinner } from "~/components/ui/spinner";
@@ -140,6 +142,7 @@ const EMPTY_PREVIEW_DESKTOP_STATE = {};
 const EMPTY_TERMINAL_LABELS = new Map<string, string>();
 const EMPTY_PENDING_SURFACES = new Set<string>();
 export function PullRequestsPage() {
+  const uiText = useUiText();
   const search = useSearch({ from: "/_chat/pull-requests" });
   const sort = search.sort ?? "ready";
   const statsPolicy: PullRequestStatsPolicy =
@@ -1143,7 +1146,7 @@ export function PullRequestsPage() {
         <PullRequestListGhost rows={7} caption="Loading pull requests…" />
       ) : !pullRequestsSupported ? (
         <PullRequestsUnavailableState
-          title="Pull requests unavailable"
+          title={uiText("Pull requests unavailable")}
           error="Update your T3 Code servers to browse pull requests."
         />
       ) : firstLoad ? (
@@ -1194,9 +1197,12 @@ export function PullRequestsPage() {
 
       {listQuery.error && shownCount > 0 ? (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning-surface px-3 py-2 text-xs">
-          <span>{listQuery.error} Showing the last pull requests loaded.</span>
+          <span>
+            {listQuery.error}
+            {uiText(" Showing the last pull requests loaded.")}
+          </span>
           <Button size="xs" variant="outline" onClick={() => listQuery.refresh()}>
-            Retry
+            {uiText("Retry")}
           </Button>
         </div>
       ) : null}
@@ -1205,7 +1211,7 @@ export function PullRequestsPage() {
           {loadingMore ? (
             <span className="flex items-center gap-2">
               <Spinner aria-hidden size="sm" />
-              {sentCursors === null ? "Updating pull requests" : "Loading more"}
+              {sentCursors === null ? uiText("Updating pull requests") : uiText("Loading more")}
             </span>
           ) : canContinue || pageSize < MAX_PAGE_SIZE ? (
             <Button
@@ -1214,10 +1220,10 @@ export function PullRequestsPage() {
               onClick={loadMore}
               disabled={listQuery.isPending || showingCarried}
             >
-              Load more pull requests
+              {uiText("Load more pull requests")}
             </Button>
           ) : (
-            <span>Narrow your search to find more pull requests.</span>
+            <span>{uiText("Narrow your search to find more pull requests.")}</span>
           )}
         </div>
       ) : null}
@@ -1225,7 +1231,7 @@ export function PullRequestsPage() {
   );
   const hostEntries = hosts.length > 0 ? hosts : expectedHosts;
   const hostMenuOptions: ReadonlyArray<PullRequestFilterOption<string>> = [
-    { value: "", label: "All", Icon: Plug2Icon },
+    { value: "", label: uiText("All"), Icon: Plug2Icon },
     ...hostEntries.map((entry) => {
       const summary = hosts.find((host) => host.host === entry.host);
       return {
@@ -1239,7 +1245,7 @@ export function PullRequestsPage() {
     }),
   ];
   const serverMenuOptions: ReadonlyArray<PullRequestFilterOption<string>> = [
-    { value: "", label: "All servers", Icon: LayersIcon },
+    { value: "", label: uiText("All servers"), Icon: LayersIcon },
     ...capableEnvironments.map((environment) => ({
       value: environment.environmentId,
       label: environment.label,
@@ -1248,12 +1254,12 @@ export function PullRequestsPage() {
   ];
   const sortMenu = (
     <PullRequestCompactFilterMenu
-      label="Sort pull requests"
+      label={uiText("Sort pull requests")}
       triggerIcon={<ArrowDownUpIcon aria-hidden className="size-4" />}
       triggerLabel="Sort"
       outlined
       value={sort}
-      options={SORT_OPTIONS}
+      options={translateUiLabels(SORT_OPTIONS, uiText)}
       onChange={(next) => updateListScope({ sort: next })}
     />
   );
@@ -1261,10 +1267,10 @@ export function PullRequestsPage() {
     <PullRequestFiltersMenuInSidebarOrder
       onOpenChange={setFiltersOpen}
       state={search.state}
-      stateOptions={STATE_TABS}
+      stateOptions={translateUiLabels(STATE_TABS, uiText)}
       onState={(state) => updateListScope({ state })}
       involvement={search.involvement}
-      involvementOptions={INVOLVEMENT_TABS}
+      involvementOptions={translateUiLabels(INVOLVEMENT_TABS, uiText)}
       onInvolvement={(involvement) => updateListScope({ involvement })}
       filters={
         typedParsed.filters.draft
@@ -1401,15 +1407,15 @@ export function PullRequestsPage() {
         if (didCopy)
           toastManager.add({
             type: "success",
-            title: `${shortLabel} link copied`,
+            title: uiText("{0} link copied", [shortLabel]),
             description: url,
           });
       },
       (error) => {
         toastManager.add({
           type: "error",
-          title: `Failed to copy ${shortLabel} link`,
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: uiText("Failed to copy {0} link", [shortLabel]),
+          description: error instanceof Error ? error.message : uiText("An error occurred."),
         });
       },
     );

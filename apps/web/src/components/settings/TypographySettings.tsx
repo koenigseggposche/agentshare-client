@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { ReactNode } from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import {
@@ -57,13 +58,14 @@ function useFontDefaultFamilies() {
 }
 
 function InterfaceFontRow({ preview }: { preview?: ReactNode }) {
+  const uiText = useUiText();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   const defaults = useFontDefaultFamilies();
   return (
     <FontFamilySettingsRow
       {...searchableSetting("interface-font")}
-      description="Everything outside code blocks and the terminal."
+      description={uiText("Everything outside code blocks and the terminal.")}
       defaultFamily={defaults.sans}
       defaultValue={DEFAULT_UNIFIED_SETTINGS.fontFamilySans}
       value={settings.fontFamilySans}
@@ -75,7 +77,7 @@ function InterfaceFontRow({ preview }: { preview?: ReactNode }) {
         })
       }
       size={{
-        label: "Interface font size",
+        label: uiText("Interface font size"),
         min: MIN_INTERFACE_FONT_SIZE,
         max: MAX_INTERFACE_FONT_SIZE,
         value: settings.fontSizeInterface,
@@ -88,13 +90,14 @@ function InterfaceFontRow({ preview }: { preview?: ReactNode }) {
 }
 
 function PromptFontRow() {
+  const uiText = useUiText();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   const defaults = useFontDefaultFamilies();
   return (
     <FontFamilySettingsRow
       {...searchableSetting("prompt-font")}
-      description="Only the box you write prompts in. Mono works well here."
+      description={uiText("Only the box you write prompts in. Mono works well here.")}
       defaultFamily={defaults.interfaceFamily}
       defaultValue={DEFAULT_UNIFIED_SETTINGS.fontFamilyComposer}
       value={settings.fontFamilyComposer}
@@ -106,7 +109,7 @@ function PromptFontRow() {
         })
       }
       size={{
-        label: "Prompt font size",
+        label: uiText("Prompt font size"),
         min: MIN_PROMPT_FONT_SIZE,
         max: MAX_PROMPT_FONT_SIZE,
         value: settings.fontSizePrompt,
@@ -127,6 +130,7 @@ function CodeFontRow({
   description?: string;
   preview?: ReactNode;
 }) {
+  const uiText = useUiText();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   const defaults = useFontDefaultFamilies();
@@ -147,7 +151,7 @@ function CodeFontRow({
       }
       requireMonospace
       size={{
-        label: "Code font size",
+        label: uiText("Code font size"),
         min: MIN_CODE_FONT_SIZE,
         max: MAX_CODE_FONT_SIZE,
         value: settings.fontSizeCode,
@@ -160,13 +164,14 @@ function CodeFontRow({
 }
 
 function TerminalFontRow() {
+  const uiText = useUiText();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   const defaults = useFontDefaultFamilies();
   return (
     <FontFamilySettingsRow
       {...searchableSetting("terminal-font")}
-      description="Terminal output, independent from code blocks and diffs."
+      description={uiText("Terminal output, independent from code blocks and diffs.")}
       defaultFamily={defaults.code}
       defaultValue={DEFAULT_UNIFIED_SETTINGS.fontFamilyTerminal}
       value={settings.fontFamilyTerminal}
@@ -179,7 +184,7 @@ function TerminalFontRow() {
       }
       requireMonospace
       size={{
-        label: "Terminal font size",
+        label: uiText("Terminal font size"),
         min: MIN_TERMINAL_FONT_SIZE,
         max: MAX_TERMINAL_FONT_SIZE,
         value: settings.fontSizeTerminal,
@@ -201,17 +206,18 @@ function TerminalFontRow() {
 }
 
 function FontSmoothingRow() {
+  const uiText = useUiText();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   if (!isMacPlatform(navigator.platform)) return null;
   return (
     <SettingsRow
       {...searchableSetting("font-smoothing")}
-      description="Use thinner grayscale text smoothing instead of the macOS default."
+      description={uiText("Use thinner grayscale text smoothing instead of the macOS default.")}
       resetAction={
         settings.fontSmoothing !== DEFAULT_UNIFIED_SETTINGS.fontSmoothing ? (
           <SettingResetButton
-            label="font smoothing"
+            label={uiText("font smoothing")}
             onClick={() =>
               updateSettings({ fontSmoothing: DEFAULT_UNIFIED_SETTINGS.fontSmoothing })
             }
@@ -222,7 +228,7 @@ function FontSmoothingRow() {
         <Switch
           checked={settings.fontSmoothing}
           onCheckedChange={(checked) => updateSettings({ fontSmoothing: Boolean(checked) })}
-          aria-label="Font smoothing"
+          aria-label={uiText("Font smoothing")}
         />
       }
     />
@@ -230,16 +236,17 @@ function FontSmoothingRow() {
 }
 
 function WordWrapRow() {
+  const uiText = useUiText();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   return (
     <SettingsRow
       {...searchableSetting("word-wrap")}
-      description="Wrap long lines in code blocks, diffs, and file previews by default."
+      description={uiText("Wrap long lines in code blocks, diffs, and file previews by default.")}
       resetAction={
         settings.wordWrap !== DEFAULT_UNIFIED_SETTINGS.wordWrap ? (
           <SettingResetButton
-            label="word wrapping"
+            label={uiText("word wrapping")}
             onClick={() => updateSettings({ wordWrap: DEFAULT_UNIFIED_SETTINGS.wordWrap })}
           />
         ) : null
@@ -248,7 +255,7 @@ function WordWrapRow() {
         <Switch
           checked={settings.wordWrap}
           onCheckedChange={(checked) => updateSettings({ wordWrap: Boolean(checked) })}
-          aria-label="Wrap code, diffs, and file previews by default"
+          aria-label={uiText("Wrap code, diffs, and file previews by default")}
         />
       }
     />
@@ -273,15 +280,18 @@ function SeparateFontsRow({
   readonly checked: boolean;
   readonly onCheckedChange: (checked: boolean) => void;
 }) {
+  const uiText = useUiText();
   return (
     <SettingsRow
       {...searchableSetting("separate-fonts")}
-      description="Set the prompt, code, and terminal fonts separately instead of one monospace font."
+      description={uiText(
+        "Set the prompt, code, and terminal fonts separately instead of one monospace font.",
+      )}
       control={
         <Switch
           checked={checked}
           onCheckedChange={(next) => onCheckedChange(Boolean(next))}
-          aria-label="Separate fonts"
+          aria-label={uiText("Separate fonts")}
         />
       }
     />
@@ -289,13 +299,14 @@ function SeparateFontsRow({
 }
 
 function SimpleFontRows() {
+  const uiText = useUiText();
   const settings = useScopedSettings();
   return (
     <>
       <InterfaceFontRow preview={<PromptFontPreview />} />
       <CodeFontRow
-        title="Monospace font"
-        description="Code blocks, diffs, file previews, and the terminal."
+        title={uiText("Monospace font")}
+        description={uiText("Code blocks, diffs, file previews, and the terminal.")}
         preview={
           <>
             <CodeFontPreview />
@@ -319,6 +330,7 @@ function SimpleFontRows() {
 }
 
 export function TypographySection() {
+  const uiText = useUiText();
   const [advanced, setAdvanced] = useLocalStorage(
     TYPOGRAPHY_ADVANCED_STORAGE_KEY,
     false,
@@ -335,7 +347,7 @@ export function TypographySection() {
   const showAdvanced =
     advanced || (searchTargetId !== null && isAdvancedTypographyTarget(searchTargetId));
   return (
-    <SettingsSection id="typography" title="Typography">
+    <SettingsSection id="typography" title={uiText("Typography")}>
       {showAdvanced ? <FontSettingsGroup /> : <SimpleFontRows />}
       <WordWrapRow />
       <AdvancedSettings
@@ -380,6 +392,7 @@ function FontFamilySettingsRow({
     onChange: (v: number) => void;
   };
 }) {
+  const uiText = useUiText();
   const trimmed = value.trim();
   const [draft, setDraft] = useState(value);
   const [draftSettled, setDraftSettled] = useState(true);
@@ -446,7 +459,7 @@ function FontFamilySettingsRow({
     ) : (
       <Input
         size="sm"
-        aria-label={`${title} family`}
+        aria-label={uiText("{0} family", [title])}
         aria-invalid={draftPending || undefined}
         autoCapitalize="off"
         autoComplete="off"
@@ -506,13 +519,17 @@ function FontFamilySettingsRow({
         }}
       >
         <SelectTrigger size="sm" className="w-22 shrink-0" aria-label={size.label}>
-          <SelectValue>{size.value} px</SelectValue>
+          <SelectValue>
+            {size.value}
+            {uiText(" px")}
+          </SelectValue>
         </SelectTrigger>
         <SelectPopup align="end" alignItemWithTrigger={false}>
           {Array.from({ length: size.max - size.min + 1 }, (_, index) => size.min + index).map(
             (px) => (
               <SelectItem hideIndicator key={px} value={String(px)}>
-                {px} px
+                {px}
+                {uiText(" px")}
               </SelectItem>
             ),
           )}

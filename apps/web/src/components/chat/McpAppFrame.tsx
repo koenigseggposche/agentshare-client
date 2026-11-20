@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { EnvironmentId, ThreadId, TurnItemId } from "@t3tools/contracts";
 import {
   makeMcpAppHost,
@@ -86,6 +87,7 @@ export function McpAppFrame(props: {
   readonly awaitingUser?: boolean;
   readonly onFullscreenChange?: (fullscreen: boolean) => void;
 }) {
+  const uiText = useUiText();
   const { app } = props;
   const theme = useHtmlRenderTheme();
   const frameRef = useRef<HTMLIFrameElement>(null);
@@ -406,7 +408,11 @@ export function McpAppFrame(props: {
   if (closed) {
     return (
       <div className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-muted-foreground text-xs">
-        <span>The {app.server} app was closed</span>
+        <span>
+          {uiText("The ")}
+          {app.server}
+          {uiText(" app was closed")}
+        </span>
         <Button
           size="xs"
           variant="ghost"
@@ -416,7 +422,7 @@ export function McpAppFrame(props: {
             setClosed(false);
           }}
         >
-          Show app
+          {uiText("Show app")}
         </Button>
       </div>
     );
@@ -448,7 +454,7 @@ export function McpAppFrame(props: {
           >
             <span className="truncate">{app.server}</span>
             <Button
-              aria-label="Exit full screen"
+              aria-label={uiText("Exit full screen")}
               size="icon-sm"
               variant="ghost"
               onClick={() => setDisplayMode("inline")}
@@ -459,13 +465,15 @@ export function McpAppFrame(props: {
         ) : null}
         {navigatedAway ? (
           <p className="flex size-full items-center justify-center text-muted-foreground text-xs">
-            The {app.server} app left its page and was stopped
+            {uiText("The ")}
+            {app.server}
+            {uiText(" app left its page and was stopped")}
           </p>
         ) : src !== null ? (
           <iframe
             ref={attachFrame}
             src={src}
-            title={`${app.server} app`}
+            title={uiText("{0} app", [app.server])}
             // Omitting allow-same-origin isolates the app from the session.
             sandbox="allow-scripts allow-forms"
             allow={mcpAppAllowAttribute(app.permissions)}
@@ -475,7 +483,9 @@ export function McpAppFrame(props: {
           />
         ) : asset._tag === "Failure" ? (
           <p className="flex size-full items-center justify-center text-muted-foreground text-xs">
-            Unable to load the {app.server} app
+            {uiText("Unable to load the ")}
+            {app.server}
+            {uiText(" app")}
           </p>
         ) : null}
       </div>

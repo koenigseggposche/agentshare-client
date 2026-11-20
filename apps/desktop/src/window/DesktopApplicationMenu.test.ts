@@ -1,3 +1,6 @@
+import * as DesktopClientSettings from "../settings/DesktopClientSettings.ts";
+import { DEFAULT_CLIENT_SETTINGS } from "@t3tools/contracts/settings";
+import * as Option from "effect/Option";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";
 import * as Deferred from "effect/Deferred";
@@ -119,6 +122,11 @@ const configureMenu = (
         Layer.provideMerge(layerDesktopUpdates),
         Layer.provideMerge(layerElectronDialog),
         Layer.provideMerge(layerElectronApp),
+        Layer.provideMerge(
+          DesktopClientSettings.layerTest(
+            Option.some({ ...DEFAULT_CLIENT_SETTINGS, uiLanguage: "en" }),
+          ),
+        ),
         Layer.provideMerge(
           DesktopEnvironment.layer({ ...environmentInput, ...environment }).pipe(
             Layer.provide(Layer.mergeAll(NodeServices.layer, DesktopConfig.layerTest({}))),

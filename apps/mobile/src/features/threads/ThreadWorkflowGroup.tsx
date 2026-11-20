@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import {
   isActiveSubagentStatus,
@@ -48,6 +49,7 @@ export function ThreadWorkflowGroup(props: {
   readonly group: SubagentWorkflowGroup;
   readonly onOpen: (threadId: ThreadId) => void;
 }) {
+  const uiText = useUiText();
   const { group } = props;
   const provider = useEnvironmentServerConfig(props.environmentId)?.providers.find(
     (candidate) => candidate.instanceId === props.subagent.providerInstanceId,
@@ -64,8 +66,10 @@ export function ThreadWorkflowGroup(props: {
         <View className="flex-row items-center">
           <RowPressable
             accessibilityRole="button"
-            accessibilityLabel={`${label} workflow, ${statusLabel}`}
-            accessibilityHint={open ? "Collapses the workflow" : "Opens the current phase"}
+            accessibilityLabel={uiText("{0} workflow, {1}", [label, statusLabel])}
+            accessibilityHint={
+              open ? uiText("Collapses the workflow") : uiText("Opens the current phase")
+            }
             accessibilityState={{ expanded: open !== undefined }}
             disabled={rail.length === 0}
             onPress={() => setSelected(nextWorkflowSelection(rail, selected))}
@@ -109,7 +113,11 @@ export function ThreadWorkflowGroup(props: {
                   icon={RAIL_ICON[item.tone]}
                   label={count ? `${count} ${item.title}` : item.title}
                   selected={item.key === selected}
-                  accessibilityLabel={`${item.title} phase, ${item.tone}${count ? `, ${count} completed` : ""}`}
+                  accessibilityLabel={uiText("{0} phase, {1}{2}", [
+                    item.title,
+                    item.tone,
+                    count ? `, ${count} completed` : "",
+                  ])}
                   onPress={() => setSelected(nextWorkflowSelection(rail, selected, item.key))}
                 />
               );
@@ -121,7 +129,7 @@ export function ThreadWorkflowGroup(props: {
             textRole="footnote"
             className="border-t border-border-subtle px-4 py-3 text-foreground-muted"
           >
-            No agents yet
+            {uiText("No agents yet")}
           </Text>
         ) : (
           open.members.map((member) => (
@@ -145,6 +153,7 @@ function WorkflowMemberRow(props: {
   readonly provider: ServerProvider | undefined;
   readonly onOpen: (threadId: ThreadId) => void;
 }) {
+  const uiText = useUiText();
   const { member } = props;
   const threadId = member.childThreadId === null ? null : ThreadId.make(member.childThreadId);
   const shell = useThreadShell(
@@ -171,7 +180,9 @@ function WorkflowMemberRow(props: {
         ...(metadata.speed === null ? [] : [metadata.speed]),
         ...(error === null ? [] : [error]),
       ].join(", ")}
-      accessibilityHint={canOpen ? "Opens this agent's thread" : "Its thread is not available yet"}
+      accessibilityHint={
+        canOpen ? uiText("Opens this agent's thread") : uiText("Its thread is not available yet")
+      }
       disabled={!canOpen}
       onPress={() => threadId !== null && props.onOpen(threadId)}
       className="min-h-11 flex-row gap-3 border-t border-border-subtle px-4 py-3 active:opacity-70"

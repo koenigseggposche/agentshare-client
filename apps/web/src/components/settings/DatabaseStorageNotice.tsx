@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import type { EnvironmentId } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
@@ -16,6 +17,7 @@ export function DatabaseStorageNotice({
 }: {
   environments: ReadonlyArray<{ readonly environmentId: EnvironmentId; readonly label: string }>;
 }) {
+  const uiText = useUiText();
   const recommendations = useAtomValue(
     serverEnvironment.databaseCompactionRecommendations(
       JSON.stringify(environments.map((environment) => environment.environmentId)),
@@ -32,18 +34,21 @@ export function DatabaseStorageNotice({
   );
   if (visible.length === 0) return null;
   return (
-    <SettingsSection id="storage-database" title="Database">
+    <SettingsSection id="storage-database" title={uiText("Database")}>
       <SettingsRow
-        title="Reclaim freed database space"
-        description="Old history is cleaned up automatically, but these databases still hold the freed space. Run the command on each machine to return it to disk; it pauses and restarts the background service. Quit the desktop app first if it hosts the environment."
+        title={uiText("Reclaim freed database space")}
+        description={uiText(
+          "Old history is cleaned up automatically, but these databases still hold the freed space. Run the command on each machine to return it to disk; it pauses and restarts the background service. Quit the desktop app first if it hosts the environment.",
+        )}
       />
       {visible.map(({ environmentId, status }) => (
         <SettingsRow
           key={environmentId}
-          title={`${(status.reclaimableBytes / 1024 ** 3).toFixed(1)} GiB on ${
+          title={uiText("{0} GiB on {1}", [
+            (status.reclaimableBytes / 1024 ** 3).toFixed(1),
             environments.find((environment) => environment.environmentId === environmentId)
-              ?.label ?? environmentId
-          }`}
+              ?.label ?? environmentId,
+          ])}
           description={<code className="select-text break-all">{status.compactCommand}</code>}
           control={
             <div className="flex flex-wrap items-center gap-1.5">
@@ -52,14 +57,14 @@ export function DatabaseStorageNotice({
                 size="xs"
                 onClick={() => copyToClipboard(status.compactCommand, undefined)}
               >
-                Copy command
+                {uiText("Copy command")}
               </Button>
               <Button
                 variant="ghost"
                 size="xs"
                 onClick={() => setDismissed((current) => [...current, environmentId])}
               >
-                Dismiss
+                {uiText("Dismiss")}
               </Button>
             </div>
           }

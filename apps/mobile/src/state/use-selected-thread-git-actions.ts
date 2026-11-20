@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { useAtomMount } from "@effect/atom-react";
 
 import { EnvironmentProject, EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
@@ -53,6 +54,7 @@ const selectedThreadStatusRevalidation = createVcsStatusRevalidationAtomFamily({
 });
 
 export function useSelectedThreadGitActions() {
+  const uiText = useUiText();
   const updateThreadMetadata = useAtomCommand(threadEnvironment.updateMetadata, {
     reportFailure: false,
   });
@@ -100,7 +102,7 @@ export function useSelectedThreadGitActions() {
         Cause.fail(
           new EnvironmentAuthorizationError({
             requiredScope: AuthOrchestrationOperateScope,
-            message: "This connection cannot update the thread's branch.",
+            message: uiText("This connection cannot update the thread's branch."),
           }),
         ),
       );
@@ -141,7 +143,7 @@ export function useSelectedThreadGitActions() {
           target,
           {
             operation: "refresh_status",
-            label: "Refreshing source control status",
+            label: uiText("Refreshing source control status"),
           },
           execute,
         );
@@ -201,7 +203,11 @@ export function useSelectedThreadGitActions() {
       const error = Cause.squash(result.cause);
       const message = error instanceof Error ? error.message : "Git action failed.";
       setPendingConnectionError(message);
-      showGitActionResult({ type: "error", title: "Git action failed", description: message });
+      showGitActionResult({
+        type: "error",
+        title: uiText("Git action failed"),
+        description: message,
+      });
       return null;
     }
     return result.value;
@@ -217,7 +223,11 @@ export function useSelectedThreadGitActions() {
       const error = Cause.squash(result.cause);
       const message = error instanceof Error ? error.message : "Failed to refresh branches.";
       setPendingConnectionError(message);
-      showGitActionResult({ type: "error", title: "Git action failed", description: message });
+      showGitActionResult({
+        type: "error",
+        title: uiText("Git action failed"),
+        description: message,
+      });
       return null;
     }
     setPendingConnectionError(null);
@@ -348,8 +358,8 @@ export function useSelectedThreadGitActions() {
           type: "success",
           title:
             result.value.status === "skipped_up_to_date"
-              ? "Already up to date"
-              : `Pulled latest on ${result.value.refName}`,
+              ? uiText("Already up to date")
+              : uiText("Pulled latest on {0}", [result.value.refName]),
         });
         return result;
       },

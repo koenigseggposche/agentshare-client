@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../i18n/uiText";
 import type { EnvironmentId, EnvironmentMachineKind } from "@t3tools/contracts";
 
 import type { SidebarProjectSnapshot } from "../sidebarProjectGrouping";
@@ -101,7 +103,8 @@ function ProjectLocationDescription(props: {
   readonly location: CommandPaletteProjectLocation | undefined;
   readonly workspaceRoot: string;
 }) {
-  const location = props.location ?? UNKNOWN_PROJECT_LOCATION;
+  const uiText = useUiText();
+  const location = props.location ?? translateUiLabels(UNKNOWN_PROJECT_LOCATION, uiText);
   return (
     <span className="flex min-w-0 items-center gap-1">
       <span className="inline-flex min-w-0 items-center gap-1">

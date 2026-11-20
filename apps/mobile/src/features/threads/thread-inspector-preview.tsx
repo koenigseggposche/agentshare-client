@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   NavigationContainer,
   NavigationIndependentTree,
@@ -34,18 +35,19 @@ export interface ThreadInspectorPresentation {
 export function ThreadInspectorHeader(
   props: ThreadInspectorPresentation & { readonly title: string },
 ) {
+  const uiText = useUiText();
   return (
     <>
       <NativeStackScreenOptions options={{ headerShown: true, headerTransparent: true }} />
       <SheetHeader
         title={props.title}
         onClose={props.onClose}
-        accessibilityLabel="Close thread preview"
+        accessibilityLabel={uiText("Close thread preview")}
         trailing={
           props.onMaximize ? (
             <IconButton
               icon="arrow.up.left.and.arrow.down.right"
-              accessibilityLabel="Maximize thread"
+              accessibilityLabel={uiText("Maximize thread")}
               onPress={props.onMaximize}
             />
           ) : undefined

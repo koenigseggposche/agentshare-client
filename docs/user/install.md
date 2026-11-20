@@ -11,14 +11,20 @@ belong to [agentshare-client](https://github.com/koenigseggposche/agentshare-cli
 The current preview is distributed as locally verified builds. Its macOS builds
 use development signing; official signing and notarization are part of release preparation.
 
-Open **Settings → AgentShare → Account and consumption**, sign in to your account and enable consumption. Use the panels on that page to manage wallet and devices, conversation models, local models, sharing and coding tools. Switching panels keeps your forms and operation feedback.
-Add an available community or flagship model to the workbench, then choose it in
-a new thread. The account service records model charges and sharing earnings.
-Manage the execution computer's Codex and Claude installations in **Manage coding tools**.
+Open **Settings → Account and security** to sign in and manage authorized devices.
+Consumption is available under the account's advanced controls. Use **Wallet and records**
+for balances, model charges and sharing earnings.
 
-To share models, sign in to the model source on the execution computer, select
-its sharing scope and start sharing in AgentShare settings. Consumption and
-sharing have separate switches.
+In **Models and tools**, use **Model connections** to browse and add conversation models,
+**Local models** to download and run models, **Model sharing** to manage sources and access,
+and **Coding tools** to install or select Codex and Claude versions. These host settings
+apply to the selected execution computer. Sign in to an official source on that computer
+before sharing it. Consumption, pausing sharing and stopping sharing are separate controls.
+
+Set **General → Interface language** to English or Simplified Chinese. It controls this
+client's interface and menus, updates without restarting, and is remembered at the next
+launch. Each device keeps its own preference. Changing language preserves drafts and
+selected models; names, conversation content, code and external output remain original.
 
 The default workbench directory is `~/.agentshare-client`; development desktop
 builds use its `dev` subdirectory. An explicit data directory selects an independent
@@ -85,12 +91,12 @@ iPad or Android device. A standalone Release package runs without Metro.
 iOS builds target iOS/iPadOS 18 or later. Development and production builds use
 separate application identifiers and account-service configuration.
 
-Open **Settings → AgentShare → My account** on mobile to sign in and read
-personal balances and records independently of execution computers. Use
-**Execution host** on the same page to choose a computer and manage its account,
-wallet, conversation models, sharing or coding tools. To run coding tasks, create a pairing link on the execution
-computer in **Settings → Sharing & access**, then add that connection on mobile.
-The granted permissions determine which host operations the mobile app can use.
+Open **Settings → Account and security → My account** on mobile to sign in independently
+of execution computers. **Wallet and records** shows that account's balances and records.
+Choose **Execution host** on either page to manage the selected computer's account or
+wallet. The model and coding-tool pages use the selected execution host. To run coding
+tasks, create a pairing link on the execution computer in **Settings → Sharing & access**,
+then add it on mobile. The granted permissions determine available host operations.
 
 ## Next steps
 
@@ -100,10 +106,11 @@ The granted permissions determine which host operations the mobile app can use.
 
 ## Use a native coding terminal
 
-Under **Settings → AgentShare → Coding tools**, open the interactive terminal panel,
-choose a model and source, then enter an absolute directory on the execution host
-or select an existing project. This requires an up-to-date sharing service and
-both access management and terminal operation permissions on the connection.
+Open **Coding terminal** from a project conversation's workspace toolbar or menu.
+Choose a model and source; the terminal starts from that workspace directory, which
+can be changed to another absolute directory on the execution host. Manage installed
+versions separately in **Settings → Coding tools**. Starting a terminal requires an
+up-to-date sharing service and access-management and terminal-operation permissions.
 
 Leaving the page keeps the task running. Return and select the original terminal
 to continue; reconnecting does not resend the launch command. Use **Stop this

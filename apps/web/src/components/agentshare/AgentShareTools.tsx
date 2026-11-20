@@ -1,3 +1,4 @@
+import { SettingsDisclosure } from "../settings/SettingsDisclosure";
 import { randomUUID } from "../../lib/utils";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -36,7 +37,7 @@ export function AgentShareTools({
   language: "zh" | "en";
 }) {
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
-  const [open, setOpen] = useState(false);
+  const open = true;
   const query = useEnvironmentQuery(
     open ? agentShareEnvironment.tools({ environmentId, input: { owner } }) : null,
   );
@@ -64,7 +65,7 @@ export function AgentShareTools({
   const command = useAtomCommand(agentShareEnvironment.command, { reportFailure: false });
   const allowed = useAtomValue(agentShareEnvironment.command.permissionAtom(environmentId));
   const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ zh: string; en: string } | null>(null);
   const run = async (service: ToolName, selection: AgentShareToolSelection) => {
     setPending(true);
     setMessage(null);
@@ -75,11 +76,14 @@ export function AgentShareTools({
     query.refresh();
     setMessage(
       result?._tag === "Success"
-        ? t("选择已提交，请核对当前版本。", "Selection submitted. Check the current version.")
-        : t(
-            "未能确认切换结果，请刷新状态后检查。",
-            "The outcome could not be confirmed. Refresh and check the selection.",
-          ),
+        ? {
+            zh: "选择已提交，请核对当前版本。",
+            en: "Selection submitted. Check the current version.",
+          }
+        : {
+            zh: "未能确认切换结果，请刷新状态后检查。",
+            en: "The outcome could not be confirmed. Refresh and check the selection.",
+          },
     );
     setPending(false);
   };
@@ -96,19 +100,19 @@ export function AgentShareTools({
     jobs.refresh();
     setMessage(
       outcome === "accepted"
-        ? t(
-            "操作已接受，请查看安装记录。安装后需手动选择版本。",
-            "Accepted. Check the installation record, then select the version explicitly.",
-          )
+        ? {
+            zh: "操作已接受，请查看安装记录。安装后需手动选择版本。",
+            en: "Accepted. Check the installation record, then select the version explicitly.",
+          }
         : outcome === "rejected"
-          ? t(
-              "请求未被接受，请检查执行电脑、路径和版本。",
-              "The request was rejected. Check the host, path and version.",
-            )
-          : t(
-              "结果暂时无法确认，请刷新记录；重发同一请求不会重复安装。",
-              "The outcome is unknown. Refresh the records; resending the same request will not repeat the installation.",
-            ),
+          ? {
+              zh: "请求未被接受，请检查执行电脑、路径和版本。",
+              en: "The request was rejected. Check the host, path and version.",
+            }
+          : {
+              zh: "结果暂时无法确认，请刷新记录；重发同一请求不会重复安装。",
+              en: "The outcome is unknown. Refresh the records; resending the same request will not repeat the installation.",
+            },
     );
     setPending(false);
   };
@@ -128,9 +132,12 @@ export function AgentShareTools({
           size="sm"
           variant="outline"
           disabled={pending || query.isPending}
-          onClick={() => (open ? query.refresh() : setOpen(true))}
+          onClick={() => {
+            query.refresh();
+            jobs.refresh();
+          }}
         >
-          {open ? t("刷新工具", "Refresh tools") : t("管理编程工具", "Manage coding tools")}
+          {t("刷新工具", "Refresh tools")}
         </Button>
       }
     >
@@ -157,7 +164,7 @@ export function AgentShareTools({
             )}
           </p>
         ) : null}
-        {message ? <p role="status">{message}</p> : null}
+        {message ? <p role="status">{message[language]}</p> : null}
         {open && operationsSupported ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
@@ -286,101 +293,109 @@ function ToolCard({
           ? status.version || t("版本读取失败", "Version unavailable")
           : t("未安装", "Not installed")}
       </h3>
-      {status.path ? (
-        <p className="break-all text-xs text-muted-foreground">{status.path}</p>
-      ) : null}
-      {status.version_error ? (
-        <p role="alert">
-          {t(
-            "当前程序未通过版本检查，请选择可用版本。",
-            "The current executable failed its version check. Select a working version.",
-          )}
-        </p>
-      ) : null}
-      <p className="text-sm">{t("已安装的独立版本", "Installed managed versions")}</p>
-      <div className="flex flex-wrap gap-2">
-        {status.versions.map((version) => {
-          const active =
-            status.selection.source === "managed" && status.selection.version === version;
-          return (
-            <Button
-              key={version}
-              size="sm"
-              variant={active ? "secondary" : "outline"}
-              disabled={blocked || active}
-              onClick={() => void run(service, { owner, source: "managed", version })}
-            >
-              {version}
-              {active ? t(" · 当前", " · Current") : ""}
-            </Button>
-          );
-        })}
-      </div>
-      {status.versions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          {t("尚未安装独立版本。", "No managed versions are installed.")}
-        </p>
-      ) : null}
-      <label className="grid gap-2 text-sm">
-        <span>
-          {t(
-            `${name} 系统工具路径（执行电脑上的绝对路径，可留空自动查找）`,
-            `${name} system executable (absolute host path; leave empty to detect)`,
-          )}
-        </span>
-        <Input
-          value={systemPath}
+      <Button size="sm" disabled={installBlocked} onClick={() => install("install", "")}>
+        {t(`安装 ${name} 最新版本`, `Install latest ${name}`)}
+      </Button>
+      <SettingsDisclosure title={t("版本与高级设置", "Versions and advanced settings")}>
+        {status.path ? (
+          <p className="break-all text-xs text-muted-foreground">{status.path}</p>
+        ) : null}
+        {status.version_error ? (
+          <p role="alert">
+            {t(
+              "当前程序未通过版本检查，请选择可用版本。",
+              "The current executable failed its version check. Select a working version.",
+            )}
+          </p>
+        ) : null}
+        <p className="text-sm">{t("已安装的独立版本", "Installed managed versions")}</p>
+        <div className="flex flex-wrap gap-2">
+          {status.versions.map((version) => {
+            const active =
+              status.selection.source === "managed" && status.selection.version === version;
+            return (
+              <Button
+                key={version}
+                size="sm"
+                variant={active ? "secondary" : "outline"}
+                disabled={blocked || active}
+                onClick={() => void run(service, { owner, source: "managed", version })}
+              >
+                {version}
+                {active ? t(" · 当前", " · Current") : ""}
+              </Button>
+            );
+          })}
+        </div>
+        {status.versions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {t("尚未安装独立版本。", "No managed versions are installed.")}
+          </p>
+        ) : null}
+        <label className="grid gap-2 text-sm">
+          <span>
+            {t(
+              `${name} 系统工具路径（执行电脑上的绝对路径，可留空自动查找）`,
+              `${name} system executable (absolute host path; leave empty to detect)`,
+            )}
+          </span>
+          <Input
+            value={systemPath}
+            disabled={blocked}
+            onChange={(event) => setSystemPath(event.target.value)}
+          />
+        </label>
+        <Button
+          size="sm"
+          variant="outline"
           disabled={blocked}
-          onChange={(event) => setSystemPath(event.target.value)}
-        />
-      </label>
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={blocked}
-        onClick={() =>
-          void run(service, {
-            owner,
-            source: "system",
-            ...(systemPath.trim() ? { path: systemPath.trim() } : {}),
-          })
-        }
-      >
-        {t(`使用系统 ${name}`, `Use system ${name}`)}
-      </Button>
-      <label className="grid gap-1 text-sm">
-        <span>{t("官方版本（留空获取最新版本）", "Official version (empty for latest)")}</span>
-        <Input
-          value={version}
+          onClick={() =>
+            void run(service, {
+              owner,
+              source: "system",
+              ...(systemPath.trim() ? { path: systemPath.trim() } : {}),
+            })
+          }
+        >
+          {t(`使用系统 ${name}`, `Use system ${name}`)}
+        </Button>
+        <label className="grid gap-1 text-sm">
+          <span>{t("官方版本（留空获取最新版本）", "Official version (empty for latest)")}</span>
+          <Input
+            value={version}
+            disabled={installBlocked}
+            onChange={(event) => setVersion(event.target.value)}
+          />
+        </label>
+        <Button
+          size="sm"
           disabled={installBlocked}
-          onChange={(event) => setVersion(event.target.value)}
-        />
-      </label>
-      <Button
-        size="sm"
-        disabled={installBlocked}
-        onClick={() => install("install", version.trim())}
-      >
-        {t(`安装 ${name} 官方版本`, `Install official ${name}`)}
-      </Button>
-      <label className="grid gap-1 text-sm">
-        <span>
-          {t("离线包目录（执行电脑上的绝对路径）", "Offline bundle directory (absolute host path)")}
-        </span>
-        <Input
-          value={bundle}
-          disabled={installBlocked}
-          onChange={(event) => setBundle(event.target.value)}
-        />
-      </label>
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={installBlocked || !bundle.trim()}
-        onClick={() => install("offline", bundle.trim())}
-      >
-        {t(`从离线包安装 ${name}`, `Install ${name} from offline bundle`)}
-      </Button>
+          onClick={() => install("install", version.trim())}
+        >
+          {t(`安装 ${name} 官方版本`, `Install official ${name}`)}
+        </Button>
+        <label className="grid gap-1 text-sm">
+          <span>
+            {t(
+              "离线包目录（执行电脑上的绝对路径）",
+              "Offline bundle directory (absolute host path)",
+            )}
+          </span>
+          <Input
+            value={bundle}
+            disabled={installBlocked}
+            onChange={(event) => setBundle(event.target.value)}
+          />
+        </label>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={installBlocked || !bundle.trim()}
+          onClick={() => install("offline", bundle.trim())}
+        >
+          {t(`从离线包安装 ${name}`, `Install ${name} from offline bundle`)}
+        </Button>
+      </SettingsDisclosure>
     </div>
   );
 }

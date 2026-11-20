@@ -1,3 +1,4 @@
+import type { UiLanguage } from "@t3tools/shared/uiMessages";
 import { type TimestampFormat } from "@t3tools/contracts/settings";
 
 function getTimestampFormatOptions(
@@ -74,14 +75,15 @@ function getTimestampFormatter(
   timestampFormat: TimestampFormat,
   includeSeconds: boolean,
   timeZone?: string,
+  language?: UiLanguage,
 ): Intl.DateTimeFormat {
-  const cacheKey = `${timestampFormat}:${includeSeconds ? "seconds" : "minutes"}:${timeZone ?? ""}`;
+  const cacheKey = `${language ?? "system"}:${timestampFormat}:${includeSeconds ? "seconds" : "minutes"}:${timeZone ?? ""}`;
   const cachedFormatter = timestampFormatterCache.get(cacheKey);
   if (cachedFormatter) {
     return cachedFormatter;
   }
 
-  const formatter = new Intl.DateTimeFormat(timestampLocale, {
+  const formatter = new Intl.DateTimeFormat(language ?? timestampLocale, {
     ...getTimestampFormatOptions(timestampFormat, includeSeconds),
     ...(timeZone ? { timeZone } : {}),
   });
@@ -121,20 +123,27 @@ function ordinalSuffix(day: number): string {
 export function formatChatTimestampTooltip(
   isoDate: string,
   timestampFormat: TimestampFormat,
+  language: UiLanguage = "en",
 ): string {
   const date = parseTimestampDate(isoDate);
   if (!date) return "";
-  const time = formatShortTimestamp(isoDate, timestampFormat);
+  const time = formatShortTimestamp(isoDate, timestampFormat, language);
+  if (language === "zh")
+    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${time}`;
   const day = date.getDate();
   const month = monthNameFormatter.format(date);
   const year = date.getFullYear();
   return `${time}, ${day}${ordinalSuffix(day)} ${month} ${year}`;
 }
 
-export function formatShortTimestamp(isoDate: string, timestampFormat: TimestampFormat): string {
+export function formatShortTimestamp(
+  isoDate: string,
+  timestampFormat: TimestampFormat,
+  language: UiLanguage = "en",
+): string {
   const date = parseTimestampDate(isoDate);
   if (!date) return "";
-  return getTimestampFormatter(timestampFormat, false).format(date);
+  return getTimestampFormatter(timestampFormat, false, undefined, language).format(date);
 }
 
 const numericDateOptions: Intl.DateTimeFormatOptions = { month: "numeric", day: "numeric" };
@@ -142,12 +151,6 @@ const numericDateWithYearOptions: Intl.DateTimeFormatOptions = {
   ...numericDateOptions,
   year: "numeric",
 };
-const numericDateFormatter = new Intl.DateTimeFormat(timestampLocale, numericDateOptions);
-const numericDateWithYearFormatter = new Intl.DateTimeFormat(
-  timestampLocale,
-  numericDateWithYearOptions,
-);
-
 interface CalendarDay {
   year: number;
   /** Days since the epoch, so differences are whole days across DST shifts. */
@@ -171,11 +174,13 @@ function calendarDay(date: Date, timeZone: string | undefined): CalendarDay {
   return { year, index: Date.UTC(year, part("month") - 1, part("day")) / 86_400_000 };
 }
 
-function formatNumericDate(date: Date, sameYear: boolean, timeZone: string | undefined): string {
-  if (!timeZone) {
-    return (sameYear ? numericDateFormatter : numericDateWithYearFormatter).format(date);
-  }
-  return new Intl.DateTimeFormat(timestampLocale, {
+function formatNumericDate(
+  date: Date,
+  sameYear: boolean,
+  timeZone: string | undefined,
+  language: UiLanguage,
+): string {
+  return new Intl.DateTimeFormat(language, {
     ...(sameYear ? numericDateOptions : numericDateWithYearOptions),
     timeZone,
   }).format(date);
@@ -186,18 +191,19 @@ export function formatDayAwareTimestamp(
   timestampFormat: TimestampFormat,
   nowMs: number = Date.now(),
   timeZone?: string,
+  language: UiLanguage = "en",
 ): string {
   const date = parseTimestampDate(isoDate);
   if (!date) return "";
-  const time = getTimestampFormatter(timestampFormat, false, timeZone).format(date);
+  const time = getTimestampFormatter(timestampFormat, false, timeZone, language).format(date);
 
   const today = calendarDay(new Date(nowMs), timeZone);
   const messageDay = calendarDay(date, timeZone);
   const dayDiff = today.index - messageDay.index;
 
   if (dayDiff <= 0) return time;
-  if (dayDiff === 1) return `yesterday at ${time}`;
-  return `${formatNumericDate(date, messageDay.year === today.year, timeZone)} ${time}`;
+  if (dayDiff === 1) return language === "zh" ? `昨天 ${time}` : `yesterday at ${time}`;
+  return `${formatNumericDate(date, messageDay.year === today.year, timeZone, language)} ${time}`;
 }
 
 /** `timeZone` overrides the zone the formatters cached when they were built. */
@@ -206,19 +212,21 @@ export function formatUpcomingTimestamp(
   timestampFormat: TimestampFormat,
   nowMs: number = Date.now(),
   timeZone?: string,
+  language: UiLanguage = "en",
 ): string {
   const date = parseTimestampDate(isoDate);
   if (!date) return "";
-  const time = getTimestampFormatter(timestampFormat, false, timeZone).format(date);
+  const time = getTimestampFormatter(timestampFormat, false, timeZone, language).format(date);
 
   const today = calendarDay(new Date(nowMs), timeZone);
   const targetDay = calendarDay(date, timeZone);
   const dayDiff = targetDay.index - today.index;
 
-  if (dayDiff < 0) return formatDayAwareTimestamp(isoDate, timestampFormat, nowMs, timeZone);
+  if (dayDiff < 0)
+    return formatDayAwareTimestamp(isoDate, timestampFormat, nowMs, timeZone, language);
   if (dayDiff === 0) return time;
-  if (dayDiff === 1) return `tomorrow at ${time}`;
-  return `${formatNumericDate(date, targetDay.year === today.year, timeZone)} ${time}`;
+  if (dayDiff === 1) return language === "zh" ? `明天 ${time}` : `tomorrow at ${time}`;
+  return `${formatNumericDate(date, targetDay.year === today.year, timeZone, language)} ${time}`;
 }
 
 type RelativeTimeParts = { value: string; suffix: string | null };

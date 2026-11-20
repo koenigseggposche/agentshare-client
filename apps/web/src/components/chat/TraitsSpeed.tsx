@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import type { ProviderDriverKind, ProviderOptionDescriptor } from "@t3tools/contracts";
 import { getProviderOptionCurrentValue } from "@t3tools/shared/model";
 import { ZapIcon } from "lucide-react";
@@ -11,7 +13,7 @@ export function getTraitsSpeedDisplay(
 ): { label: string; speedIcon: "fast" | "ultrafast" | null } | null {
   if (descriptor.id === "fastMode" && descriptor.type === "boolean") {
     return {
-      label: descriptor.currentValue === true ? "Fast" : "Normal",
+      label: descriptor.currentValue === true ? readUiText("Fast") : readUiText("Normal"),
       speedIcon: descriptor.currentValue === true ? "fast" : null,
     };
   }
@@ -27,7 +29,8 @@ export function getTraitsSpeedDisplay(
     (ultrafastTier && currentValue === ultrafastTier.id)
   ) {
     return {
-      label: descriptor.options.find(({ id }) => id === currentValue)?.label ?? "Normal",
+      label:
+        descriptor.options.find(({ id }) => id === currentValue)?.label ?? readUiText("Normal"),
       speedIcon:
         ultrafastTier && currentValue === ultrafastTier.id
           ? "ultrafast"
@@ -48,6 +51,7 @@ export function TraitsSpeedIcon({
   speedIcon: "fast" | "ultrafast";
   size?: ComposerControlSize;
 }) {
+  const uiText = useUiText();
   return (
     <>
       <ComposerControlIcon
@@ -63,7 +67,7 @@ export function TraitsSpeedIcon({
         )}
       />
       <span className="sr-only">
-        {speedIcon === "ultrafast" ? "Ultrafast mode on" : "Fast mode on"}
+        {speedIcon === "ultrafast" ? uiText("Ultrafast mode on") : uiText("Fast mode on")}
       </span>
     </>
   );

@@ -1,3 +1,6 @@
+import { readUiText } from "../i18n/uiText";
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { providerStreamInterruption } from "@t3tools/client-runtime/errors";
 import type {
   ThreadPendingApproval,
@@ -353,7 +356,7 @@ export function threadFeedCompactionLabels(feed: ReadonlyArray<ThreadFeedEntry>)
           (age === undefined
             ? undefined
             : {
-                title: `Context compacted after ${age} idle`,
+                title: readUiText("Context compacted after {0} idle", [age]),
                 compacting: "Compacting…",
               });
         if (labels) labelsByEntryId.set(entry.id, labels);
@@ -578,6 +581,7 @@ function itemToolPresentation(item: OrchestrationV2TurnItem): T3McpToolPresentat
 function itemSummary(
   item: OrchestrationV2TurnItem,
   toolPresentation: T3McpToolPresentation | null = null,
+  uiText: UiTranslator = uiTranslators.en,
 ): string {
   if (item.type === "notification") return item.summary;
   if (item.type === "system_notice") return item.message;
@@ -614,9 +618,11 @@ function itemSummary(
     case "run_interrupt_request":
       return "Interrupt requested";
     case "run_interrupt_result":
-      return "Run interrupted";
+      return uiText("Run interrupted");
     case "error":
-      return item.failure.class === "usage_limit" ? "Usage limit reached" : "Provider error";
+      return item.failure.class === "usage_limit"
+        ? uiText("Usage limit reached")
+        : "Provider error";
     case "handoff":
       return "Context handed off";
     case "fork":
@@ -642,11 +648,11 @@ function itemSummary(
       return toolPresentation?.displayName ?? item.toolName ?? "Tool call";
     }
     case "proposed_plan":
-      return "Proposed plan";
+      return uiText("Proposed plan");
     case "todo_list":
       return "Plan updated";
     case "user_message":
-      return "User message";
+      return uiText("User message");
     case "assistant_message":
       return "Assistant message";
   }
@@ -798,10 +804,11 @@ export function formatItemFullDetail(
 function toFeedActivity(
   row: OrchestrationV2ProjectedTurnItem,
   attemptId: RunAttemptId | null,
+  uiText: UiTranslator = uiTranslators.en,
 ): ThreadFeedActivity {
   const item = row.item;
   const toolPresentation = itemToolPresentation(item);
-  const summary = itemSummary(item, toolPresentation);
+  const summary = itemSummary(item, toolPresentation, uiText);
   const detail = item.type === "notification" ? null : itemPreview(item);
   const createdAt = DateTime.formatIso(item.startedAt ?? item.updatedAt);
   const workEntry = toWorkLogEntry(item, createdAt, summary, detail);
@@ -1073,6 +1080,7 @@ function deriveThreadFeedRunFolds(
   latestRun: ThreadFeedLatestRun | null,
   runlessWorkActive: boolean,
   feedFailedRunIds: ReadonlySet<RunId>,
+  uiText: UiTranslator = uiTranslators.en,
 ): ReadonlyMap<string, ThreadFeedRunFold> {
   const terminalAssistantMessageIdByRun = new Map<RunId, string>();
   const interruptedRunIds = new Set<RunId>();
@@ -1225,11 +1233,11 @@ function deriveThreadFeedRunFolds(
       hiddenEntryIds,
       label: interrupted
         ? duration
-          ? `You stopped after ${duration}`
-          : "You stopped this response"
+          ? uiText("You stopped after {0}", [duration])
+          : uiText("You stopped this response")
         : duration
-          ? `Worked for ${duration}`
-          : "Worked",
+          ? uiText("Worked for {0}", [duration])
+          : uiText("Worked"),
     });
   }
   const covered = new Set(
@@ -1245,7 +1253,7 @@ function deriveThreadFeedRunFolds(
       runId: RunId.make(`deferred-work:${entry.id}`),
       createdAt: entry.createdAt,
       hiddenEntryIds: new Set([entry.id]),
-      label: "Earlier work",
+      label: uiText("Earlier work"),
       deferredWorkItemIds,
     });
   }
@@ -1363,6 +1371,7 @@ export function deriveThreadFeedPresentation(
   activeWorkStartedAt: string | null = null,
   runlessWorkActive = false,
   cache?: ThreadFeedCache,
+  uiText: UiTranslator = uiTranslators.en,
 ): ThreadFeedEntry[] {
   const previous = cache?.presentation ?? null;
   const restart = presentationRestart(
@@ -1430,6 +1439,7 @@ export function deriveThreadFeedPresentation(
     latestRun,
     isWorking && runlessWorkActive,
     failedRunIds,
+    uiText,
   );
   const collapsedEntryIds = new Set<string>();
   for (const fold of foldsByAnchorId.values()) {
@@ -1991,6 +2001,7 @@ export function buildThreadFeed(
     readonly checkpointSummaries?: ReadonlyArray<ThreadCheckpointSummary>;
     readonly cache?: ThreadFeedCache;
   },
+  uiText: UiTranslator = uiTranslators.en,
 ): ThreadFeedEntry[] {
   const anchoredMessages = options?.anchoredMessages ?? [];
   const attemptByRootNodeId = new Map(
@@ -2162,7 +2173,7 @@ export function buildThreadFeed(
       entryRows.push(index);
       continue;
     }
-    const activity = toFeedActivity(row, attemptId);
+    const activity = toFeedActivity(row, attemptId, uiText);
     const entry: RawThreadFeedEntry = {
       type: "activity",
       id: activity.id,

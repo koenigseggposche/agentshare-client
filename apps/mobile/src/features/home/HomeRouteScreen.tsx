@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { uuidv4 } from "../../lib/uuid";
 import { ThreadUndoNotice } from "./ThreadUndoNotice";
 import { Toolbar } from "../../components/ui/Toolbar";
@@ -40,6 +41,7 @@ import { useSelectWorkspaceTab } from "../workspace/useSelectWorkspaceTab";
 import { useSelectWorkspaceDetail } from "../workspace/useSelectWorkspaceDetail";
 
 export function HomeRouteScreen() {
+  const uiText = useUiText();
   const { width: windowWidth } = useWindowDimensions();
   const nativePrimaryColumn = use(NativePrimaryColumnContext);
   const columnMetrics = useNativeColumnLayoutMetrics();
@@ -179,13 +181,13 @@ export function HomeRouteScreen() {
         {Platform.OS === "ios" ? (
           <Toolbar placement="left">
             <Toolbar.Button
-              accessibilityLabel="New task"
+              accessibilityLabel={uiText("New task")}
               icon="square.and.pencil"
               onPress={startNewTask}
             />
           </Toolbar>
         ) : null}
-        {Platform.OS === "android" ? <AppBar embedded title="Threads" /> : null}
+        {Platform.OS === "android" ? <AppBar embedded title={uiText("Threads")} /> : null}
         <WorkspaceEmptyDetail
           onAddConnection={
             Platform.OS === "android" && !catalogState.hasConnections
@@ -211,11 +213,14 @@ export function HomeRouteScreen() {
           <NativeStackScreenOptions
             optionsVersion={headerWidth}
             options={{
-              ...getConnectionAwareBrandHeaderOptions({
-                headerWidth,
-                trailingItemCount: nativePrimaryColumn && deviceType === "pad" ? 2 : 1,
-                onOpenEnvironments: () => openSettings(navigation, "SettingsEnvironments"),
-              }),
+              ...getConnectionAwareBrandHeaderOptions(
+                {
+                  headerWidth,
+                  trailingItemCount: nativePrimaryColumn && deviceType === "pad" ? 2 : 1,
+                  onOpenEnvironments: () => openSettings(navigation, "SettingsEnvironments"),
+                },
+                uiText,
+              ),
               headerShown: Platform.OS !== "android",
             }}
           />

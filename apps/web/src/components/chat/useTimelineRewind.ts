@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { EnvironmentThreadShell, ThreadStructure } from "@t3tools/client-runtime/state/shell";
 import type { ComposerThreadTarget } from "../../composerDraftStore";
 import type { ComposerHandleRef } from "../../composerHandleContext";
@@ -58,6 +59,7 @@ interface TimelineRewindInput {
  * the composer) and forking a new thread from a run.
  */
 export function useTimelineRewind(input: TimelineRewindInput) {
+  const uiText = useUiText();
   const {
     environmentId,
     routeThreadRef,
@@ -184,7 +186,7 @@ export function useTimelineRewind(input: TimelineRewindInput) {
         sourceThreadId: input.sourceThreadId,
         targetThreadId,
         runId: input.runId,
-        title: `${activeThread.title} fork`,
+        title: uiText("{0} fork", [activeThread.title]),
       },
     });
     if (result._tag === "Failure") {

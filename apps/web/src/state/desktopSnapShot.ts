@@ -1,3 +1,5 @@
+import { readUiTranslator } from "../i18n/uiText";
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
 import type { DesktopSnapShotState } from "@t3tools/contracts";
 import * as Option from "effect/Option";
 import { Atom, type AtomRegistry } from "effect/reactivity";
@@ -9,8 +11,12 @@ export interface SnapShotSetupError {
   readonly message: string;
 }
 
-export function snapShotSetupError(title: string, error: unknown): SnapShotSetupError {
-  return { title, message: error instanceof Error ? error.message : "Try again." };
+export function snapShotSetupError(
+  title: string,
+  error: unknown,
+  uiText: UiTranslator = uiTranslators.en,
+): SnapShotSetupError {
+  return { title, message: error instanceof Error ? error.message : uiText("Try again.") };
 }
 
 export interface DesktopSnapShotLoad {
@@ -40,7 +46,11 @@ export const desktopSnapShotAtom = Atom.writable(
       void refreshDesktopSnapShotState(get.registry, (error) => {
         get.setSelf({
           ...Option.getOrElse(get.self<DesktopSnapShotLoad>(), () => EMPTY_LOAD),
-          refreshError: snapShotSetupError("Couldn't check capture setup", error),
+          refreshError: snapShotSetupError(
+            "Couldn't check capture setup",
+            error,
+            readUiTranslator(),
+          ),
         });
       });
     window.addEventListener("focus", refresh);

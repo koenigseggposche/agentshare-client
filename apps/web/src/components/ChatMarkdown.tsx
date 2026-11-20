@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../i18n/uiText";
 import { buildFileLinkParentSuffixByPath, fileLinkLabel } from "@t3tools/shared/fileLinks";
 import {
   isWindowsDrivePathHref,
@@ -276,13 +278,14 @@ function CodexArtifactTemplateCard(props: {
   readonly template: CodexArtifactTemplate;
   readonly onUse?: ((template: CodexArtifactTemplate) => void) | undefined;
 }) {
+  const uiText = useUiText();
   const Icon = ARTIFACT_TEMPLATE_ICON_BY_KIND[props.template.artifactKind];
   const presentationLabel = codexArtifactTemplatePresentationLabel(props.template.artifactKind);
 
   return (
     <div
       role="group"
-      aria-label={`${props.template.displayName} template`}
+      aria-label={uiText("{0} template", [props.template.displayName])}
       data-chat-markdown-artifact-template
       className="my-[0.65rem] flex w-full min-w-0 items-center gap-3 rounded-xl border border-border/70 bg-card/60 px-3 py-2.5 text-foreground shadow-xs"
       data-artifact-kind={props.template.artifactKind}
@@ -312,7 +315,7 @@ function CodexArtifactTemplateCard(props: {
           className="shrink-0"
           onClick={() => props.onUse?.(props.template)}
         >
-          Use template
+          {uiText("Use template")}
         </Button>
       ) : null}
     </div>
@@ -505,6 +508,7 @@ function useChatMarkdownState({
   headingLevelOffset = 0,
   sourceControlMedia = false,
 }: ChatMarkdownProps) {
+  const uiText = useUiText();
   const resolvedTheme = useRenderedAppearance();
   const markdownRef = useRef<HTMLElement>(null);
   const mediaRequestId = useRef(0);
@@ -619,7 +623,7 @@ function useChatMarkdownState({
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Media unavailable",
+            title: uiText("Media unavailable"),
             description,
           }),
         );
@@ -631,7 +635,7 @@ function useChatMarkdownState({
   );
   const projects = useProjects();
   const [preferredEditor] = usePreferredEditor(availableEditors);
-  const preferredEditorMenuLabel = openInEditorMenuLabel(preferredEditor);
+  const preferredEditorMenuLabel = openInEditorMenuLabel(preferredEditor, uiText);
   const openInPreferredEditor = useOpenInPreferredEditor(environmentId, availableEditors);
   const openInEditor = useAtomCommand(shellEnvironment.openInEditor, {
     reportFailure: false,
@@ -712,7 +716,7 @@ function useChatMarkdownState({
         AsyncResult.failure<void, BrowserPreviewUnavailableError>(
           Cause.fail(
             new BrowserPreviewUnavailableError({
-              message: "Preview access is unavailable for this client.",
+              message: uiText("Preview access is unavailable for this client."),
             }),
           ),
         ),
@@ -726,7 +730,7 @@ function useChatMarkdownState({
           toastManager.add(
             stackedThreadToast({
               type: "error",
-              title: "Unable to open link in browser",
+              title: uiText("Unable to open link in browser"),
               description: error.message,
             }),
           );
@@ -742,20 +746,23 @@ function useChatMarkdownState({
         AsyncResult.failure<void, BrowserPreviewUnavailableError>(
           Cause.fail(
             new BrowserPreviewUnavailableError({
-              message: "Environment is not connected.",
+              message: uiText("Environment is not connected."),
             }),
           ),
         ),
       );
     }
-    return openFileInPreview({
-      threadRef,
-      filePath: path,
-      workspaceRoot: cwd,
-      httpBaseUrl: preparedConnection.httpBaseUrl,
-      createAssetUrl,
-      openPreview,
-    });
+    return openFileInPreview(
+      {
+        threadRef,
+        filePath: path,
+        workspaceRoot: cwd,
+        httpBaseUrl: preparedConnection.httpBaseUrl,
+        createAssetUrl,
+        openPreview,
+      },
+      uiText,
+    );
   };
   const findWorkspaceFileMatch = async (fileLinkMeta: MarkdownFileLinkMeta) => {
     const workspaceRelativePath = fileLinkMeta.workspaceLookupPath;
@@ -986,8 +993,10 @@ const CHAT_MARKDOWN_COMPONENTS = {
     return <p {...props}>{renderSkillInlineMarkdownChildren(children, skills, threadRef)}</p>;
   },
   blockquote: function MarkdownBlockquote({ node: _node, children, ...props }) {
-    const alert =
-      GITHUB_ALERT_PRESENTATIONS[String((props as Record<string, unknown>)["data-alert"] ?? "")];
+    const uiText = useUiText();
+    const alert = translateUiLabels(GITHUB_ALERT_PRESENTATIONS, uiText)[
+      String((props as Record<string, unknown>)["data-alert"] ?? "")
+    ];
     if (!alert) {
       return <blockquote {...props}>{children}</blockquote>;
     }
@@ -1028,6 +1037,7 @@ const CHAT_MARKDOWN_COMPONENTS = {
     );
   },
   input: function MarkdownInput({ node: _node, type, checked, disabled: _disabled, ...props }) {
+    const uiText = useUiText();
     const { onTaskListChange } = use(ChatMarkdownRendererContext);
     const text = use(ChatMarkdownTextContext);
     if (type !== "checkbox" || !onTaskListChange) {
@@ -1046,7 +1056,7 @@ const CHAT_MARKDOWN_COMPONENTS = {
         {...props}
         type="checkbox"
         name="markdown-task"
-        aria-label="Toggle task"
+        aria-label={uiText("Toggle task")}
         checked={checked}
         onChange={(event) => {
           const listItemStart = Number(event.currentTarget.closest("li")?.dataset.listItemOffset);
@@ -1059,6 +1069,7 @@ const CHAT_MARKDOWN_COMPONENTS = {
     );
   },
   a: function MarkdownAnchor({ node, href, children, title: _title, ...props }) {
+    const uiText = useUiText();
     const {
       canOperateHost,
       canOperatePreview,
@@ -1091,7 +1102,7 @@ const CHAT_MARKDOWN_COMPONENTS = {
       return environmentId ? (
         <MarkdownThreadLink environmentId={environmentId} link={threadLink} label={label} />
       ) : (
-        <span>{label ?? "Thread"}</span>
+        <span>{label ?? uiText("Thread")}</span>
       );
     }
     const contextReference = href ? parseComposerContextHref(href) : null;
@@ -1231,43 +1242,47 @@ const CHAT_MARKDOWN_COMPONENTS = {
                 : resolveThreadPullRequest(href) === null
                   ? undefined
                   : "link-to-thread";
-            void showExternalLinkContextMenu({
-              href,
-              canOpenInPreview,
-              threadLinkAction,
-              position: { x: event.clientX, y: event.clientY },
-              showContextMenu: (items, position) => api.contextMenu.show(items, position),
-              openInPreview: async (target) => {
-                const result = await openExternalLinkInPreview(target);
-                if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
-                  reportMarkdownActionFailure(
-                    { operation: "open-link-in-preview", target },
-                    result.cause,
-                  );
-                }
+            void showExternalLinkContextMenu(
+              {
+                href,
+                canOpenInPreview,
+                threadLinkAction,
+                position: { x: event.clientX, y: event.clientY },
+                showContextMenu: (items, position) => api.contextMenu.show(items, position),
+                openInPreview: async (target) => {
+                  const result = await openExternalLinkInPreview(target);
+                  if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+                    reportMarkdownActionFailure(
+                      { operation: "open-link-in-preview", target },
+                      result.cause,
+                    );
+                  }
+                },
+                openExternal: (target) => api.shell.openExternal(target),
+                copyLink: (target) => writeTextToClipboard(target, "link"),
+                updateThreadLink: updateThreadPullRequestLink,
+                reportFailure: (operation, cause) => {
+                  reportMarkdownActionFailure({ operation, target: href }, cause);
+                  if (
+                    operation === "link-pull-request-to-thread" ||
+                    operation === "unlink-pull-request-from-thread"
+                  ) {
+                    toastManager.add(
+                      stackedThreadToast({
+                        type: "error",
+                        title:
+                          operation === "link-pull-request-to-thread"
+                            ? uiText("Unable to link pull request")
+                            : uiText("Unable to unlink pull request"),
+                        description:
+                          cause instanceof Error ? cause.message : uiText("The request failed."),
+                      }),
+                    );
+                  }
+                },
               },
-              openExternal: (target) => api.shell.openExternal(target),
-              copyLink: (target) => writeTextToClipboard(target, "link"),
-              updateThreadLink: updateThreadPullRequestLink,
-              reportFailure: (operation, cause) => {
-                reportMarkdownActionFailure({ operation, target: href }, cause);
-                if (
-                  operation === "link-pull-request-to-thread" ||
-                  operation === "unlink-pull-request-from-thread"
-                ) {
-                  toastManager.add(
-                    stackedThreadToast({
-                      type: "error",
-                      title:
-                        operation === "link-pull-request-to-thread"
-                          ? "Unable to link pull request"
-                          : "Unable to unlink pull request",
-                      description: cause instanceof Error ? cause.message : "The request failed.",
-                    }),
-                  );
-                }
-              },
-            });
+              uiText,
+            );
           }}
         >
           {faviconHost && hasText && !isPullRequestAutolink ? (

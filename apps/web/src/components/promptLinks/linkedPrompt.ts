@@ -1,15 +1,23 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { LinkedPrompt } from "@t3tools/shared/promptLinks";
 
 import { type ComposerThreadTarget, useComposerDraftStore } from "~/composerDraftStore";
 
 import { toastManager } from "../ui/toast";
 
-export function warnAboutHiddenCharacters(prompt: LinkedPrompt): void {
+export function warnAboutHiddenCharacters(
+  prompt: LinkedPrompt,
+  uiText: UiTranslator = uiTranslators.en,
+): void {
   if (prompt.hiddenCharacters === 0) return;
   toastManager.add({
     type: "warning",
-    title: "This prompt had hidden characters, it may be malicious",
-    description: `T3 Code removed ${prompt.hiddenCharacters} hidden character${prompt.hiddenCharacters === 1 ? "" : "s"}. Read the prompt before you send it.`,
+    title: uiText("This prompt had hidden characters, it may be malicious"),
+    description: uiText(
+      "T3 Code removed {0} hidden character{1}. Read the prompt before you send it.",
+      [prompt.hiddenCharacters, prompt.hiddenCharacters === 1 ? "" : "s"],
+    ),
     timeout: 0,
   });
 }
@@ -18,13 +26,14 @@ export function placeLinkedPrompt(
   target: ComposerThreadTarget,
   prompt: LinkedPrompt,
   notes: ReadonlyArray<string> = [],
+  uiText: UiTranslator = uiTranslators.en,
 ): void {
-  warnAboutHiddenCharacters(prompt);
+  warnAboutHiddenCharacters(prompt, uiText);
   const place = () => {
     useComposerDraftStore.getState().setPrompt(target, prompt.text);
     toastManager.add({
       type: "info",
-      title: "Prompt added from a link",
+      title: uiText("Prompt added from a link"),
       description: ["Read it before you send.", ...notes].join(" "),
     });
   };
@@ -35,8 +44,8 @@ export function placeLinkedPrompt(
   }
   const id = toastManager.add({
     type: "info",
-    title: "Linked prompt ready",
-    description: "This thread already has a draft. Replace it with the linked prompt?",
+    title: uiText("Linked prompt ready"),
+    description: uiText("This thread already has a draft. Replace it with the linked prompt?"),
     timeout: 0,
     actionProps: {
       children: "Replace draft",

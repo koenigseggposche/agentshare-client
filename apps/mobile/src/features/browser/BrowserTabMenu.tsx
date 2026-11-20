@@ -1,3 +1,6 @@
+import { readUiText } from "../../i18n/uiText";
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import { useAtomValue } from "@effect/atom-react";
 import type { MenuAction } from "@react-native-menu/menu";
@@ -49,6 +52,7 @@ export function BrowserTabMenu({
   readonly streaming: boolean;
   readonly onPaste?: () => void;
 }) {
+  const uiText = useUiText();
   const adjust = useAtomCommand(previewEnvironment.adjust, "browser tab change");
   const resize = useAtomCommand(previewEnvironment.resize, "browser viewport change");
   const close = useAtomCommand(previewEnvironment.close, "browser tab close");
@@ -70,18 +74,18 @@ export function BrowserTabMenu({
 
   const closeAction: MenuAction = {
     id: "close",
-    title: "Close tab",
+    title: uiText("Close tab"),
     image: "xmark",
     attributes: { destructive: true, disabled: !canClose },
   };
   const actions: MenuAction[] = [
-    ...(onPaste ? [{ id: "paste", title: "Paste", image: "doc.on.clipboard" }] : []),
-    { id: "hard-reload", title: "Hard reload", image: "arrow.clockwise.circle" },
+    ...(onPaste ? [{ id: "paste", title: uiText("Paste"), image: "doc.on.clipboard" }] : []),
+    { id: "hard-reload", title: uiText("Hard reload"), image: "arrow.clockwise.circle" },
     {
       id: "appearance",
-      title: "Appearance",
+      title: uiText("Appearance"),
       image: "circle.lefthalf.filled",
-      subactions: APPEARANCES.map((option) => ({
+      subactions: translateUiLabels(APPEARANCES, uiText).map((option) => ({
         id: `appearance:${option.id}`,
         title: option.title,
         state: option.id === colorScheme ? "on" : "off",
@@ -89,19 +93,19 @@ export function BrowserTabMenu({
     },
     {
       id: "zoom",
-      title: `Zoom (${Math.round(zoomFactor * 100)}%)`,
+      title: uiText("Zoom ({0}%)", [Math.round(zoomFactor * 100)]),
       image: "plus.magnifyingglass",
       subactions: [
-        { id: "zoom:in", title: "Zoom in", image: "plus.magnifyingglass" },
-        { id: "zoom:out", title: "Zoom out", image: "minus.magnifyingglass" },
-        { id: "zoom:reset", title: "Actual size", image: "1.magnifyingglass" },
+        { id: "zoom:in", title: uiText("Zoom in"), image: "plus.magnifyingglass" },
+        { id: "zoom:out", title: uiText("Zoom out"), image: "minus.magnifyingglass" },
+        { id: "zoom:reset", title: uiText("Actual size"), image: "1.magnifyingglass" },
       ],
     },
     {
       id: "viewport",
-      title: "Viewport",
+      title: uiText("Viewport"),
       image: "rectangle.and.arrow.up.right.and.arrow.down.left",
-      subactions: VIEWPORTS.map((option) => ({
+      subactions: translateUiLabels(VIEWPORTS, uiText).map((option) => ({
         id: `viewport:${option.id}`,
         title: option.title,
         state: option.id === viewportId ? "on" : "off",
@@ -109,11 +113,11 @@ export function BrowserTabMenu({
     },
     {
       id: "site-data",
-      title: "Site data",
+      title: uiText("Site data"),
       image: "trash",
       subactions: [
-        { id: "clear:cookies", title: "Clear cookies", attributes: { destructive: true } },
-        { id: "clear:cache", title: "Clear cache", attributes: { destructive: true } },
+        { id: "clear:cookies", title: uiText("Clear cookies"), attributes: { destructive: true } },
+        { id: "clear:cache", title: uiText("Clear cache"), attributes: { destructive: true } },
       ],
     },
     closeAction,
@@ -121,13 +125,13 @@ export function BrowserTabMenu({
 
   const run = async (change: Omit<PreviewAdjustInput, "threadId" | "tabId">) => {
     const result = await adjust({ environmentId, input: { ...target, ...change } });
-    if (result._tag === "Failure") Dialog.alert("Could not change this browser tab");
+    if (result._tag === "Failure") Dialog.alert(readUiText("Could not change this browser tab"));
   };
 
   const onAction = (id: string) => {
     if (id === "close") {
       void close({ environmentId, input: target }).then((result) => {
-        if (result._tag === "Failure") Dialog.alert("Could not close this browser tab");
+        if (result._tag === "Failure") Dialog.alert(readUiText("Could not close this browser tab"));
       });
       return;
     }
@@ -139,16 +143,20 @@ export function BrowserTabMenu({
     if (id === "clear:cookies") return void run({ clear: "cookies" });
     if (id === "clear:cache") return void run({ clear: "cache" });
     if (id.startsWith("appearance:")) {
-      const option = APPEARANCES.find((candidate) => `appearance:${candidate.id}` === id);
+      const option = translateUiLabels(APPEARANCES, uiText).find(
+        (candidate) => `appearance:${candidate.id}` === id,
+      );
       if (option) void run({ colorScheme: option.id });
       return;
     }
     if (id.startsWith("viewport:")) {
-      const option = VIEWPORTS.find((candidate) => `viewport:${candidate.id}` === id);
+      const option = translateUiLabels(VIEWPORTS, uiText).find(
+        (candidate) => `viewport:${candidate.id}` === id,
+      );
       if (!option) return;
       void resize({ environmentId, input: { ...target, viewport: option.setting } }).then(
         (result) => {
-          if (result._tag === "Failure") Dialog.alert("Could not change the viewport");
+          if (result._tag === "Failure") Dialog.alert(readUiText("Could not change the viewport"));
         },
       );
     }
@@ -160,12 +168,12 @@ export function BrowserTabMenu({
       // the other state's actions.
       key={streaming ? "streaming" : "idle"}
       accessible
-      accessibilityLabel="Browser tab options"
+      accessibilityLabel={uiText("Browser tab options")}
       accessibilityRole="button"
       actions={streaming ? actions : [closeAction]}
       onPressAction={({ nativeEvent }) => onAction(nativeEvent.event)}
     >
-      <ControlPill icon="ellipsis" accessibilityLabel="Browser tab options" />
+      <ControlPill icon="ellipsis" accessibilityLabel={uiText("Browser tab options")} />
     </Menu>
   );
 }

@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { OrchestrationV2TurnItem } from "@t3tools/contracts";
 import { getRenderablePatch, resolveFileDiffPath } from "./diffRendering";
 
@@ -58,6 +60,7 @@ function recordedText(value: string | undefined) {
 
 export function toolCallDiff(
   item: Pick<FileChange, "diffStr" | "fileName" | "changes" | "oldStr" | "newStr">,
+  uiText: UiTranslator = uiTranslators.en,
 ) {
   const diff = recordedText(item.diffStr);
   const operation = item.changes?.[0]?.operation;
@@ -69,8 +72,8 @@ export function toolCallDiff(
     content: diff.text?.trim()
       ? []
       : [
-          { label: "Recorded content before", text: before.text },
-          { label: "Recorded content after", text: after.text },
+          { label: uiText("Recorded content before"), text: before.text },
+          { label: uiText("Recorded content after"), text: after.text },
         ].filter((entry): entry is { label: string; text: string } => entry.text !== undefined),
     truncated: diff.truncated || before.truncated || after.truncated,
   };

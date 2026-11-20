@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import { RegistryContext, useAtomValue } from "@effect/atom-react";
 import { useNavigation } from "@react-navigation/native";
@@ -31,6 +33,7 @@ export function usePullRequestListActions(
     patch: Partial<EnvironmentPullRequestListEntry>,
   ) => void,
 ) {
+  const uiText = useUiText();
   const registry = use(RegistryContext);
   const navigation = useNavigation();
   const selectDetail = useSelectWorkspaceDetail();
@@ -108,8 +111,8 @@ export function usePullRequestListActions(
     if (AsyncResult.isFailure(result)) {
       const cause = squashAtomCommandFailure(result);
       Dialog.alert(
-        `Couldn't update this ${terminology.singular}`,
-        cause instanceof Error ? cause.message : "Try again.",
+        readUiText("Couldn't update this {0}", [terminology.singular]),
+        cause instanceof Error ? cause.message : readUiText("Try again."),
       );
     }
   };
@@ -141,9 +144,10 @@ export function usePullRequestListActions(
     const label = pullRequestActionLabel(
       supported,
       sourceControlClients.get(entry.provider).changeRequest,
+      uiText,
     );
     Dialog.alert(`${label}?`, `#${entry.number} · ${entry.title}`, [
-      { text: "Cancel", style: "cancel" },
+      { text: readUiText("Cancel"), style: "cancel" },
       {
         text: label,
         style: supported === "close" ? "destructive" : "default",
@@ -156,24 +160,24 @@ export function usePullRequestListActions(
     return [
       {
         id: "open",
-        title: `Open ${terminology.singular}`,
+        title: uiText("Open {0}", [terminology.singular]),
         image: Platform.OS === "ios" ? "arrow.up.right" : "open_in_new",
       },
       ...(writableEnvironments.has(entry.environmentId) && entry.state === "open"
         ? [
             {
               id: "request-review",
-              title: "Request review",
+              title: uiText("Request review"),
               image: Platform.OS === "ios" ? "person.badge.plus" : "person_add",
             },
             {
               id: entry.isDraft ? "ready" : "draft",
-              title: entry.isDraft ? "Mark ready for review" : "Convert to draft",
+              title: entry.isDraft ? uiText("Mark ready for review") : uiText("Convert to draft"),
               image: Platform.OS === "ios" ? "pencil" : "edit",
             },
             {
               id: "close",
-              title: pullRequestActionLabel("close", terminology),
+              title: pullRequestActionLabel("close", terminology, uiText),
               image: Platform.OS === "ios" ? "xmark" : "close",
               attributes: { destructive: true },
             },
@@ -182,17 +186,17 @@ export function usePullRequestListActions(
           ? [
               {
                 id: "reopen",
-                title: pullRequestActionLabel("reopen", terminology),
+                title: pullRequestActionLabel("reopen", terminology, uiText),
                 image: Platform.OS === "ios" ? "arrow.clockwise" : "refresh",
               },
             ]
           : []),
       {
         id: "share",
-        title: "Share…",
+        title: uiText("Share…"),
         image: Platform.OS === "ios" ? "square.and.arrow.up" : "share",
       },
-      { id: "copy", title: "Copy link", image: Platform.OS === "ios" ? "link" : "link" },
+      { id: "copy", title: uiText("Copy link"), image: Platform.OS === "ios" ? "link" : "link" },
       {
         id: "provider",
         title: openOnProviderLabel(entry.provider),

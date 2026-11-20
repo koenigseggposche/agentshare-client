@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { providerStreamInterruption } from "@t3tools/client-runtime/errors";
 import type { ThreadStructure, ThreadStructureRuntime } from "@t3tools/client-runtime/state/shell";
 import { resolveThreadWorkingStartedAt } from "@t3tools/client-runtime/state/models";
@@ -364,6 +366,7 @@ function projectedWorkEntryTone(item: OrchestrationV2TurnItem): WorkLogEntry["to
 
 export function providerErrorPresentation(
   item: Extract<OrchestrationV2TurnItem, { readonly type: "error" }>,
+  uiText: UiTranslator = uiTranslators.en,
 ): { readonly label: string; readonly detail: string } {
   if (item.retry === undefined) {
     const interruption = providerStreamInterruption(item.failure);
@@ -371,8 +374,8 @@ export function providerErrorPresentation(
     return {
       label:
         item.failure.class === "usage_limit"
-          ? "Usage limit reached"
-          : item.title?.trim() || "Provider error",
+          ? uiText("Usage limit reached")
+          : item.title?.trim() || uiText("Provider error"),
       detail: item.failure.message,
     };
   }
@@ -400,7 +403,10 @@ export function providerErrorPresentation(
   };
 }
 
-function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry {
+function projectedWorkEntry(
+  row: OrchestrationV2ProjectedTurnItem,
+  uiText: UiTranslator = uiTranslators.en,
+): WorkLogEntry {
   const { item } = row;
   const title = item.title?.trim() || null;
   const common = {
@@ -419,7 +425,7 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
     case "thread_created":
       return {
         ...common,
-        label: "Created thread",
+        label: uiText("Created thread"),
       };
     case "compaction":
       return {
@@ -431,13 +437,13 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
     case "reasoning":
       return {
         ...common,
-        label: title ?? "Thinking",
+        label: title ?? uiText("Thinking"),
         ...(item.text ? { detail: item.text } : {}),
       };
     case "command_execution":
       return {
         ...common,
-        label: title ?? "Ran command",
+        label: title ?? uiText("Ran command"),
         command: item.input,
         rawCommand: item.input,
         toolTitle: title ?? "Command",
@@ -449,8 +455,8 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
         label:
           title ??
           (item.changes !== undefined && item.changes.length > 1
-            ? `Changed ${item.changes.length} files`
-            : `Changed ${item.fileName}`),
+            ? uiText("Changed {0} files", [item.changes.length])
+            : uiText("Changed {0}", [item.fileName])),
         changedFiles: item.changes?.map((change) => change.path) ?? [item.fileName],
         toolTitle: title ?? "File change",
         toolData: item,
@@ -459,7 +465,7 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
     case "file_search":
       return {
         ...common,
-        label: title ?? formatSearchToolLabel(item) ?? "Searched files",
+        label: title ?? formatSearchToolLabel(item) ?? uiText("Searched files"),
         ...(item.pattern ? { detail: item.pattern } : {}),
         toolTitle: title ?? "File search",
         toolData: item,
@@ -467,7 +473,7 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
     case "web_search":
       return {
         ...common,
-        label: title ?? "Searched the web",
+        label: title ?? uiText("Searched the web"),
         ...(item.patterns?.length ? { detail: item.patterns.join(", ") } : {}),
         toolTitle: title ?? "Web search",
         toolData: item,
@@ -475,7 +481,7 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
     case "checkpoint":
       return {
         ...common,
-        label: title ?? "Checkpoint captured",
+        label: title ?? uiText("Checkpoint captured"),
         changedFiles: item.files.map((file) => file.path),
         toolData: item,
       };
@@ -486,7 +492,7 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
         sourceActivityKind: "runtime.warning",
       };
     case "error": {
-      const presentation = providerErrorPresentation(item);
+      const presentation = providerErrorPresentation(item, uiText);
       return {
         ...common,
         ...presentation,
@@ -511,8 +517,10 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
           (classified === "read"
             ? formatReadToolLabel(readPath ?? "")
             : classified === "search"
-              ? (formatSearchToolLabel({ input: item.input }) ?? item.toolName ?? "Tool call")
-              : (item.toolName ?? "Tool call")),
+              ? (formatSearchToolLabel({ input: item.input }) ??
+                item.toolName ??
+                uiText("Tool call"))
+              : (item.toolName ?? uiText("Tool call"))),
         toolTitle: title ?? item.toolName ?? "Tool",
         toolData: { input: item.input, output: item.output },
       };
@@ -525,20 +533,25 @@ function projectedWorkEntry(row: OrchestrationV2ProjectedTurnItem): WorkLogEntry
         item.steps.find((step) => step.status === "pending");
       return {
         ...common,
-        label: `Tasks ${done}/${item.steps.length}${current ? ` · ${current.text}` : ""}`,
+        label: uiText("Tasks {0}/{1}{2}", [
+          done,
+          item.steps.length,
+          current ? ` · ${current.text}` : "",
+        ]),
       };
     }
     case "approval_request":
       return {
         ...common,
-        label: title ?? "Approval requested",
+        label: title ?? uiText("Approval requested"),
         detail: item.prompt ?? item.requestKind,
         toolData: item,
       };
     case "user_input_request":
       return {
         ...common,
-        label: title ?? (item.questionAnswer ? "Answered questions" : "Input requested"),
+        label:
+          title ?? (item.questionAnswer ? uiText("Answered questions") : uiText("Input requested")),
         ...(item.questionAnswer ? { questionAnswer: item.questionAnswer } : {}),
         toolData: item,
       };
@@ -569,6 +582,7 @@ export interface TimelineEntriesProjection {
 
 export function deriveTimelineEntriesFromVisibleTurnItems(
   input: TimelineEntriesInput,
+  uiText: UiTranslator = uiTranslators.en,
 ): TimelineEntry[] {
   const committedMessageIds = new Set<string>();
   const entries: TimelineEntry[] = [];
@@ -745,7 +759,7 @@ export function deriveTimelineEntriesFromVisibleTurnItems(
       id: item.id,
       kind: "work",
       createdAt,
-      entry: projectedWorkEntry(row),
+      entry: projectedWorkEntry(row, uiText),
       ...attemptMetadata,
     });
   }
@@ -927,6 +941,7 @@ function canRederiveInPlace(
 function reuseTimelineEntries(
   input: TimelineEntriesInput,
   previous: TimelineEntriesProjection,
+  uiText: UiTranslator = uiTranslators.en,
 ): TimelineEntry[] | null {
   const before = previous.input;
   if (
@@ -980,12 +995,15 @@ function reuseTimelineEntries(
   const rederived =
     changedItems.length === 0
       ? []
-      : deriveTimelineEntriesFromVisibleTurnItems({
-          ...input,
-          visibleTurnItems: changedItems,
-          optimisticMessages: [],
-          anchoredMessages: [],
-        });
+      : deriveTimelineEntriesFromVisibleTurnItems(
+          {
+            ...input,
+            visibleTurnItems: changedItems,
+            optimisticMessages: [],
+            anchoredMessages: [],
+          },
+          uiText,
+        );
   if (
     rederived.length !== changedItems.length ||
     rederived.some((entry, index) => entry.id !== changedItems[index]!.item.id)
@@ -1021,10 +1039,13 @@ function reuseTimelineEntries(
   if (rederivedCount !== rederivedEntries.size) return null;
   if (appended) {
     entries.push(
-      ...deriveTimelineEntriesFromVisibleTurnItems({
-        ...input,
-        visibleTurnItems: input.visibleTurnItems.slice(before.visibleTurnItems.length),
-      }),
+      ...deriveTimelineEntriesFromVisibleTurnItems(
+        {
+          ...input,
+          visibleTurnItems: input.visibleTurnItems.slice(before.visibleTurnItems.length),
+        },
+        uiText,
+      ),
     );
   }
   return entries;
@@ -1033,10 +1054,11 @@ function reuseTimelineEntries(
 export function deriveTimelineEntriesFromVisibleTurnItemsWithState(
   input: TimelineEntriesInput,
   previous: TimelineEntriesProjection | null = null,
+  uiText: UiTranslator = uiTranslators.en,
 ): TimelineEntriesProjection {
-  const reused = previous === null ? null : reuseTimelineEntries(input, previous);
+  const reused = previous === null ? null : reuseTimelineEntries(input, previous, uiText);
   if (reused !== null) return { input, entries: reused };
-  const entries = deriveTimelineEntriesFromVisibleTurnItems(input);
+  const entries = deriveTimelineEntriesFromVisibleTurnItems(input, uiText);
   if (previous === null || !shallow(input.attachmentUrlById, previous.input.attachmentUrlById)) {
     return { input, entries };
   }

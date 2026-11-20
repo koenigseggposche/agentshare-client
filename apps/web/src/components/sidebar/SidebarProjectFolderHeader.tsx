@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/models";
 import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { ChevronDownIcon, SquarePenIcon } from "lucide-react";
@@ -43,6 +44,7 @@ export const SidebarProjectFolderHeader = memo(function SidebarProjectFolderHead
   onNewThread: (group: SidebarProjectSnapshot) => void;
   onContextMenu: (group: SidebarProjectSnapshot, position: { x: number; y: number }) => void;
 }) {
+  const uiText = useUiText();
   const { group, collapsed, hiddenThreads } = props;
   const rowId = sidebarFolderRowId(group.projectKey);
   const localLastVisitedAtById = useUiStateStore((state) => state.threadLastVisitedAtById);
@@ -106,14 +108,17 @@ export const SidebarProjectFolderHeader = memo(function SidebarProjectFolderHead
                 data-sidebar-action-for={rowId}
                 size="icon-xs"
                 variant="ghost-muted"
-                aria-label={`New thread in ${group.displayName}`}
+                aria-label={uiText("New thread in {0}", [group.displayName])}
                 onClick={() => props.onNewThread(group)}
               />
             }
           >
             <SquarePenIcon aria-hidden />
           </TooltipTrigger>
-          <TooltipPopup>New thread in {group.displayName}</TooltipPopup>
+          <TooltipPopup>
+            {uiText("New thread in ")}
+            {group.displayName}
+          </TooltipPopup>
         </Tooltip>
       </span>
     </li>

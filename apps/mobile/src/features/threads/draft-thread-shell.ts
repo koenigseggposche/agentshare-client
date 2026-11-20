@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { presentThreadShell } from "@t3tools/client-runtime/state/shell";
 import type {
   EnvironmentId,
@@ -9,22 +11,25 @@ import type {
 } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 
-export function draftThreadShell(input: {
-  readonly environmentId: EnvironmentId;
-  readonly threadId: ThreadId;
-  readonly projectId: ProjectId;
-  readonly modelSelection: ModelSelection;
-  readonly runtimeMode: RuntimeMode;
-  readonly interactionMode: ProviderInteractionMode;
-  readonly branch: string | null;
-  readonly worktreePath: string | null;
-  readonly createdAt: string;
-}) {
+export function draftThreadShell(
+  input: {
+    readonly environmentId: EnvironmentId;
+    readonly threadId: ThreadId;
+    readonly projectId: ProjectId;
+    readonly modelSelection: ModelSelection;
+    readonly runtimeMode: RuntimeMode;
+    readonly interactionMode: ProviderInteractionMode;
+    readonly branch: string | null;
+    readonly worktreePath: string | null;
+    readonly createdAt: string;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+) {
   const timestamp = DateTime.makeUnsafe(input.createdAt);
   return presentThreadShell(input.environmentId, {
     id: input.threadId,
     projectId: input.projectId,
-    title: "New thread",
+    title: uiText("New thread"),
     providerInstanceId: input.modelSelection.instanceId,
     modelSelection: input.modelSelection,
     runtimeMode: input.runtimeMode,

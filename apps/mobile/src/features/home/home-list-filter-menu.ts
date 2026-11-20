@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { EnvironmentId } from "@t3tools/contracts";
 
 export interface HomeListFilterMenuEnvironment {
@@ -29,24 +31,27 @@ export interface HomeListFilterMenu {
   readonly items: Array<HomeListFilterMenuAction | HomeListFilterMenuSubmenu>;
 }
 
-export function buildHomeListFilterMenu(props: {
-  readonly environments: ReadonlyArray<HomeListFilterMenuEnvironment>;
-  readonly projects: ReadonlyArray<HomeListFilterMenuProject>;
-  readonly selectedEnvironmentId: EnvironmentId | null;
-  readonly selectedProjectKey: string | null;
-  readonly onEnvironmentChange: (environmentId: EnvironmentId | null) => void;
-  readonly onProjectChange: (projectKey: string | null) => void;
-}): HomeListFilterMenu {
+export function buildHomeListFilterMenu(
+  props: {
+    readonly environments: ReadonlyArray<HomeListFilterMenuEnvironment>;
+    readonly projects: ReadonlyArray<HomeListFilterMenuProject>;
+    readonly selectedEnvironmentId: EnvironmentId | null;
+    readonly selectedProjectKey: string | null;
+    readonly onEnvironmentChange: (environmentId: EnvironmentId | null) => void;
+    readonly onProjectChange: (projectKey: string | null) => void;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): HomeListFilterMenu {
   const items: Array<HomeListFilterMenuAction | HomeListFilterMenuSubmenu> = [];
 
   items.push({
     type: "submenu",
-    title: "Environment",
+    title: uiText("Environment"),
     items: [
       {
         type: "action",
-        title: "All environments",
-        subtitle: "Show threads from every environment",
+        title: uiText("All environments"),
+        subtitle: uiText("Show threads from every environment"),
         state: props.selectedEnvironmentId === null ? "on" : "off",
         onPress: () => props.onEnvironmentChange(null),
       },
@@ -65,12 +70,12 @@ export function buildHomeListFilterMenu(props: {
   if (props.projects.length > 0) {
     items.push({
       type: "submenu",
-      title: "Project",
+      title: uiText("Project"),
       items: [
         {
           type: "action",
-          title: "All projects",
-          subtitle: "Show threads from every project",
+          title: uiText("All projects"),
+          subtitle: uiText("Show threads from every project"),
           state: props.selectedProjectKey === null ? "on" : "off",
           onPress: () => props.onProjectChange(null),
         },
@@ -85,7 +90,7 @@ export function buildHomeListFilterMenu(props: {
   }
 
   return {
-    title: "Thread list options",
+    title: uiText("Thread list options"),
     items,
   };
 }

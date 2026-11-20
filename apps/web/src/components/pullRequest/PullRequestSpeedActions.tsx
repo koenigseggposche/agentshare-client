@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import type { PullRequestAction } from "@t3tools/contracts";
 import { createContext, use, type ReactNode } from "react";
@@ -44,6 +46,7 @@ export function PullRequestSpeedActions<Entry extends PullRequestSpeedActionEntr
   sweeping?: boolean;
   onCloseSweepStart?: (entry: Entry, event: PointerEvent) => void;
 }) {
+  const uiText = useUiText();
   const canWrite = useAtomValue(
     pullRequestEnvironment.runAction.permissionAtom(entry.environmentId),
   );
@@ -83,11 +86,11 @@ export function PullRequestSpeedActions<Entry extends PullRequestSpeedActionEntr
     <SpeedModeGroup
       busy={busy}
       pending={actionPending || closing}
-      label={`Quick actions for ${terminology.singular} #${entry.number}`}
+      label={uiText("Quick actions for {0} #{1}", [terminology.singular, entry.number])}
     >
       {actions.map((action) => {
-        const label = ACTIONS[action].label;
-        const Icon = ACTIONS[action].Icon;
+        const label = translateUiLabels(ACTIONS, uiText)[action].label;
+        const Icon = translateUiLabels(ACTIONS, uiText)[action].Icon;
         return (
           <Tooltip key={action}>
             <TooltipTrigger
@@ -111,10 +114,10 @@ export function PullRequestSpeedActions<Entry extends PullRequestSpeedActionEntr
             </TooltipTrigger>
             <TooltipPopup>
               {action === "merge" && entry.stack
-                ? `Open this ${terminology.singular} to merge its stack`
+                ? uiText("Open this {0} to merge its stack", [terminology.singular])
                 : action === "close" && onCloseSweepStart
-                  ? "Close immediately, or drag across rows to close several"
-                  : `${label} immediately`}
+                  ? uiText("Close immediately, or drag across rows to close several")
+                  : uiText("{0} immediately", [label])}
             </TooltipPopup>
           </Tooltip>
         );

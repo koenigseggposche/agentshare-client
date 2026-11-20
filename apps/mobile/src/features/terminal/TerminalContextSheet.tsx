@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import {
   ComposerContextId,
@@ -25,6 +27,7 @@ export function TerminalContextSheet(props: {
   onClose: () => void;
   onAttach: () => void;
 }) {
+  const uiText = useUiText();
   const insets = useSafeAreaInsets();
   const lines = props.text.replace(/\n+$/, "").split("\n");
   const [range, setRange] = useState({ start: 0, end: lines.length - 1 });
@@ -37,7 +40,11 @@ export function TerminalContextSheet(props: {
       version: 1 as const,
       kind: "terminal" as const,
       contextId: ComposerContextId.make(uuidv4()),
-      label: `${props.terminalLabel} · visible lines ${range.start + 1}–${range.end + 1}`,
+      label: uiText("{0} · visible lines {1}–{2}", [
+        props.terminalLabel,
+        range.start + 1,
+        range.end + 1,
+      ]),
       terminalId: props.terminalId,
       terminalLabel: `${props.terminalLabel} (visible output)`,
       lineStart: range.start + 1,
@@ -50,13 +57,16 @@ export function TerminalContextSheet(props: {
         context: { version: 1, records: [record] },
       })
     ) {
-      Dialog.alert("Too many context items", "Remove some context from the draft and try again.");
+      Dialog.alert(
+        readUiText("Too many context items"),
+        readUiText("Remove some context from the draft and try again."),
+      );
       return;
     }
     props.onAttach();
   };
   return (
-    <Sheet title="Terminal output" onClose={props.onClose}>
+    <Sheet title={uiText("Terminal output")} onClose={props.onClose}>
       <ScrollView
         nestedScrollEnabled
         className="flex-1"
@@ -64,7 +74,7 @@ export function TerminalContextSheet(props: {
         contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20 }}
       >
         <Text className="pb-4 text-sm text-foreground-muted">
-          Tap the first and last line to select a range.
+          {uiText("Tap the first and last line to select a range.")}
         </Text>
         <View className="overflow-hidden rounded-xl bg-card-alt">
           {lines.map(
@@ -72,7 +82,7 @@ export function TerminalContextSheet(props: {
               /* oxlint-disable react/no-array-index-key -- Selection is addressed by line number in this captured terminal snapshot. */ <Pressable
                 key={index}
                 accessibilityRole="button"
-                accessibilityLabel={`Line ${index + 1}: ${line}`}
+                accessibilityLabel={uiText("Line {0}: {1}", [index + 1, line])}
                 accessibilityState={{ selected: index >= range.start && index <= range.end }}
                 onPress={() => {
                   if (anchor === null) {
@@ -112,11 +122,11 @@ export function TerminalContextSheet(props: {
       >
         {tooLarge ? (
           <Text className="text-sm text-foreground-muted">
-            Select fewer lines to fit the context limit.
+            {uiText("Select fewer lines to fit the context limit.")}
           </Text>
         ) : null}
         <Button
-          label="Attach selected output"
+          label={uiText("Attach selected output")}
           tone="primary"
           fullWidth
           disabled={!selectedText.trim() || tooLarge}

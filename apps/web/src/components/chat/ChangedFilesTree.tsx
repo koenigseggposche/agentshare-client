@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useSyncLayout } from "@legendapp/list/react";
 import { type OrchestrationV2CheckpointFileTotals, type RunId } from "@t3tools/contracts";
 import { type MouseEvent, type ReactNode, memo, useLayoutEffect, useRef, useState } from "react";
@@ -36,6 +37,7 @@ export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
   onOpenTurnDiff: (runId: RunId, filePath?: string) => void;
   onFileContextMenu?: ChangedFileContextMenuHandler | undefined;
 }) {
+  const uiText = useUiText();
   const {
     runId,
     files,
@@ -61,7 +63,9 @@ export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
       >
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-foreground">
           <span>
-            {totals.count.toLocaleString()} changed file{totals.count === 1 ? "" : "s"}
+            {totals.count.toLocaleString(uiText.language)}
+            {uiText(" changed file")}
+            {totals.count === 1 ? "" : uiText.language === "en" ? "s" : ""}
           </span>
           {hasNonZeroStat(totals) && (
             <DiffStatLabel
@@ -82,7 +86,9 @@ export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
                     size="icon-xs"
                     variant="ghost-muted"
                     aria-label={
-                      allDirectoriesExpanded ? "Collapse all folders" : "Expand all folders"
+                      allDirectoriesExpanded
+                        ? uiText("Collapse all folders")
+                        : uiText("Expand all folders")
                     }
                     data-scroll-anchor-ignore
                     onClick={() => {
@@ -98,7 +104,9 @@ export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
                 />
               </TooltipTrigger>
               <TooltipPopup side="top">
-                {allDirectoriesExpanded ? "Collapse all folders" : "Expand all folders"}
+                {allDirectoriesExpanded
+                  ? uiText("Collapse all folders")
+                  : uiText("Expand all folders")}
               </TooltipPopup>
             </Tooltip>
           )}
@@ -109,15 +117,15 @@ export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
                   type="button"
                   size="xs"
                   variant="ghost-muted"
-                  aria-label="Open diff"
+                  aria-label={uiText("Open diff")}
                   onClick={() => onOpenTurnDiff(runId, files[0]?.path)}
                 />
               }
             >
               <FileDiffIcon className="size-3" />
-              <span className="hidden @[24rem]/changed-files:inline">Open diff</span>
+              <span className="hidden @[24rem]/changed-files:inline">{uiText("Open diff")}</span>
             </TooltipTrigger>
-            <TooltipPopup side="top">Open the full diff</TooltipPopup>
+            <TooltipPopup side="top">{uiText("Open the full diff")}</TooltipPopup>
           </Tooltip>
         </div>
       </div>
@@ -138,8 +146,10 @@ export const ChangedFilesCard = memo(function ChangedFilesCard(props: {
             variant="ghost-muted"
             onClick={() => onOpenTurnDiff(runId, files[0]?.path)}
           >
-            {hiddenFileCount.toLocaleString()} more file{hiddenFileCount === 1 ? "" : "s"} in the
-            full diff
+            {hiddenFileCount.toLocaleString(uiText.language)}
+            {uiText(" more file")}
+            {hiddenFileCount === 1 ? "" : uiText.language === "en" ? "s" : ""}
+            {uiText(" in the full diff")}
           </Button>
         </div>
       )}

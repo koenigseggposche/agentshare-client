@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { ReactElement } from "react";
 import { Sheet } from "../../components/ui/Sheet";
 
@@ -8,8 +9,9 @@ export interface WorktreeSetupSheetProps {
 }
 
 export function WorktreeSetupSheet({ children, onClose }: WorktreeSetupSheetProps) {
+  const uiText = useUiText();
   return (
-    <Sheet title="Worktree setup" onClose={onClose}>
+    <Sheet title={uiText("Worktree setup")} onClose={onClose}>
       {children}
     </Sheet>
   );

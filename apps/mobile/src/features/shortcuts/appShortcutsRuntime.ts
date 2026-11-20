@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import * as QuickActions from "expo-quick-actions";
 import { Platform } from "react-native";
 import type { NavigationState } from "@react-navigation/native";
@@ -123,7 +125,10 @@ export function recordAppShortcutNavigationState(state: NavigationState): void {
  * a cold-start shortcut arrives as the launch action, and pushing it over the
  * initial Home route makes back return home instead of exiting the app.
  */
-export function installAppShortcuts(navigate: (href: string) => void): () => void {
+export function installAppShortcuts(
+  navigate: (href: string) => void,
+  uiText: UiTranslator = uiTranslators.en,
+): () => void {
   const initialHref = QuickActions.initial ? shortcutHref(QuickActions.initial) : null;
   if (initialHref !== null) navigate(initialHref);
   const subscription = QuickActions.addListener((action) => {
@@ -135,7 +140,7 @@ export function installAppShortcuts(navigate: (href: string) => void): () => voi
   const recents = createRecentThreadShortcuts({
     load: loadRecentThreadShortcuts,
     save: saveRecentThreadShortcuts,
-    publish: (list) => QuickActions.setItems(buildShortcutActions(list)),
+    publish: (list) => QuickActions.setItems(buildShortcutActions(list, uiText)),
   });
   const unsubscribe = appAtomRegistry.subscribe(
     activeThreadShortcutAtom,

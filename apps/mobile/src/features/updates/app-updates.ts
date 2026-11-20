@@ -1,3 +1,6 @@
+import { readUiText } from "../../i18n/uiText";
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import * as Updates from "expo-updates";
 // Metro namespace imports evaluate unrelated React Native getters, including unavailable native modules.
 import { AppState } from "react-native";
@@ -108,7 +111,10 @@ export function registerHiddenUpdateTap(count: number): {
   };
 }
 
-export async function runAppUpdateCheck(options: AppUpdateCheckOptions = {}): Promise<void> {
+export async function runAppUpdateCheck(
+  options: AppUpdateCheckOptions = {},
+  uiText: UiTranslator = uiTranslators.en,
+): Promise<void> {
   const client = options.client ?? Updates;
   if (!isAppUpdateCheckAvailable(client)) return;
 
@@ -143,19 +149,23 @@ export async function runAppUpdateCheck(options: AppUpdateCheckOptions = {}): Pr
   // Publish the operation before any state listener can synchronously re-enter.
   appUpdateCheckInFlight = inFlight;
 
-  const execution = performAppUpdateCheck(client, {
-    applyMode: options.applyMode,
-    deferral: options.deferral,
-    environment: options.environment,
-    onFailure: (message) => {
-      progress.failure = message;
-      notifyListeners(failureListeners, message);
+  const execution = performAppUpdateCheck(
+    client,
+    {
+      applyMode: options.applyMode,
+      deferral: options.deferral,
+      environment: options.environment,
+      onFailure: (message) => {
+        progress.failure = message;
+        notifyListeners(failureListeners, message);
+      },
+      onStateChange: (state) => {
+        progress.state = state;
+        notifyListeners(stateListeners, state);
+      },
     },
-    onStateChange: (state) => {
-      progress.state = state;
-      notifyListeners(stateListeners, state);
-    },
-  });
+    uiText,
+  );
   void execution.then(deferred.resolve, deferred.reject);
 
   try {
@@ -210,6 +220,7 @@ async function observeAppUpdateCheck(
 async function performAppUpdateCheck(
   client: AppUpdateClient,
   options: AppUpdateCheckOptions,
+  uiText: UiTranslator = uiTranslators.en,
 ): Promise<void> {
   const setState = options.onStateChange ?? (() => {});
   const environment = options.environment ?? defaultAppUpdateEnvironment;
@@ -256,13 +267,13 @@ async function performAppUpdateCheck(
     );
     if (outcome === "flush-failed") {
       setState("ready");
-      armDeferredAppUpdateInstall(client, environment, deferral);
+      armDeferredAppUpdateInstall(client, environment, deferral, uiText);
     }
     return;
   }
 
   setState("ready");
-  armDeferredAppUpdateInstall(client, environment, deferral);
+  armDeferredAppUpdateInstall(client, environment, deferral, uiText);
 }
 
 type AppUpdateInstallOutcome = "installed" | "flush-failed" | "restart-failed";
@@ -313,10 +324,11 @@ function armDeferredAppUpdateInstall(
   client: AppUpdateClient,
   environment: AppUpdateEnvironment,
   deferral: AppUpdateDeferral,
+  uiText: UiTranslator = uiTranslators.en,
 ): void {
   if (deferral.pendingInstall) return;
   deferral.pendingInstall = true;
-  scheduleDeferredAppUpdateInstall(client, environment, deferral, true);
+  scheduleDeferredAppUpdateInstall(client, environment, deferral, true, uiText);
   environment.onForegroundStay(() => {
     void promptDeferredAppUpdateInstall(client, environment, deferral);
   });
@@ -340,9 +352,10 @@ function scheduleDeferredAppUpdateInstall(
   environment: AppUpdateEnvironment,
   deferral: AppUpdateDeferral,
   includeCurrent: boolean,
+  uiText: UiTranslator = uiTranslators.en,
 ): void {
   environment.onNextBackground(() => {
-    void applyDeferredAppUpdateInstall(client, environment, deferral);
+    void applyDeferredAppUpdateInstall(client, environment, deferral, uiText);
   }, includeCurrent);
 }
 
@@ -350,6 +363,7 @@ async function applyDeferredAppUpdateInstall(
   client: AppUpdateClient,
   environment: AppUpdateEnvironment,
   deferral: AppUpdateDeferral,
+  uiText: UiTranslator = uiTranslators.en,
 ): Promise<void> {
   if (!deferral.pendingInstall || deferral.installInProgress) return;
   deferral.installInProgress = true;
@@ -361,7 +375,7 @@ async function applyDeferredAppUpdateInstall(
     }
     deferral.installInProgress = false;
     // Wait for a fresh background transition after failure to avoid same-session retry loops.
-    scheduleDeferredAppUpdateInstall(client, environment, deferral, false);
+    scheduleDeferredAppUpdateInstall(client, environment, deferral, false, uiText);
     return;
   }
   const reloaded = await settlePromise(() => client.reloadAsync());
@@ -376,11 +390,13 @@ async function defaultConfirmInstallNow(): Promise<boolean> {
   const Dialog = await import("../../components/ui/Dialog");
   return new Promise<boolean>((resolve) => {
     Dialog.alert(
-      "Update ready",
-      "A new version has been downloaded and installs automatically the next time you leave the app. Install it now instead?",
+      readUiText("Update ready"),
+      readUiText(
+        "A new version has been downloaded and installs automatically the next time you leave the app. Install it now instead?",
+      ),
       [
-        { onPress: () => resolve(false), style: "cancel", text: "Later" },
-        { onPress: () => resolve(true), text: "Install Now" },
+        { onPress: () => resolve(false), style: "cancel", text: readUiText("Later") },
+        { onPress: () => resolve(true), text: readUiText("Install Now") },
       ],
       { cancelable: true, onDismiss: () => resolve(false) },
     );
@@ -487,9 +503,10 @@ function shouldRecheckAppUpdateOnForeground(
 export function installAppUpdateChecks(
   client: AppUpdateClient = Updates,
   deferral: AppUpdateDeferral = appUpdateDeferral,
+  uiText: UiTranslator = uiTranslators.en,
 ): () => void {
   if (!isAppUpdateCheckAvailable(client)) return () => undefined;
-  void runAppUpdateCheck({ client, deferral });
+  void runAppUpdateCheck({ client, deferral }, uiText);
   let backgroundedAtMs: number | null = null;
   const subscription = AppState.addEventListener("change", (state) => {
     if (state === "background") {
@@ -503,7 +520,7 @@ export function installAppUpdateChecks(
       deferral.pendingInstall,
     );
     backgroundedAtMs = null;
-    if (shouldCheck) void runAppUpdateCheck({ client, deferral });
+    if (shouldCheck) void runAppUpdateCheck({ client, deferral }, uiText);
   });
   return () => subscription.remove();
 }

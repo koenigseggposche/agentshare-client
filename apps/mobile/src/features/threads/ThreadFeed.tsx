@@ -1,3 +1,8 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText, readUiText } from "../../i18n/uiText";
 import { TaskChargesButton } from "./TaskChargesButton";
 import { Button } from "../../components/ui/Button";
 import * as Dialog from "../../components/ui/Dialog";
@@ -402,9 +407,10 @@ function UserMessageCopyButton(props: {
   readonly onCopy: (() => Promise<void>) | undefined;
   readonly tintColor: ColorValue;
 }) {
+  const uiText = useUiText();
   const button = (
     <CopyTextButton
-      accessibilityLabel="Copy message"
+      accessibilityLabel={uiText("Copy message")}
       text={props.text}
       onCopy={props.onCopy}
       tintColor={props.tintColor}
@@ -416,7 +422,7 @@ function UserMessageCopyButton(props: {
   if (linkText.length > PROMPT_LINK_MAX_PROMPT_LENGTH) return button;
   return (
     <Menu
-      actions={USER_MESSAGE_COPY_MENU_ACTIONS}
+      actions={translateUiLabels(USER_MESSAGE_COPY_MENU_ACTIONS, uiText)}
       onPressAction={({ nativeEvent }) => {
         if (nativeEvent.event === "copy-prompt-link") void copyPromptLink(linkText);
       }}
@@ -435,6 +441,7 @@ function AssistantForkButton(props: {
   readonly projectedItem: OrchestrationV2ProjectedTurnItem;
   readonly sourceTitle: string;
 }) {
+  const uiText = useUiText();
   const support = useV2ItemSupport({
     environmentId: props.environmentId,
     sourceThreadId: props.projectedItem.sourceThreadId,
@@ -454,7 +461,7 @@ function AssistantForkButton(props: {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Fork from this response"
+      accessibilityLabel={uiText("Fork from this response")}
       disabled={busy}
       onPress={() => {
         const targetThreadId = ThreadId.make(uuidv4());
@@ -466,7 +473,7 @@ function AssistantForkButton(props: {
             sourceThreadId: props.projectedItem.sourceThreadId,
             targetThreadId,
             runId,
-            title: `${props.sourceTitle} fork`,
+            title: uiText("{0} fork", [props.sourceTitle]),
             creationSource: "mobile",
           },
         })
@@ -475,8 +482,10 @@ function AssistantForkButton(props: {
             const targetThreadReady = await waitForThreadShell(props.environmentId, targetThreadId);
             if (!targetThreadReady) {
               Dialog.alert(
-                "Fork created",
-                "Its thread data did not reach this client. Reconnect and try opening it from the thread list.",
+                readUiText("Fork created"),
+                readUiText(
+                  "Its thread data did not reach this client. Reconnect and try opening it from the thread list.",
+                ),
               );
               return;
             }
@@ -561,6 +570,7 @@ function MessageAttachmentImage(props: {
   readonly height?: number;
   readonly onPressPreview: (source: FilePreviewSource) => void;
 }) {
+  const uiText = useUiText();
   const withGallery = useFilePreviewGallery();
   const sourceIdentifier = useId();
   const resource = {
@@ -594,7 +604,7 @@ function MessageAttachmentImage(props: {
     <PresentationSource identifier={sourceIdentifier}>
       <Pressable
         accessibilityRole="imagebutton"
-        accessibilityLabel={`Open ${props.name}`}
+        accessibilityLabel={uiText("Open {0}", [props.name])}
         onPress={() =>
           props.onPressPreview(
             withGallery({
@@ -656,6 +666,7 @@ function MessageAttachmentFile(props: {
   readonly standaloneFile?: boolean;
   readonly available?: boolean;
 }) {
+  const uiText = useUiText();
   const sourceIdentifier = useId();
   const navigation = useNavigation();
   const { selectedThread } = useThreadSelection();
@@ -695,7 +706,7 @@ function MessageAttachmentFile(props: {
     setOpening(true);
     const finish = (message: string | null) => {
       if (message !== null && !controller.signal.aborted) {
-        Dialog.alert("Could not open attachment", message);
+        Dialog.alert(readUiText("Could not open attachment"), message);
       }
       if (openingRef.current === controller) {
         openingRef.current = null;
@@ -812,7 +823,7 @@ function MessageAttachmentFile(props: {
       <View className="min-w-0 flex-row items-center overflow-hidden rounded-xl border border-border bg-card">
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Open ${attachment.name}`}
+          accessibilityLabel={uiText("Open {0}", [attachment.name])}
           accessibilityValue={{ text: `${fileTypeLabel}, ${sizeLabel}` }}
           accessibilityState={{ disabled, busy: opening }}
           disabled={disabled}
@@ -845,7 +856,7 @@ function MessageAttachmentFile(props: {
         {props.standaloneFile ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Download ${attachment.name}`}
+            accessibilityLabel={uiText("Download {0}", [attachment.name])}
             accessibilityState={{ disabled, busy: opening }}
             disabled={disabled}
             className="mr-1 min-h-11 w-11 items-center justify-center rounded-lg active:bg-subtle disabled:opacity-40"
@@ -995,6 +1006,7 @@ function PendingMessageMedia(props: {
   readonly onPressPreview: (source: FilePreviewSource) => void;
   readonly onPlaybackStart: () => void;
 }) {
+  const uiText = useUiText();
   const withGallery = useFilePreviewGallery();
   const { attachment } = props;
   const fileBacked = isFileBackedComposerAttachment(attachment);
@@ -1004,7 +1016,7 @@ function PendingMessageMedia(props: {
     return (
       <Pressable
         accessibilityRole="imagebutton"
-        accessibilityLabel={`Open ${attachment.name}`}
+        accessibilityLabel={uiText("Open {0}", [attachment.name])}
         onPress={() => {
           const source = composerImageGallery([attachment])[0];
           if (source) props.onPressPreview(withGallery(source));
@@ -1147,6 +1159,7 @@ function ArtifactTemplateCard(props: {
   readonly template: CodexArtifactTemplate;
   readonly onUse?: ((template: CodexArtifactTemplate) => void) | undefined;
 }) {
+  const uiText = useUiText();
   return (
     <View className="my-2 min-w-0 flex-row items-center gap-3 rounded-2xl border border-border bg-card px-3 py-3">
       <View className="relative h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-subtle">
@@ -1175,9 +1188,9 @@ function ArtifactTemplateCard(props: {
       </View>
       {props.onUse ? (
         <Button
-          label="Use template"
+          label={uiText("Use template")}
           tone="secondary"
-          accessibilityLabel={`Use ${props.template.displayName} template`}
+          accessibilityLabel={uiText("Use {0} template", [props.template.displayName])}
           onPress={() => props.onUse?.(props.template)}
         />
       ) : null}
@@ -1387,6 +1400,7 @@ function AgentMessageFoldHeader(props: {
   readonly onToggle: () => void;
   readonly iconSubtleColor: ColorValue;
 }) {
+  const uiText = useUiText();
   const senderShell = useQuietThreadShell(
     props.senderThreadId ? scopeThreadRef(props.environmentId, props.senderThreadId) : null,
   );
@@ -1395,7 +1409,9 @@ function AgentMessageFoldHeader(props: {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${label}: ${props.summary}`}
-      accessibilityHint={`Double tap to ${props.expanded ? "hide" : "show"} the message.`}
+      accessibilityHint={uiText("Double tap to {0} the message.", [
+        props.expanded ? "hide" : "show",
+      ])}
       accessibilityState={{ expanded: props.expanded }}
       hitSlop={4}
       className="min-h-10 flex-row items-center gap-1.5 px-3.5 py-2"
@@ -1434,6 +1450,7 @@ function OpenSenderThreadButton(props: {
   readonly environmentId: EnvironmentId;
   readonly senderThreadId: ThreadId;
 }) {
+  const uiText = useUiText();
   const openLinkedThread = useOpenLinkedThread();
   return (
     <Pressable
@@ -1446,7 +1463,9 @@ function OpenSenderThreadButton(props: {
         })
       }
     >
-      <Text className="font-t3-medium text-xs text-foreground-secondary">Open thread</Text>
+      <Text className="font-t3-medium text-xs text-foreground-secondary">
+        {uiText("Open thread")}
+      </Text>
     </Pressable>
   );
 }
@@ -1470,6 +1489,7 @@ function ThreadAutomationMessageRow(props: {
   readonly linkHandlers: MarkdownLinkHandlers;
   readonly renderImage: MarkdownImageRenderer;
 }) {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const tasks = useEnvironmentQuery(
     props.scheduledTaskId
@@ -1491,8 +1511,10 @@ function ThreadAutomationMessageRow(props: {
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Automation: ${summary}`}
-          accessibilityHint={`Double tap to ${props.expanded ? "hide" : "show"} the prompt.`}
+          accessibilityLabel={uiText("Automation: {0}", [summary])}
+          accessibilityHint={uiText("Double tap to {0} the prompt.", [
+            props.expanded ? "hide" : "show",
+          ])}
           accessibilityState={{ expanded: props.expanded }}
           hitSlop={4}
           className="min-h-10 flex-row items-center gap-1.5 px-3.5 py-2"
@@ -1509,7 +1531,7 @@ function ThreadAutomationMessageRow(props: {
             type="monochrome"
           />
           <Text className="font-t3-medium text-sm text-user-bubble-foreground-muted">
-            Automation
+            {uiText("Automation")}
           </Text>
           <Text numberOfLines={1} className="min-w-0 shrink text-sm text-user-bubble-foreground">
             {summary}
@@ -1547,7 +1569,7 @@ function ThreadAutomationMessageRow(props: {
               onPress={() => openSettings(navigation, "SettingsScheduledTasks")}
             >
               <Text className="font-t3-medium text-xs text-foreground-secondary">
-                Open automation
+                {uiText("Open automation")}
               </Text>
             </Pressable>
           ) : null}
@@ -1705,6 +1727,7 @@ function renderFeedEntry(
     readonly workflowOpening: WorkflowOpening | null;
     readonly userMessageGrouping: GroupedThreadFeedRow["userMessageGrouping"];
   },
+  uiText: UiTranslator = uiTranslators.en,
 ) {
   const entry = info.item;
   const { markdownStyles, iconSubtleColor, userBubbleColor } = props;
@@ -1909,9 +1932,9 @@ function renderFeedEntry(
         <ThreadContextDivider
           label={
             !active
-              ? "Context compaction"
+              ? readUiText("Context compaction")
               : reason === undefined
-                ? "Compacting context"
+                ? readUiText("Compacting context")
                 : IDLE_COMPACTING_LABELS[reason]
           }
           icon="arrow.down.right.and.arrow.up.left"
@@ -1950,7 +1973,7 @@ function renderFeedEntry(
       const bubbleBodyVisible = foldRowId === null || foldExpanded;
       const intentBadge = props.userMessageGrouping.continuesSteer
         ? null
-        : resolveUserMessageIntentBadge(message.inputIntent);
+        : resolveUserMessageIntentBadge(message.inputIntent, uiText);
       const referenceIds = new Set(
         collectComposerContextReferences(message.text).map((reference) => reference.contextId),
       );
@@ -1995,7 +2018,7 @@ function renderFeedEntry(
         >
           {presentation.attribution === "t3code" ? (
             <Text className="mb-1 pr-1 font-t3-medium text-2xs text-foreground-muted opacity-60">
-              Sent by T3 Code
+              {readUiText("Sent by T3 Code")}
             </Text>
           ) : null}
           {presentation.guestName !== undefined ? (
@@ -2093,7 +2116,7 @@ function renderFeedEntry(
                       <Pressable
                         key={attachment.id}
                         accessibilityRole="imagebutton"
-                        accessibilityLabel={`Open ${attachment.name}`}
+                        accessibilityLabel={readUiText("Open {0}", [attachment.name])}
                         onPress={() => {
                           const source = composerImageGallery([attachment])[0];
                           if (source)
@@ -2200,7 +2223,9 @@ function renderFeedEntry(
                 </Text>
               ) : null}
               <Text className="font-t3-medium text-xs tabular-nums text-foreground-secondary">
-                {entry.pendingMessage && !entry.acknowledged ? "Pending" : timestampLabel}
+                {entry.pendingMessage && !entry.acknowledged
+                  ? readUiText("Pending")
+                  : timestampLabel}
               </Text>
               {props.onEditPendingMessage !== null &&
               entry.pendingMessage &&
@@ -2209,7 +2234,7 @@ function renderFeedEntry(
               entry.pendingMessage.messageId !== props.dispatchingMessageId ? (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Edit pending message"
+                  accessibilityLabel={readUiText("Edit pending message")}
                   hitSlop={8}
                   className="size-7 items-center justify-center"
                   onPress={() => {
@@ -2286,7 +2311,7 @@ function renderFeedEntry(
         {showAssistantMeta ? (
           <View className="mt-1 flex-row items-center gap-1">
             <CopyTextButton
-              accessibilityLabel="Copy message"
+              accessibilityLabel={readUiText("Copy message")}
               text={renderedText}
               tintColor={iconSubtleColor}
               buttonSize={props.replyActionSize.button}
@@ -2345,6 +2370,7 @@ function TurnDiffStat(props: {
   readonly checkpoint: ThreadCheckpointSummary;
   readonly onOpenTurnDiff: (checkpoint: ThreadCheckpointSummary) => void;
 }) {
+  const uiText = useUiText();
   const { files } = props.checkpoint;
   const additions = files.reduce((total, file) => total + file.additions, 0);
   const deletions = files.reduce((total, file) => total + file.deletions, 0);
@@ -2352,7 +2378,11 @@ function TurnDiffStat(props: {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Review ${fileCountLabel}, ${additions} additions, ${deletions} deletions`}
+      accessibilityLabel={uiText("Review {0}, {1} additions, {2} deletions", [
+        fileCountLabel,
+        additions,
+        deletions,
+      ])}
       onPress={() => props.onOpenTurnDiff(props.checkpoint)}
       className="min-h-11 shrink-0 flex-row items-center gap-2 px-2 active:bg-subtle"
     >
@@ -2379,6 +2409,7 @@ type UserMessageContentProps = {
 };
 
 function UserMessageContent(props: UserMessageContentProps) {
+  const uiText = useUiText();
   const [selected, setSelected] = useState<{ contextId: string; label: string } | null>(null);
   const navigation = useNavigation();
   const openLinkedThread = useOpenLinkedThread();
@@ -2418,7 +2449,10 @@ function UserMessageContent(props: UserMessageContentProps) {
       });
       return;
     }
-    setSelected({ contextId: reference.contextId, label: record?.label ?? "Context unavailable" });
+    setSelected({
+      contextId: reference.contextId,
+      label: record?.label ?? uiText("Context unavailable"),
+    });
   };
   return (
     <>
@@ -2435,10 +2469,10 @@ function UserMessageContent(props: UserMessageContentProps) {
               (item) => item.contextId === reference.contextId,
             );
             return {
-              title: record?.label ?? "Context unavailable",
+              title: record?.label ?? uiText("Context unavailable"),
               actions: [
-                { id: "open-context", title: "Open context" },
-                { id: "copy-context", title: "Copy context", disabled: !record },
+                { id: "open-context", title: uiText("Open context") },
+                { id: "copy-context", title: uiText("Copy context"), disabled: !record },
               ],
             };
           },
@@ -2463,7 +2497,10 @@ function UserMessageContent(props: UserMessageContentProps) {
               )
                 .then(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success))
                 .catch(() => {
-                  Dialog.alert("Could not copy context", "Try copying this context again.");
+                  Dialog.alert(
+                    readUiText("Could not copy context"),
+                    readUiText("Try copying this context again."),
+                  );
                 });
             }
           },
@@ -2584,6 +2621,7 @@ function useThreadFeedPresentation(
   expandedTurnIds: ReadonlySet<RunId>,
   expandedWorkGroups: Record<string, boolean>,
 ) {
+  const uiText = useUiText();
   const [feedCache] = useState(createThreadFeedCache);
   return appendPendingThreadMessages(
     deriveThreadFeedPresentation(
@@ -2598,6 +2636,7 @@ function useThreadFeedPresentation(
       props.activeWorkStartedAt,
       props.runlessWorkActive ?? false,
       feedCache,
+      uiText,
     ),
     props.feed,
     props.queuedMessages,
@@ -2666,6 +2705,7 @@ export const ThreadFeed = memo(function ThreadFeed({
   ref,
   ...props
 }: ThreadFeedProps & { readonly ref?: Ref<ThreadFeedHandle> }) {
+  const uiText = useUiText();
   const { listRef, onEndFollowEnabledChange, onHeaderMaterialVisibilityChange } = props;
   const workflowOpening = useWorkflowOpening(props.detailRef);
   const guestShare = useThreadGuestShare(props.detailRef);
@@ -3036,10 +3076,10 @@ export const ThreadFeed = memo(function ThreadFeed({
           actions: [
             {
               id: "open-skill",
-              title: "View instructions",
+              title: uiText("View instructions"),
               disabled: !enrichedSkillInstructionsPath(skill),
             },
-            { id: "copy-skill", title: "Copy skill" },
+            { id: "copy-skill", title: uiText("Copy skill") },
           ],
         };
       }
@@ -3047,15 +3087,16 @@ export const ThreadFeed = memo(function ThreadFeed({
       if (thread) {
         return {
           title:
-            appAtomRegistry.get(environmentThreadShells.threadShellAtom(thread))?.title ?? "Thread",
+            appAtomRegistry.get(environmentThreadShells.threadShellAtom(thread))?.title ??
+            uiText("Thread"),
           actions: [
-            { id: "open-thread", title: "Open thread" },
-            { id: "copy-thread-link", title: "Copy link" },
+            { id: "open-thread", title: uiText("Open thread") },
+            { id: "copy-thread-link", title: uiText("Copy link") },
           ],
         };
       }
       const target = resolveFileChipTarget(href, props.workspaceRoot);
-      return target ? fileChipMenu(target) : undefined;
+      return target ? fileChipMenu(target, uiText) : undefined;
     },
     onFileContextMenuAction: (href, actionId) => {
       const skill = enrichedSkillReference(href, props.skills);
@@ -3125,7 +3166,7 @@ export const ThreadFeed = memo(function ThreadFeed({
       return (
         <Text
           accessibilityRole="link"
-          accessibilityLabel={`Open ${name}`}
+          accessibilityLabel={uiText("Open {0}", [name])}
           onPress={() => onMarkdownLinkPress(image.href, true)}
           style={{
             color: markdownStyles.assistant.nativeTextStyle.linkColor,
@@ -3749,49 +3790,53 @@ export const ThreadFeed = memo(function ThreadFeed({
               iconColor={iconSubtleColor}
             />
           ) : null}
-          {renderFeedEntry(info, {
-            userMessageGrouping: info.item.userMessageGrouping,
-            environmentId: props.environmentId,
-            dispatchingMessageId: props.dispatchingMessageId,
-            onEditPendingMessage: props.onEditPendingMessage,
-            onUseArtifactTemplate: props.onUseArtifactTemplate,
-            threadId: props.threadId,
-            copiedRowId,
-            expandedWorkRows,
-            workRowSizing,
-            workGroupScrollPositions,
-            terminalAssistantMessageIds,
-            unsettledTurnId,
-            compactionLabelsByEntryId,
-            failedRunIds,
-            onCopyWorkRow,
-            onToggleWorkGroup,
-            onToggleWorkRow,
-            onToggleTurnFold,
-            onOpenTurnDiff,
-            onPressPreview,
-            onPlaybackStart: onInlinePlaybackStart,
-            markdownLinkHandlers,
-            renderMarkdownImage,
-            renderViewedImage,
-            renderReasoning,
-            iconSubtleColor,
-            replyActionSize,
-            screenColor,
-            userBubbleColor,
-            markdownStyles,
-            reviewCommentColors,
-            reviewCommentBubbleWidth,
-            themeAppearance,
-            duoColumns,
-            userBubbleMaxWidth,
-            markdownContentWidth,
-            contentWidth,
-            threadTitle: props.threadTitle,
-            skills: props.skills,
-            workspaceRoot: props.workspaceRoot,
-            workflowOpening,
-          })}
+          {renderFeedEntry(
+            info,
+            {
+              userMessageGrouping: info.item.userMessageGrouping,
+              environmentId: props.environmentId,
+              dispatchingMessageId: props.dispatchingMessageId,
+              onEditPendingMessage: props.onEditPendingMessage,
+              onUseArtifactTemplate: props.onUseArtifactTemplate,
+              threadId: props.threadId,
+              copiedRowId,
+              expandedWorkRows,
+              workRowSizing,
+              workGroupScrollPositions,
+              terminalAssistantMessageIds,
+              unsettledTurnId,
+              compactionLabelsByEntryId,
+              failedRunIds,
+              onCopyWorkRow,
+              onToggleWorkGroup,
+              onToggleWorkRow,
+              onToggleTurnFold,
+              onOpenTurnDiff,
+              onPressPreview,
+              onPlaybackStart: onInlinePlaybackStart,
+              markdownLinkHandlers,
+              renderMarkdownImage,
+              renderViewedImage,
+              renderReasoning,
+              iconSubtleColor,
+              replyActionSize,
+              screenColor,
+              userBubbleColor,
+              markdownStyles,
+              reviewCommentColors,
+              reviewCommentBubbleWidth,
+              themeAppearance,
+              duoColumns,
+              userBubbleMaxWidth,
+              markdownContentWidth,
+              contentWidth,
+              threadTitle: props.threadTitle,
+              skills: props.skills,
+              workspaceRoot: props.workspaceRoot,
+              workflowOpening,
+            },
+            uiText,
+          )}
           {props.worktreeSetup && info.index === setupAnchorIndex ? (
             <WorktreeSetupCard key={props.threadId} {...props.worktreeSetup} />
           ) : props.setupWorkingStartedAt && info.index === setupAnchorIndex ? (
@@ -3950,7 +3995,7 @@ export const ThreadFeed = memo(function ThreadFeed({
                   endpoints={props.pendingHandoff}
                   iconColor={iconSubtleColor}
                   surfaceColor={screenColor}
-                  label="Context handoff pending"
+                  label={uiText("Context handoff pending")}
                 />
               ) : null
             }
@@ -3971,7 +4016,7 @@ export const ThreadFeed = memo(function ThreadFeed({
             style={[StyleSheet.absoluteFill, { left: contentLeftInset, right: contentRightInset }]}
           >
             <ThreadFeedPlaceholder
-              title="No conversation yet"
+              title={uiText("No conversation yet")}
               detail="Ask the agent to inspect the repo, run a command, or continue the active thread."
               topInset={topContentInset}
               bottomInset={bottomContentInset}
@@ -3987,6 +4032,7 @@ export const ThreadFeed = memo(function ThreadFeed({
 });
 
 function ThreadFeedLoadEarlierControl(props: ThreadFeedHistoryControls) {
+  const uiText = useUiText();
   const theme = useUniwindTheme();
   const mutedColor = theme["--color-icon-subtle"];
   if (!props.hasMoreHistory && props.error === null) {
@@ -3997,9 +4043,11 @@ function ThreadFeedLoadEarlierControl(props: ThreadFeedHistoryControls) {
       {props.hasMoreHistory ? (
         <View className="self-center">
           <Button
-            label={props.loading ? "Loading earlier activity…" : "Load earlier activity"}
+            label={
+              props.loading ? uiText("Loading earlier activity…") : uiText("Load earlier activity")
+            }
             tone="secondary"
-            accessibilityLabel="Load earlier activity"
+            accessibilityLabel={uiText("Load earlier activity")}
             disabled={props.loading}
             onPress={props.onLoadEarlier}
             icon="chevron.up"

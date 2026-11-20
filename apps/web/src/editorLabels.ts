@@ -1,3 +1,4 @@
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
 import { EDITORS, type EditorId } from "@t3tools/contracts";
 
 import { getLocalFileManagerName } from "~/lib/utils";
@@ -12,8 +13,11 @@ export function editorLabelForPlatform(editorId: EditorId, platform: string): st
   return editorLabels.get(editorId) ?? "Editor";
 }
 
-export function openInEditorMenuLabel(editorId: EditorId | null): string {
+export function openInEditorMenuLabel(
+  editorId: EditorId | null,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
   return editorId === null || editorId === "file-manager"
-    ? "Open in editor"
+    ? uiText("Open in editor")
     : `Open in ${editorLabels.get(editorId) ?? "Editor"}`;
 }

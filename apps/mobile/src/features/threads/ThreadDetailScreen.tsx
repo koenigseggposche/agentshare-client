@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import { ChildThreadApprovals } from "./ChildThreadApprovals";
 import { useOpenThreadInspector } from "./thread-inspector-navigation";
 import { useWorkbenchLabels } from "../workspace/navigation-tabs";
@@ -385,6 +387,7 @@ function ThreadDetailBody(
     >;
   },
 ) {
+  const uiText = useUiText();
   const labels = useWorkbenchLabels();
   const usesNativeWorkspaceColumns = useNativeWorkspaceColumnsSupported();
   const { layout } = useAdaptiveWorkspaceLayout();
@@ -610,17 +613,21 @@ function ThreadDetailBody(
     });
     setForceStoppingKey((current) => (current === threadKey ? null : current));
     if (result._tag === "Failure") {
-      if (!isAtomCommandInterrupted(result)) Dialog.alert("Could not force stop the agent");
+      if (!isAtomCommandInterrupted(result))
+        Dialog.alert(readUiText("Could not force stop the agent"));
       return;
     }
     const others = result.value.sharedWithThreadIds.length;
     if (result.value.outcome === "releasing") {
-      Dialog.alert("Turn stopped; the agent is still shutting down");
+      Dialog.alert(readUiText("Turn stopped; the agent is still shutting down"));
     }
     if (result.value.outcome === "shared") {
       Dialog.alert(
-        "Turn stopped; the agent process kept running",
-        `It is shared with ${others === 0 ? "other" : others} working ${others === 1 ? "thread" : "threads"}. Stop those to free it.`,
+        readUiText("Turn stopped; the agent process kept running"),
+        readUiText("It is shared with {0} working {1}. Stop those to free it.", [
+          others === 0 ? "other" : others,
+          others === 1 ? "thread" : "threads",
+        ]),
       );
     }
   };
@@ -718,8 +725,8 @@ function ThreadDetailBody(
     if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
       const error = squashAtomCommandFailure(result);
       Dialog.alert(
-        "Could not update thread",
-        error instanceof Error ? error.message : "Try again.",
+        readUiText("Could not update thread"),
+        error instanceof Error ? error.message : readUiText("Try again."),
       );
     }
   };
@@ -742,19 +749,23 @@ function ThreadDetailBody(
       return {
         kind: "stop",
         unresponsive,
-        label: unresponsive ? "Not responding to Stop" : "Stopping…",
+        label: unresponsive ? uiText("Not responding to Stop") : uiText("Stopping…"),
         action:
           unresponsive && canForceStop
             ? {
-                label: forceStoppingKey === selectedThreadKey ? "Force stopping..." : "Force stop",
-                accessibilityLabel: "Force stop the agent",
+                label:
+                  forceStoppingKey === selectedThreadKey
+                    ? uiText("Force stopping...")
+                    : uiText("Force stop"),
+                accessibilityLabel: uiText("Force stop the agent"),
                 disabled: forceStoppingKey === selectedThreadKey,
                 onPress: () =>
                   Dialog.confirm({
-                    title: "Force stop the agent?",
-                    message:
+                    title: uiText("Force stop the agent?"),
+                    message: uiText(
                       "It has not answered Stop. Force stop ends the turn and kills the agent's processes, unless other working threads share them.",
-                    confirmText: "Force stop",
+                    ),
+                    confirmText: readUiText("Force stop"),
                     destructive: true,
                     onConfirm: () => void forceStop(runStop.runId),
                   }),
@@ -769,7 +780,9 @@ function ThreadDetailBody(
       if (props.worktreeSetup) return null;
       return {
         kind: "preparing",
-        label: props.creationState.preparingWorktree ? "Setting up worktree…" : "Starting…",
+        label: props.creationState.preparingWorktree
+          ? uiText("Setting up worktree…")
+          : uiText("Starting…"),
       };
     }
     if (props.creationState?.kind === "failed") {
@@ -783,7 +796,10 @@ function ThreadDetailBody(
       return {
         kind: "child-input",
         label: childThreadInputsTitle(childThreadInputs),
-        accessibilityLabel: `Open ${childInput.hasPendingApprovals ? "approval" : "question"} from ${childInput.title}`,
+        accessibilityLabel: uiText("Open {0} from {1}", [
+          childInput.hasPendingApprovals ? "approval" : "question",
+          childInput.title,
+        ]),
         onPress: () => {
           Keyboard.dismiss();
           openLinkedThread({ environmentId: childInput.environmentId, threadId: childInput.id });
@@ -812,8 +828,8 @@ function ThreadDetailBody(
           });
         },
         action: {
-          label: statusPending ? "Stopping..." : "Stop",
-          accessibilityLabel: "Stop background work",
+          label: statusPending ? uiText("Stopping...") : uiText("Stop"),
+          accessibilityLabel: uiText("Stop background work"),
           disabled: !props.canOperateThread || statusPending,
           onPress: () => void runStatusAction("stop"),
         },
@@ -835,10 +851,10 @@ function ThreadDetailBody(
         action: {
           label: statusPending
             ? snoozed
-              ? "Waking..."
+              ? uiText("Waking...")
               : settled
-                ? "Un-settling..."
-                : "Dismissing..."
+                ? uiText("Un-settling...")
+                : uiText("Dismissing...")
             : actionLabel,
           accessibilityLabel: actionLabel,
           disabled: !props.canOperateThread || statusPending,
@@ -1256,8 +1272,8 @@ function ThreadDetailBody(
             if (feedbackTarget?.supportsFeedback) {
               if (hasAttachmentsOrContext) {
                 Dialog.alert(
-                  "Approval feedback",
-                  "Send approval feedback without attachments or added context.",
+                  readUiText("Approval feedback"),
+                  readUiText("Send approval feedback without attachments or added context."),
                 );
                 return false;
               }
@@ -1337,8 +1353,8 @@ function ThreadDetailBody(
     if (AsyncResult.isFailure(edited)) {
       const error = squashAtomCommandFailure(edited);
       Dialog.alert(
-        "Could not edit message",
-        error instanceof Error ? error.message : "Please try again.",
+        readUiText("Could not edit message"),
+        error instanceof Error ? error.message : readUiText("Please try again."),
       );
       return;
     }
@@ -1443,7 +1459,7 @@ function ThreadDetailBody(
             renderFallback={(fallback) => (
               <RenderFailureView
                 {...fallback}
-                title="The conversation couldn't be displayed"
+                title={uiText("The conversation couldn't be displayed")}
                 bottomInset={estimatedOverlayHeight}
               />
             )}

@@ -1,3 +1,7 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import {
   resolveProviderSkillSourceKind,
   type ProviderSkillSourceKind,
@@ -108,10 +112,13 @@ const SKILL_SOURCE_SYMBOL_BY_KIND: Record<ProviderSkillSourceKind, AppSymbolName
   other: "cube",
 };
 
-function itemIcon(item: ComposerCommandItem): AppSymbolName | null {
+function itemIcon(
+  item: ComposerCommandItem,
+  uiText: UiTranslator = uiTranslators.en,
+): AppSymbolName | null {
   switch (item.type) {
     case "pull-request":
-      return pullRequestStatus(item.pullRequest).icon;
+      return pullRequestStatus(item.pullRequest, uiText).icon;
     case "slash-command":
     case "provider-slash-command":
       return "terminal";
@@ -126,10 +133,13 @@ function itemIcon(item: ComposerCommandItem): AppSymbolName | null {
   }
 }
 
-function groupLabel(triggerKind: ComposerTriggerKind | null): string | null {
+function groupLabel(
+  triggerKind: ComposerTriggerKind | null,
+  uiText: UiTranslator = uiTranslators.en,
+): string | null {
   switch (triggerKind) {
     case "pull-request":
-      return "Pull requests";
+      return uiText("Pull requests");
     case "slash-command":
       return "Commands";
     case "skill":
@@ -141,15 +151,19 @@ function groupLabel(triggerKind: ComposerTriggerKind | null): string | null {
   }
 }
 
-function emptyText(triggerKind: ComposerTriggerKind | null, isLoading: boolean): string {
+function emptyText(
+  triggerKind: ComposerTriggerKind | null,
+  isLoading: boolean,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
   if (isLoading) {
-    return triggerKind === "path" ? "Searching files…" : "Loading…";
+    return triggerKind === "path" ? "Searching files…" : uiText("Loading…");
   }
   switch (triggerKind) {
     case "pull-request":
       return "No matching pull requests.";
     case "path":
-      return "No matching files or folders.";
+      return uiText("No matching files or folders.");
     case "skill":
       return "No skills found.";
     case "slash-command":
@@ -165,7 +179,8 @@ const CommandRow = memo(function CommandRow(props: {
   readonly isLast: boolean;
   readonly isSlashSkill: boolean;
 }) {
-  const iconName = itemIcon(props.item);
+  const uiText = useUiText();
+  const iconName = itemIcon(props.item, uiText);
 
   return (
     <Pressable
@@ -182,7 +197,7 @@ const CommandRow = memo(function CommandRow(props: {
           size={14}
           tintColorClassName={
             props.item.type === "pull-request"
-              ? pullRequestStatus(props.item.pullRequest).tint
+              ? pullRequestStatus(props.item.pullRequest, uiText).tint
               : "accent-icon-subtle"
           }
           type="monochrome"
@@ -191,7 +206,7 @@ const CommandRow = memo(function CommandRow(props: {
       <Text className="shrink-0 text-base font-t3-medium text-foreground" numberOfLines={1}>
         {props.isSlashSkill && props.item.type === "skill" ? (
           <>
-            <Text className="text-foreground-muted">skill:</Text>
+            <Text className="text-foreground-muted">{uiText("skill:")}</Text>
             {props.item.skill.name}
           </>
         ) : (
@@ -210,7 +225,8 @@ const CommandRow = memo(function CommandRow(props: {
 export const ComposerCommandPopover = memo(function ComposerCommandPopover(
   props: ComposerCommandPopoverProps,
 ) {
-  const label = groupLabel(props.triggerKind);
+  const uiText = useUiText();
+  const label = groupLabel(props.triggerKind, uiText);
 
   return (
     <PopoverSurface>
@@ -240,7 +256,7 @@ export const ComposerCommandPopover = memo(function ComposerCommandPopover(
       ) : (
         <View className="px-3.5 py-2.5">
           <Text className="text-xs text-foreground-tertiary">
-            {props.error ?? emptyText(props.triggerKind, props.isLoading)}
+            {props.error ?? emptyText(props.triggerKind, props.isLoading, uiText)}
           </Text>
         </View>
       )}

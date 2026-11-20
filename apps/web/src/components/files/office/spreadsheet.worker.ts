@@ -1,3 +1,4 @@
+import { readUiTranslator } from "../../../i18n/uiText";
 // Adapted from opencode (MIT). Copyright (c) 2025 opencode. See LICENSE.opencode.
 import {
   initWasm,
@@ -33,114 +34,117 @@ type State = { opened: Opened | undefined };
 
 const state: State = { opened: undefined };
 
-serveWorker<SheetMethods>({
-  open: async (input) => {
-    if (state.opened) throw new Error("The worker already holds a workbook");
+serveWorker<SheetMethods>(
+  {
+    open: async (input) => {
+      if (state.opened) throw new Error("The worker already holds a workbook");
 
-    await initWasm();
+      await initWasm();
 
-    const workbook = openWorkbook(new Uint8Array(input.bytes));
-    const info = workbook.sheetInfo();
+      const workbook = openWorkbook(new Uint8Array(input.bytes));
+      const info = workbook.sheetInfo();
 
-    state.opened = { workbook, info, ends: new Map(), surface: new OffscreenCanvas(1, 1) };
+      state.opened = { workbook, info, ends: new Map(), surface: new OffscreenCanvas(1, 1) };
 
-    const tabs = visibleTabs(workbook, info);
-    // A workbook saved on a hidden sheet opens on the first visible one, as Excel does.
-    const first = tabs.find((tab) => tab.index === info.activeSheet) ?? tabs[0];
+      const tabs = visibleTabs(workbook, info);
+      // A workbook saved on a hidden sheet opens on the first visible one, as Excel does.
+      const first = tabs.find((tab) => tab.index === info.activeSheet) ?? tabs[0];
 
-    if (!first) return undefined;
+      if (!first) return undefined;
 
-    return { tabs, layout: show(state.opened, first.index) };
+      return { tabs, layout: show(state.opened, first.index) };
+    },
+    show: (input) => {
+      const opened = required();
+      const current = opened.info.activeSheet;
+      const layout = attempt(() => show(opened, input.sheet));
+
+      if (layout) return layout;
+
+      // One sheet that fails to open leaves the others readable: go back to the sheet on show.
+      attempt(() => show(opened, current));
+
+      throw new Error(`Sheet ${input.sheet} could not open`);
+    },
+    frame: (input) => {
+      const opened = active(input.sheet);
+      const frozen = { rows: opened.info.frozenRows, cols: opened.info.frozenCols };
+      const viewport = { x: input.x, y: input.y, width: input.width, height: input.height };
+      const drawn = drawFrame(opened.workbook, viewport, frozen, input.wider);
+
+      if (!drawn) return undefined;
+
+      const surface = opened.surface;
+      const width = Math.ceil(input.offset.x + drawn.viewport.width * input.ratio);
+      const height = Math.ceil(input.offset.y + drawn.viewport.height * input.ratio);
+
+      if (surface.width !== width) surface.width = width;
+
+      if (surface.height !== height) surface.height = height;
+
+      const context = surface.getContext("2d");
+
+      if (!context) return undefined;
+
+      paintFrame(context, drawn, { ratio: input.ratio, origin: input.offset });
+
+      const bitmap = surface.transferToImageBitmap();
+      const grid = drawn.list.grid;
+      const panes = frozenSize(grid, frozen);
+
+      return new Transfer(
+        {
+          bitmap,
+          viewport: drawn.viewport,
+          grid,
+          hyperlinks: drawn.list.hyperlinks ?? [],
+          frozen: panes,
+          end: end(opened, input.sheet, panes),
+        },
+        [bitmap],
+      );
+    },
+    position: (input) => {
+      const workbook = required().workbook;
+      const cell = input.cell;
+      const start = attempt(() => workbook.cellPosition(input.sheet, cell.row, cell.col));
+
+      const next = attempt(() =>
+        workbook.cellPosition(
+          input.sheet,
+          Math.min(cell.row + 1, lastCell.row),
+          Math.min(cell.col + 1, lastCell.col),
+        ),
+      );
+
+      return start && next ? { start, next } : undefined;
+    },
+    cells: (input) => {
+      const cells = read(required(), input.sheet, input.range);
+      const range = input.range;
+
+      return Array.from({ length: range.bottom - range.top + 1 }, (_, row) =>
+        Array.from(
+          { length: range.right - range.left + 1 },
+          (_, col) => cells?.[row]?.[col]?.displayText ?? "",
+        ),
+      );
+    },
+    // Copies the cells as they show, which is what a reader expects to paste, not the formulas behind them.
+    copy: (input) => {
+      const cells = read(required(), input.sheet, input.range);
+
+      if (!cells) return undefined;
+
+      return toTsv(
+        cells.map((row) =>
+          row.map((cell) => ({ input: cell.displayText, isFormula: literal(cell) })),
+        ),
+      );
+    },
   },
-  show: (input) => {
-    const opened = required();
-    const current = opened.info.activeSheet;
-    const layout = attempt(() => show(opened, input.sheet));
-
-    if (layout) return layout;
-
-    // One sheet that fails to open leaves the others readable: go back to the sheet on show.
-    attempt(() => show(opened, current));
-
-    throw new Error(`Sheet ${input.sheet} could not open`);
-  },
-  frame: (input) => {
-    const opened = active(input.sheet);
-    const frozen = { rows: opened.info.frozenRows, cols: opened.info.frozenCols };
-    const viewport = { x: input.x, y: input.y, width: input.width, height: input.height };
-    const drawn = drawFrame(opened.workbook, viewport, frozen, input.wider);
-
-    if (!drawn) return undefined;
-
-    const surface = opened.surface;
-    const width = Math.ceil(input.offset.x + drawn.viewport.width * input.ratio);
-    const height = Math.ceil(input.offset.y + drawn.viewport.height * input.ratio);
-
-    if (surface.width !== width) surface.width = width;
-
-    if (surface.height !== height) surface.height = height;
-
-    const context = surface.getContext("2d");
-
-    if (!context) return undefined;
-
-    paintFrame(context, drawn, { ratio: input.ratio, origin: input.offset });
-
-    const bitmap = surface.transferToImageBitmap();
-    const grid = drawn.list.grid;
-    const panes = frozenSize(grid, frozen);
-
-    return new Transfer(
-      {
-        bitmap,
-        viewport: drawn.viewport,
-        grid,
-        hyperlinks: drawn.list.hyperlinks ?? [],
-        frozen: panes,
-        end: end(opened, input.sheet, panes),
-      },
-      [bitmap],
-    );
-  },
-  position: (input) => {
-    const workbook = required().workbook;
-    const cell = input.cell;
-    const start = attempt(() => workbook.cellPosition(input.sheet, cell.row, cell.col));
-
-    const next = attempt(() =>
-      workbook.cellPosition(
-        input.sheet,
-        Math.min(cell.row + 1, lastCell.row),
-        Math.min(cell.col + 1, lastCell.col),
-      ),
-    );
-
-    return start && next ? { start, next } : undefined;
-  },
-  cells: (input) => {
-    const cells = read(required(), input.sheet, input.range);
-    const range = input.range;
-
-    return Array.from({ length: range.bottom - range.top + 1 }, (_, row) =>
-      Array.from(
-        { length: range.right - range.left + 1 },
-        (_, col) => cells?.[row]?.[col]?.displayText ?? "",
-      ),
-    );
-  },
-  // Copies the cells as they show, which is what a reader expects to paste, not the formulas behind them.
-  copy: (input) => {
-    const cells = read(required(), input.sheet, input.range);
-
-    if (!cells) return undefined;
-
-    return toTsv(
-      cells.map((row) =>
-        row.map((cell) => ({ input: cell.displayText, isFormula: literal(cell) })),
-      ),
-    );
-  },
-});
+  readUiTranslator(),
+);
 
 function required() {
   if (!state.opened) throw new Error("The worker holds no workbook");

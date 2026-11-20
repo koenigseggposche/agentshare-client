@@ -47,7 +47,7 @@ export function AgentShareModels({
   const sourceLabels = modelSourceLabels[language];
   const instances = useEnvironmentSettings(environmentId, (settings) => settings.providerInstances);
   const [pending, setPending] = useState<AgentShareModel | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ zh: string; en: string } | null>(null);
   const add = async (model: AgentShareModel) => {
     setPending(model);
     setFeedback(null);
@@ -58,22 +58,20 @@ export function AgentShareModels({
       });
       setFeedback(
         result._tag === "Success"
-          ? t(
-              "模型连接已添加，可在新会话中选择。",
-              "Model connection added. Choose it in a new thread.",
-            )
-          : t(
-              "连接未能确认添加，请刷新工作台后检查。",
-              "The connection could not be confirmed. Refresh the workbench and check its status.",
-            ),
+          ? {
+              zh: "模型连接已添加，可在新会话中选择。",
+              en: "Model connection added. Choose it in a new thread.",
+            }
+          : {
+              zh: "连接未能确认添加，请刷新工作台后检查。",
+              en: "The connection could not be confirmed. Refresh the workbench and check its status.",
+            },
       );
     } catch {
-      setFeedback(
-        t(
-          "连接中断，请刷新后检查操作结果。",
-          "The connection was interrupted. Refresh to check the outcome.",
-        ),
-      );
+      setFeedback({
+        zh: "连接中断，请刷新后检查操作结果。",
+        en: "The connection was interrupted. Refresh to check the outcome.",
+      });
     }
     setPending(null);
   };
@@ -120,7 +118,7 @@ export function AgentShareModels({
             )}
           </p>
         ) : null}
-        {feedback ? <p role="status">{feedback}</p> : null}
+        {feedback ? <p role="status">{feedback[language]}</p> : null}
         {!query.isPending && !query.error && models.length === 0 ? (
           <p>
             {t(

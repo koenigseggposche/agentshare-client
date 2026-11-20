@@ -1,3 +1,6 @@
+import { readUiText } from "../../i18n/uiText";
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { translateUiLabels, uiTranslators } from "@t3tools/shared/uiMessages";
 import type {
   PullRequestActivity,
   PullRequestCheck,
@@ -43,8 +46,11 @@ const STATES = {
   { label: string; icon: AppSymbolName; tint: string; text: string; background: string }
 >;
 
-export function pullRequestStatus(pr: Pick<PullRequestListEntry, "state" | "isDraft">) {
-  return STATES[pr.isDraft && pr.state === "open" ? "draft" : pr.state];
+export function pullRequestStatus(
+  pr: Pick<PullRequestListEntry, "state" | "isDraft">,
+  uiText: UiTranslator = uiTranslators.en,
+) {
+  return translateUiLabels(STATES, uiText)[pr.isDraft && pr.state === "open" ? "draft" : pr.state];
 }
 
 export function pullRequestConflict(pr: {
@@ -54,41 +60,52 @@ export function pullRequestConflict(pr: {
   readonly baseBranch?: string | undefined;
 }) {
   if (pr.state !== "open" || pr.isDraft || pr.mergeability !== "conflicting") return null;
-  return { label: pr.baseBranch ? `Conflicts with ${pr.baseBranch}` : "Has conflicts" };
+  return {
+    label: pr.baseBranch
+      ? readUiText("Conflicts with {0}", [pr.baseBranch])
+      : readUiText("Has conflicts"),
+  };
 }
 
-export function checkStatus(check: PullRequestCheck) {
+export function checkStatus(check: PullRequestCheck, uiText: UiTranslator = uiTranslators.en) {
   switch (check.status) {
     case "success":
       return {
-        label: "Passed",
+        label: uiText("Passed"),
         icon: "checkmark.circle",
         tint: "accent-adaptive-emerald-600-400",
       } as const;
     case "failure":
       return {
-        label: "Failed",
+        label: uiText("Failed"),
         icon: "exclamationmark.circle",
         tint: "accent-danger-foreground",
       } as const;
     case "action-required":
       return {
-        label: "Action required",
+        label: uiText("Action required"),
         icon: "exclamationmark.circle",
         tint: "accent-warning-foreground",
       } as const;
     case "pending":
-      return { label: "Pending", icon: "clock", tint: "accent-warning-foreground" } as const;
+      return {
+        label: uiText("Pending"),
+        icon: "clock",
+        tint: "accent-warning-foreground",
+      } as const;
     case "cancelled":
-      return { label: "Cancelled", icon: "minus", tint: "accent-icon-muted" } as const;
+      return { label: uiText("Cancelled"), icon: "minus", tint: "accent-icon-muted" } as const;
     case "skipped":
-      return { label: "Skipped", icon: "slash.circle", tint: "accent-icon-muted" } as const;
+      return { label: uiText("Skipped"), icon: "slash.circle", tint: "accent-icon-muted" } as const;
     case "neutral":
-      return { label: "Neutral", icon: "minus", tint: "accent-icon-muted" } as const;
+      return { label: uiText("Neutral"), icon: "minus", tint: "accent-icon-muted" } as const;
   }
 }
 
-export function pullRequestChecksSummary(pr: Pick<PullRequestDetail, "checks">) {
+export function pullRequestChecksSummary(
+  pr: Pick<PullRequestDetail, "checks">,
+  uiText: UiTranslator = uiTranslators.en,
+) {
   const failed = pr.checks.filter((check) => check.status === "failure").length;
   const required = pr.checks.filter((check) => check.status === "action-required").length;
   const pending = pr.checks.filter((check) => check.status === "pending").length;
@@ -96,39 +113,41 @@ export function pullRequestChecksSummary(pr: Pick<PullRequestDetail, "checks">) 
   const count = pr.checks.length ? `${passed} of ${pr.checks.length}` : undefined;
   if (failed)
     return {
-      label: `${failed} ${failed === 1 ? "check" : "checks"} failing`,
-      title: `${failed} ${failed === 1 ? "check" : "checks"} failing`,
+      label: uiText("{0} {1} failing", [failed, failed === 1 ? "check" : "checks"]),
+      title: uiText("{0} {1} failing", [failed, failed === 1 ? "check" : "checks"]),
       count,
       icon: "exclamationmark.circle",
       tint: "accent-danger-foreground",
     } as const;
   if (required)
     return {
-      label: `${required} need attention`,
-      title: "Checks need attention",
+      label: uiText("{0} need attention", [required]),
+      title: uiText("Checks need attention"),
       count: `${required} awaiting action`,
       icon: "exclamationmark.circle",
       tint: "accent-warning-foreground",
     } as const;
   if (pending)
     return {
-      label: `${pending} pending`,
-      title: "Checks running",
+      label: uiText("{0} pending", [pending]),
+      title: uiText("Checks running"),
       count: `${pending} pending`,
       icon: "clock",
       tint: "accent-warning-foreground",
     } as const;
   if (passed)
     return {
-      label: `${passed} of ${pr.checks.length} passed`,
-      title: passed === pr.checks.length ? "All checks passed" : "Checks completed",
+      label: uiText("{0} of {1} passed", [passed, pr.checks.length]),
+      title: passed === pr.checks.length ? uiText("All checks passed") : uiText("Checks completed"),
       count,
       icon: "checkmark.circle",
       tint: "accent-adaptive-emerald-600-400",
     } as const;
   return {
-    label: pr.checks.length ? `${pr.checks.length} completed` : "No checks reported",
-    title: pr.checks.length ? "Checks completed" : "No checks reported",
+    label: pr.checks.length
+      ? uiText("{0} completed", [pr.checks.length])
+      : uiText("No checks reported"),
+    title: pr.checks.length ? uiText("Checks completed") : uiText("No checks reported"),
     count,
     icon: "minus",
     tint: "accent-icon-muted",
@@ -143,6 +162,7 @@ export function normalizedReviewState(reviewState: string | null) {
 export function pullRequestReviewSummary(
   pr: Pick<PullRequestDetail, "reviewers">,
   activity: Pick<PullRequestActivity, "comments" | "commits"> | null,
+  uiText: UiTranslator = uiTranslators.en,
 ) {
   const latest = new Map<string, PullRequestActivity["comments"][number]>();
   const comments = new Map<string, PullRequestActivity["comments"][number]>();
@@ -175,7 +195,7 @@ export function pullRequestReviewSummary(
   );
   if (requested.length)
     return {
-      title: "Changes requested",
+      title: uiText("Changes requested"),
       count: `${requested.length} ${requested.length === 1 ? "reviewer" : "reviewers"}`,
       icon: "xmark.circle.fill",
       tint: "accent-danger-foreground",
@@ -185,8 +205,8 @@ export function pullRequestReviewSummary(
     return {
       title:
         approved.length === 1 && approved[0]?.author
-          ? `Approved by ${approved[0].author.login}`
-          : "Reviews approved",
+          ? uiText("Approved by {0}", [approved[0].author.login])
+          : uiText("Reviews approved"),
       count: `${approved.length} approved`,
       icon: "checkmark.circle",
       tint: "accent-adaptive-emerald-600-400",
@@ -195,14 +215,14 @@ export function pullRequestReviewSummary(
   const commented = reviews.filter((review) => review.reviewState === "COMMENTED");
   if (commented.length && !pr.reviewers.length)
     return {
-      title: "Reviews",
+      title: uiText("Reviews"),
       count: `${commented.length} commented`,
       icon: "bubble.left",
       tint: "accent-icon-muted",
       reviews,
     } as const;
   return {
-    title: pr.reviewers.length ? "Awaiting review" : "Request a review",
+    title: pr.reviewers.length ? uiText("Awaiting review") : uiText("Request a review"),
     count: pr.reviewers.length ? `${pr.reviewers.length} requested` : "None assigned",
     icon: "person.2",
     tint: "accent-icon-muted",

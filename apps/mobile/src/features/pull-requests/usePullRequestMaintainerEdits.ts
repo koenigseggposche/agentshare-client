@@ -1,3 +1,5 @@
+import { useUiText } from "../../i18n/uiText";
+import { readUiText } from "../../i18n/uiText";
 import { useAtomRefresh } from "@effect/atom-react";
 import {
   maintainerEditsChoiceInForce,
@@ -17,6 +19,7 @@ export function usePullRequestMaintainerEdits(
   pr: PullRequestDetail | null,
   canEdit: boolean,
 ) {
+  const uiText = useUiText();
   const target = pullRequestTarget(params);
   const update = useAtomCommand(composerPullRequests.update, { reportFailure: false });
   const refreshDetail = useAtomRefresh(composerPullRequests.detail(target));
@@ -44,8 +47,8 @@ export function usePullRequestMaintainerEdits(
       setChoice(previousChoice);
       const cause = squashAtomCommandFailure(response);
       Dialog.alert(
-        "Could not save maintainer access",
-        cause instanceof Error ? cause.message : "Try again.",
+        readUiText("Could not save maintainer access"),
+        cause instanceof Error ? cause.message : readUiText("Try again."),
       );
       return;
     }
@@ -56,8 +59,10 @@ export function usePullRequestMaintainerEdits(
     value,
     saving,
     subtitle: saving
-      ? "Saving…"
-      : "Maintainers can push to this branch. If your fork has workflows, this can also give access to its secrets.",
+      ? uiText("Saving…")
+      : uiText(
+          "Maintainers can push to this branch. If your fork has workflows, this can also give access to its secrets.",
+        ),
     toggle: () => void save(!value),
   };
 }

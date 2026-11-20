@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type {
   EnvironmentId,
   ProviderInstanceId,
@@ -20,6 +21,7 @@ export function useUsageLimitsPanel(input: {
   readonly providers: readonly ServerProvider[];
   readonly sources: UsageLimitSourceSnapshots;
 }) {
+  const uiText = useUiText();
   const {
     environmentId,
     threadKey,
@@ -44,8 +46,12 @@ export function useUsageLimitsPanel(input: {
   const banner =
     report !== null && panel !== null
       ? // A fresh id per opening: the stack keeps the last dismissed id as "exiting".
-        usageLimitsBannerItem(`usage-limits:${panel.key}:${panel.now}`, report, environmentId, () =>
-          setPanel(null),
+        usageLimitsBannerItem(
+          `usage-limits:${panel.key}:${panel.now}`,
+          report,
+          environmentId,
+          () => setPanel(null),
+          uiText,
         )
       : null;
   // Intercept /usage-limits only when Limits has selected-provider data.
@@ -63,7 +69,10 @@ export function useUsageLimitsPanel(input: {
       return true;
     }
     setPanel(null);
-    toastManager.add({ type: "info", title: "Usage limits are unavailable for this provider" });
+    toastManager.add({
+      type: "info",
+      title: uiText("Usage limits are unavailable for this provider"),
+    });
     return false;
   });
   // Async responses may clear only their originating thread's panel.

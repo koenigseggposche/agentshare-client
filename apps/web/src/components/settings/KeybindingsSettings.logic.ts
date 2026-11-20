@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { translateUiLabels, uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   STATIC_KEYBINDING_COMMANDS,
   type KeybindingCommand,
@@ -117,6 +119,7 @@ function wrapWhenExpression(node: KeybindingWhenNode): string {
 
 export function parseWhenExpressionDraft(
   expression: string,
+  uiText: UiTranslator = uiTranslators.en,
 ): { ok: true; value: KeybindingWhenNode | undefined } | { ok: false; message: string } {
   const trimmed = expression.trim();
   if (trimmed.length === 0) return { ok: true, value: undefined };
@@ -125,7 +128,7 @@ export function parseWhenExpressionDraft(
   if (!ast) {
     return {
       ok: false,
-      message: "Use variables with !, &&, ||, and parentheses.",
+      message: uiText("Use variables with !, &&, ||, and parentheses."),
     };
   }
 
@@ -222,25 +225,33 @@ const KEYBINDING_GROUPS = [
 ] as const;
 const OTHER_KEYBINDING_GROUP = { id: "other", title: "Other" } as const;
 
-function keybindingGroupFor(command: KeybindingCommand): { id: string; title: string } {
+function keybindingGroupFor(
+  command: KeybindingCommand,
+  uiText: UiTranslator = uiTranslators.en,
+): { id: string; title: string } {
   const prefix = String(command).split(".")[0] ?? "";
   return (
-    KEYBINDING_GROUPS.find((group) => (group.prefixes as ReadonlyArray<string>).includes(prefix)) ??
-    OTHER_KEYBINDING_GROUP
+    translateUiLabels(KEYBINDING_GROUPS, uiText).find((group) =>
+      (group.prefixes as ReadonlyArray<string>).includes(prefix),
+    ) ?? translateUiLabels(OTHER_KEYBINDING_GROUP, uiText)
   );
 }
 
 export function groupKeybindingRows(
   rows: ReadonlyArray<KeybindingRow>,
+  uiText: UiTranslator = uiTranslators.en,
 ): ReadonlyArray<KeybindingGroup> {
   const rowsByGroup = new Map<string, Array<KeybindingRow>>();
   for (const row of rows) {
-    const group = keybindingGroupFor(row.command);
+    const group = keybindingGroupFor(row.command, uiText);
     const bucket = rowsByGroup.get(group.id);
     if (bucket) bucket.push(row);
     else rowsByGroup.set(group.id, [row]);
   }
-  return [...KEYBINDING_GROUPS, OTHER_KEYBINDING_GROUP].flatMap((group) => {
+  return [
+    ...translateUiLabels(KEYBINDING_GROUPS, uiText),
+    translateUiLabels(OTHER_KEYBINDING_GROUP, uiText),
+  ].flatMap((group) => {
     const groupRows = rowsByGroup.get(group.id);
     return groupRows ? [{ id: group.id, title: group.title, rows: groupRows }] : [];
   });

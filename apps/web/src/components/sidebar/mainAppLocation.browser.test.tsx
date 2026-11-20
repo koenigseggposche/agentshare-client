@@ -56,7 +56,7 @@ function KeyboardOpenControls() {
   const close = useCloseAppModal();
   return (
     <>
-      <button type="button" onClick={() => void navigate({ href: "/settings/agentshare" })}>
+      <button type="button" onClick={() => void navigate({ href: "/settings/providers" })}>
         Browse models
       </button>
       <button
@@ -82,7 +82,7 @@ describe("main app return location", () => {
     expect(document.activeElement).toBe(opener);
     expect(opener.matches(":focus-visible")).toBe(true);
     await userEvent.keyboard("{Enter}");
-    await vi.waitFor(() => expect(router.state.location.pathname).toBe("/settings/agentshare"));
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe("/settings/providers"));
     await userEvent.tab();
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Close settings" }).element(),

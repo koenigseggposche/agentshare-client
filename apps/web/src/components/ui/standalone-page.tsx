@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { ReactNode } from "react";
 
 import { AgentShareMark } from "../AgentShareMark";
@@ -20,12 +21,13 @@ export function StandalonePageHeader({
   readonly title: ReactNode;
   readonly description: ReactNode;
 }) {
+  const uiText = useUiText();
   return (
     <>
       <div className="flex items-baseline justify-between gap-3 text-muted-foreground">
-        <span className="flex items-baseline gap-1.5" role="img" aria-label="AgentShare">
+        <span className="flex items-baseline gap-1.5" role="img" aria-label={uiText("AgentShare")}>
           <AgentShareMark className="h-5 w-auto shrink-0 text-foreground" aria-hidden />
-          <span className="text-lg font-medium tracking-tight">AgentShare</span>
+          <span className="text-lg font-medium tracking-tight">{uiText("AgentShare")}</span>
         </span>
         {context ? <span className="text-sm">{context}</span> : null}
       </div>

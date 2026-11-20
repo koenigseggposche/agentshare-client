@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { ThreadStructure } from "@t3tools/client-runtime/state/shell";
 import {
   AuthOrchestrationOperateScope,
@@ -123,6 +124,7 @@ export function usePendingThreadRequests(input: {
   readonly composerRef: RefObject<ChatComposerHandle | null>;
   readonly setThreadError: (threadId: ThreadId, error: string | null) => void;
 }) {
+  const uiText = useUiText();
   const {
     environmentId,
     activeThreadId,
@@ -407,8 +409,8 @@ export function usePendingThreadRequests(input: {
       setComposerDraftPrompt(composerDraftTarget, nextPrompt);
       toastManager.add({
         type: "info",
-        title: "Your typed text was set aside",
-        description: "It will be back in the composer once the question is answered.",
+        title: uiText("Your typed text was set aside"),
+        description: uiText("It will be back in the composer once the question is answered."),
         data: { threadRef: activeThreadId ? { environmentId, threadId: activeThreadId } : null },
       });
       if (activeThreadId) {

@@ -1,3 +1,5 @@
+import { liveUiText } from "./i18n/uiText";
+import { installLanguageRuntime } from "./i18n/installLanguageRuntime";
 import { installComposerAttachmentUploads } from "./state/composer-attachment-uploads";
 import { installThreadOutboxDelivery } from "./state/threadOutboxDelivery";
 import * as Linking from "expo-linking";
@@ -179,6 +181,7 @@ function handleNavigationReady(): void {
 declare const module: { readonly hot?: FoundationHotModule } | undefined;
 
 const appServiceDisposers = [
+  installLanguageRuntime(),
   installUiRuntimeMemoryWarningGc(),
   subscribeComposerDraftModelReconciliation({
     registry: appAtomRegistry,
@@ -188,13 +191,13 @@ const appServiceDisposers = [
   }),
   installAppearanceRuntime(),
   installSubscriptionUsageRefresh(),
-  installThreadOutboxDelivery(),
+  installThreadOutboxDelivery(liveUiText),
   installComposerAttachmentUploads(),
   startIncomingShareInbox(),
   installAgentNotificationNavigation(linkToAppPath),
-  installAppShortcuts(linkToAppPath),
-  installAppUpdateChecks(),
-  installShowcaseCapture(rootPathnameFromState),
+  installAppShortcuts(linkToAppPath, liveUiText),
+  installAppUpdateChecks(undefined, undefined, liveUiText),
+  installShowcaseCapture(rootPathnameFromState, liveUiText),
 ];
 disposeOnFoundationReplace(typeof module === "undefined" ? undefined : module.hot, () => {
   for (const dispose of appServiceDisposers) dispose();

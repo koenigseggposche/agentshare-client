@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   foldSearchQuery,
   PALETTE_SECONDARY_LIMIT,
@@ -44,12 +46,13 @@ export function buildLinkedThreadActionItems(
     icon: ReactNode;
     runThread: (thread: Pick<SidebarThreadSummary, "environmentId" | "id">) => Promise<void>;
   },
+  uiText: UiTranslator = uiTranslators.en,
 ): CommandPaletteActionItem[] {
   return input.threads.map((thread) => ({
     kind: "action",
     value: `thread:${input.environmentId}:${thread.id}`,
-    title: thread.title || "Untitled thread",
-    description: thread.archivedAt === null ? "Linked thread" : "Archived thread",
+    title: thread.title || uiText("Untitled thread"),
+    description: thread.archivedAt === null ? uiText("Linked thread") : uiText("Archived thread"),
     searchTerms: [input.query, thread.title],
     icon: input.icon,
     run: () => input.runThread({ environmentId: input.environmentId, id: thread.id }),
@@ -541,31 +544,37 @@ function scorePaletteItem(
  * Equal match classes put commands before threads, so "new" runs "New thread".
  * Server message matches stay in a final group so late results cannot move earlier rows.
  */
-export function filterCommandPaletteGroups(input: {
-  activeGroups: ReadonlyArray<CommandPaletteGroup>;
-  query: string;
-  isInSubmenu: boolean;
-  /** Submenu options join the root search, and a submenu with no match falls back to it. */
-  allOptions?: {
-    readonly rootGroups: ReadonlyArray<CommandPaletteGroup>;
-    readonly nestedItems: ReadonlyArray<CommandPaletteActionItem>;
-  };
-  projectSearchItems: ReadonlyArray<CommandPaletteActionItem>;
-  settingsSearchItems?: ReadonlyArray<CommandPaletteActionItem>;
-  threadSearchItems: ReadonlyArray<CommandPaletteActionItem>;
-  /** Threads whose messages match, best first; threads already listed are skipped. */
-  threadMessageItems?: ReadonlyArray<CommandPaletteActionItem>;
-  now?: number;
-}): CommandPaletteGroup[] {
+export function filterCommandPaletteGroups(
+  input: {
+    activeGroups: ReadonlyArray<CommandPaletteGroup>;
+    query: string;
+    isInSubmenu: boolean;
+    /** Submenu options join the root search, and a submenu with no match falls back to it. */
+    allOptions?: {
+      readonly rootGroups: ReadonlyArray<CommandPaletteGroup>;
+      readonly nestedItems: ReadonlyArray<CommandPaletteActionItem>;
+    };
+    projectSearchItems: ReadonlyArray<CommandPaletteActionItem>;
+    settingsSearchItems?: ReadonlyArray<CommandPaletteActionItem>;
+    threadSearchItems: ReadonlyArray<CommandPaletteActionItem>;
+    /** Threads whose messages match, best first; threads already listed are skipped. */
+    threadMessageItems?: ReadonlyArray<CommandPaletteActionItem>;
+    now?: number;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): CommandPaletteGroup[] {
   if (input.allOptions && input.isInSubmenu) {
     const { allOptions, ...submenuInput } = input;
-    const scoped = filterCommandPaletteGroups(submenuInput);
+    const scoped = filterCommandPaletteGroups(submenuInput, uiText);
     if (scoped.length > 0 || input.query.trim().length === 0) return scoped;
-    return filterCommandPaletteGroups({
-      ...input,
-      activeGroups: allOptions.rootGroups,
-      isInSubmenu: false,
-    });
+    return filterCommandPaletteGroups(
+      {
+        ...input,
+        activeGroups: allOptions.rootGroups,
+        isInSubmenu: false,
+      },
+      uiText,
+    );
   }
 
   const isActionsFilter = input.query.startsWith(">");
@@ -594,28 +603,28 @@ export function filterCommandPaletteGroups(input: {
     if (input.allOptions && input.allOptions.nestedItems.length > 0) {
       searchableGroups.push({
         value: "nested-search",
-        label: "Suggestions",
+        label: uiText("Suggestions"),
         items: input.allOptions.nestedItems,
       });
     }
     if (input.threadSearchItems.length > 0) {
       searchableGroups.push({
         value: "threads-search",
-        label: "Threads",
+        label: uiText("Threads"),
         items: input.threadSearchItems,
       });
     }
     if (input.projectSearchItems.length > 0) {
       searchableGroups.push({
         value: "projects-search",
-        label: "Projects",
+        label: uiText("Projects"),
         items: input.projectSearchItems,
       });
     }
     if (input.settingsSearchItems && input.settingsSearchItems.length > 0) {
       searchableGroups.push({
         value: "settings-search",
-        label: "Settings",
+        label: uiText("Settings"),
         items: input.settingsSearchItems,
       });
     }
@@ -657,7 +666,7 @@ export function filterCommandPaletteGroups(input: {
   const messageItems = (input.threadMessageItems ?? []).filter((item) => !listed.has(item.value));
   return messageItems.length === 0
     ? groups
-    : [...groups, { value: "threads-messages", label: "In messages", items: messageItems }];
+    : [...groups, { value: "threads-messages", label: uiText("In messages"), items: messageItems }];
 }
 
 /** Every option inside a submenu as one row, e.g. "New thread in t3code" or "Change theme: Dracula". */
@@ -763,18 +772,21 @@ export function getCommandPaletteMode(input: {
   return input.isBrowsing ? "root-browse" : "root";
 }
 
-export function buildRootGroups(input: {
-  actionItems: ReadonlyArray<CommandPaletteActionItem | CommandPaletteSubmenuItem>;
-  recentThreadItems: ReadonlyArray<CommandPaletteActionItem>;
-}): CommandPaletteGroup[] {
+export function buildRootGroups(
+  input: {
+    actionItems: ReadonlyArray<CommandPaletteActionItem | CommandPaletteSubmenuItem>;
+    recentThreadItems: ReadonlyArray<CommandPaletteActionItem>;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): CommandPaletteGroup[] {
   const groups: CommandPaletteGroup[] = [];
   if (input.actionItems.length > 0) {
-    groups.push({ value: "actions", label: "Actions", items: input.actionItems });
+    groups.push({ value: "actions", label: uiText("Actions"), items: input.actionItems });
   }
   if (input.recentThreadItems.length > 0) {
     groups.push({
       value: "recent-threads",
-      label: "Recent Threads",
+      label: uiText("Recent Threads"),
       items: input.recentThreadItems,
     });
   }
@@ -872,11 +884,11 @@ export function buildPaletteRemoteSourceReadiness(
   };
 }
 
-export function errorMessage(error: unknown): string {
+export function errorMessage(error: unknown, uiText: UiTranslator = uiTranslators.en): string {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
   }
-  return "An error occurred.";
+  return uiText("An error occurred.");
 }
 
 const OVERLAY_MODE_BY_COMMAND = {

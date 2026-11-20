@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { translateUiLabels, uiTranslators } from "@t3tools/shared/uiMessages";
 import type { ContextMenuItem } from "@t3tools/contracts";
 
 type ExternalLinkContextMenuAction =
@@ -29,19 +31,26 @@ const EXTERNAL_LINK_CONTEXT_MENU_ITEMS = [
   { id: "copy-link", label: "Copy Link" },
 ] as const satisfies readonly ContextMenuItem<ExternalLinkContextMenuAction>[];
 
-function externalLinkContextMenuItems(options: {
-  readonly canOpenInPreview: boolean;
-  readonly threadLinkAction?: "link-to-thread" | "unlink-from-thread" | undefined;
-}): readonly ContextMenuItem<ExternalLinkContextMenuAction>[] {
+function externalLinkContextMenuItems(
+  options: {
+    readonly canOpenInPreview: boolean;
+    readonly threadLinkAction?: "link-to-thread" | "unlink-from-thread" | undefined;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): readonly ContextMenuItem<ExternalLinkContextMenuAction>[] {
   const items = options.canOpenInPreview
-    ? EXTERNAL_LINK_CONTEXT_MENU_ITEMS
-    : EXTERNAL_LINK_CONTEXT_MENU_ITEMS.filter((item) => item.id !== "open-in-preview");
+    ? translateUiLabels(EXTERNAL_LINK_CONTEXT_MENU_ITEMS, uiText)
+    : translateUiLabels(EXTERNAL_LINK_CONTEXT_MENU_ITEMS, uiText).filter(
+        (item) => item.id !== "open-in-preview",
+      );
   if (options.threadLinkAction === undefined) return items;
   return [
     {
       id: options.threadLinkAction,
       label:
-        options.threadLinkAction === "link-to-thread" ? "Link to thread" : "Unlink from thread",
+        options.threadLinkAction === "link-to-thread"
+          ? uiText("Link to thread")
+          : uiText("Unlink from thread"),
     },
     ...items,
   ];
@@ -85,22 +94,25 @@ export function resolveExternalWebLinkHost(href: string | undefined): string | n
   return resolveExternalWebLink(href)?.hostname || null;
 }
 
-export async function showExternalLinkContextMenu({
-  href,
-  position,
-  canOpenInPreview = true,
-  threadLinkAction,
-  showContextMenu,
-  openInPreview,
-  openExternal,
-  copyLink,
-  updateThreadLink,
-  reportFailure,
-}: ShowExternalLinkContextMenuOptions): Promise<void> {
+export async function showExternalLinkContextMenu(
+  {
+    href,
+    position,
+    canOpenInPreview = true,
+    threadLinkAction,
+    showContextMenu,
+    openInPreview,
+    openExternal,
+    copyLink,
+    updateThreadLink,
+    reportFailure,
+  }: ShowExternalLinkContextMenuOptions,
+  uiText: UiTranslator = uiTranslators.en,
+): Promise<void> {
   let action: ExternalLinkContextMenuAction | null;
   try {
     action = await showContextMenu(
-      externalLinkContextMenuItems({ canOpenInPreview, threadLinkAction }),
+      externalLinkContextMenuItems({ canOpenInPreview, threadLinkAction }, uiText),
       position,
     );
   } catch (cause) {

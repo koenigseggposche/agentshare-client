@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   sourceControlClients,
   type ChangeRequestTerminology,
@@ -33,31 +35,40 @@ export function pullRequestAgentPrompt(
   }
 }
 
-export function pullRequestAgentActions(pr: PullRequestDetail, canWatch: boolean) {
+export function pullRequestAgentActions(
+  pr: PullRequestDetail,
+  canWatch: boolean,
+  uiText: UiTranslator = uiTranslators.en,
+) {
   const { shortLabel } = sourceControlClients.get(pr.provider).changeRequest;
   return [
     {
       task: "ask",
-      title: "Ask a question",
+      title: uiText("Ask a question"),
       icon: "bubble.left.and.text.bubble.right",
       disabled: false,
     },
-    { task: "explain", title: `Explain this ${shortLabel}`, icon: "book", disabled: false },
+    {
+      task: "explain",
+      title: uiText("Explain this {0}", [shortLabel]),
+      icon: "book",
+      disabled: false,
+    },
     {
       task: "feedback",
-      title: "Address feedback",
+      title: uiText("Address feedback"),
       icon: "wrench.and.screwdriver",
       disabled: pr.state !== "open",
     },
     {
       task: "conflicts",
-      title: "Resolve conflicts",
+      title: uiText("Resolve conflicts"),
       icon: "arrow.triangle.branch",
       disabled: pr.state !== "open" || pr.mergeability !== "conflicting",
     },
     {
       task: "watch",
-      title: `Watch ${shortLabel}`,
+      title: uiText("Watch {0}", [shortLabel]),
       icon: "eye",
       disabled: pr.state !== "open" || !canWatch,
     },

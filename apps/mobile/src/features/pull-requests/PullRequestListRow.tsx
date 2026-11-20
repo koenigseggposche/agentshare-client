@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   capitalizeTerm,
   sourceControlClients,
@@ -43,6 +44,7 @@ export const PullRequestListRow = memo(
     readonly getActions: (item: EnvironmentPullRequestListEntry) => MenuProps["actions"];
     readonly onAction: (item: EnvironmentPullRequestListEntry, action: string) => void;
   }) {
+    const uiText = useUiText();
     const { item } = props;
     const foreground = props.selected
       ? selectedThreadRowColors.foregroundClassName
@@ -59,9 +61,9 @@ export const PullRequestListRow = memo(
       : props.sidebar
         ? "text-drawer-foreground-muted"
         : "text-foreground-tertiary";
-    const status = pullRequestStatus(item);
+    const status = pullRequestStatus(item, uiText);
     const conflict = pullRequestConflict(item);
-    const review = pullRequestListReviewStatus(item);
+    const review = pullRequestListReviewStatus(item, uiText);
     const checks = item.checksState ? pullRequestChecksStatus(item.checksState) : null;
     return (
       <View style={props.sidebar ? THREAD_LIST_V2_SIDEBAR_ROW_CONTAINER_STYLE : undefined}>
@@ -74,8 +76,24 @@ export const PullRequestListRow = memo(
           <Pressable
             accessibilityRole="button"
             accessibilityState={{ selected: props.selected, busy: props.busy }}
-            accessibilityLabel={`${capitalizeTerm(sourceControlClients.get(item.provider).changeRequest.singular)} ${item.number}, ${item.title}, ${status.label}${conflict ? `, ${conflict.label.toLowerCase()}` : ""}, by ${item.author?.login ?? "unknown author"}${review ? `, ${review.accessibleLabel}` : ""}${item.checksState ? `, checks ${item.checksState}` : ""}${item.stack ? `, stack ${item.stack.position} of ${item.stack.size}` : ""}${item.labels.length ? `, ${item.labels.map((label) => label.name).join(", ")}` : ""}, ${item.additions} additions, ${item.deletions} deletions`}
-            accessibilityHint="Double tap to open. Touch and hold for quick actions."
+            accessibilityLabel={uiText(
+              "{0} {1}, {2}, {3}{4}, by {5}{6}{7}{8}{9}, {10} additions, {11} deletions",
+              [
+                capitalizeTerm(sourceControlClients.get(item.provider).changeRequest.singular),
+                item.number,
+                item.title,
+                status.label,
+                conflict ? `, ${conflict.label.toLowerCase()}` : "",
+                item.author?.login ?? "unknown author",
+                review ? `, ${review.accessibleLabel}` : "",
+                item.checksState ? `, checks ${item.checksState}` : "",
+                item.stack ? `, stack ${item.stack.position} of ${item.stack.size}` : "",
+                item.labels.length ? `, ${item.labels.map((label) => label.name).join(", ")}` : "",
+                item.additions,
+                item.deletions,
+              ],
+            )}
+            accessibilityHint={uiText("Double tap to open. Touch and hold for quick actions.")}
             onPress={() => props.onSelect(item)}
             disabled={props.busy}
             style={props.sidebar ? THREAD_LIST_V2_SIDEBAR_ROW_STYLE : undefined}
@@ -176,7 +194,10 @@ export const PullRequestListRow = memo(
                   ) : null}
                 </View>
                 {checks ? (
-                  <View className="shrink-0" accessibilityLabel={`Checks ${item.checksState}`}>
+                  <View
+                    className="shrink-0"
+                    accessibilityLabel={uiText("Checks {0}", [item.checksState])}
+                  >
                     <SymbolView name={checks.icon} size={13} tintColorClassName={checks.tint} />
                   </View>
                 ) : null}

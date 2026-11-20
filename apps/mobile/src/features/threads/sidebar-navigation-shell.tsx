@@ -1,3 +1,4 @@
+import { readUiTranslator } from "../../i18n/uiText";
 import { createV5StackNavigator as createNativeStackNavigator } from "../../native/createV5StackNavigator";
 import { NavigationContainer, NavigationIndependentTree } from "@react-navigation/native";
 import { type NativeStackNavigationOptions } from "@react-navigation/native-stack";
@@ -22,7 +23,7 @@ const SIDEBAR_SCREEN_OPTIONS: SidebarScreenOptions = {
   headerShadowVisible: false,
   headerShown: true,
   headerStyle: NATIVE_LIQUID_GLASS_SUPPORTED ? { backgroundColor: "transparent" } : undefined,
-  ...getCompactBrandHeaderOptions({ fontSize: 18, fontWeight: "800" }),
+  ...getCompactBrandHeaderOptions({ fontSize: 18, fontWeight: "800" }, readUiTranslator()),
   headerTransparent: NATIVE_LIQUID_GLASS_SUPPORTED,
   scrollEdgeEffects: NATIVE_LIQUID_GLASS_SUPPORTED ? SCROLL_EDGE_EFFECTS : undefined,
   unstable_navigationItemStyle: NATIVE_LIQUID_GLASS_SUPPORTED ? "editor" : undefined,

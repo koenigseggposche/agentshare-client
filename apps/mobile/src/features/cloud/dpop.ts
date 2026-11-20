@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { readUiTranslator } from "../../i18n/uiText";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import * as Clock from "effect/Clock";
 import * as Digest from "effect/crypto/Digest";
 import * as SecureRandom from "effect/crypto/SecureRandom";
@@ -244,11 +247,14 @@ export const loadOrCreateDpopProofKeyPair = Effect.fn("dpop.loadOrCreateDpopProo
   },
 );
 
-function normalizeHtu(url: string): Effect.Effect<string, CloudDpopError> {
+function normalizeHtu(
+  url: string,
+  uiText: UiTranslator = uiTranslators.en,
+): Effect.Effect<string, CloudDpopError> {
   const normalized = normalizeDpopHtu(url);
   return normalized
     ? Effect.succeed(normalized)
-    : Effect.fail(new CloudDpopError({ message: "DPoP URL is invalid." }));
+    : Effect.fail(new CloudDpopError({ message: uiText("DPoP URL is invalid.") }));
 }
 
 export const createDpopProof = Effect.fn("dpop.createDpopProof")(function* (input: {
@@ -271,7 +277,7 @@ export const createDpopProof = Effect.fn("dpop.createDpopProof")(function* (inpu
     Effect.flatMap((random) => random.uuidV4()),
     Effect.mapError(cloudDpopError("Could not generate DPoP proof identifier.")),
   );
-  const htu = yield* normalizeHtu(input.url);
+  const htu = yield* normalizeHtu(input.url, readUiTranslator());
   const header = yield* encodeDpopJwtHeaderJson({
     typ: "dpop+jwt",
     alg: "ES256",

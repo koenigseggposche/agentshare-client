@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   ConnectionBlockedError,
   ConnectionTransientError,
@@ -92,6 +93,7 @@ export function useComposerContextImport(input: {
   readonly pendingThreadImportsRef: RefObject<Map<string, number>>;
   readonly addComposerFilesToDraft: (files: ComposerFileAttachment[]) => string[];
 }) {
+  const uiText = useUiText();
   const {
     environmentId,
     linkedEnvironments,
@@ -161,8 +163,8 @@ export function useComposerContextImport(input: {
     const fail = (reason: string) => {
       toastManager.add({
         type: "error",
-        title: `Couldn't bring ${record.name} into this message`,
-        description: `${reason} Remove the chip or attach the file again.`,
+        title: uiText("Couldn't bring {0} into this message", [record.name]),
+        description: uiText("{0} Remove the chip or attach the file again.", [reason]),
       });
     };
     let file = copiedComposerAttachmentFile(sourceEnvironmentId, record.attachmentId);
@@ -330,13 +332,17 @@ export function useComposerContextImport(input: {
           : existing?.kind === "review-comment"
             ? reviewCommentContextRecord(existing.record)
             : existing?.kind === "preview-annotation"
-              ? previewAnnotationContextRecord(existing.record, {
-                  screenshotContextId: composerImages.some(
-                    (image) => image.id === existing.record.id,
-                  )
-                    ? existing.record.id
-                    : undefined,
-                })
+              ? previewAnnotationContextRecord(
+                  existing.record,
+                  {
+                    screenshotContextId: composerImages.some(
+                      (image) => image.id === existing.record.id,
+                    )
+                      ? existing.record.id
+                      : undefined,
+                  },
+                  uiText,
+                )
               : existing?.kind === "thread" || existing?.kind === "environment"
                 ? existing.record
                 : existing

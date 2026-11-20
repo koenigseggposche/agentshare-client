@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   mergeDirectPreviewAnnotation,
   resolveBackgroundDraftWorkspaceOptions,
@@ -261,6 +262,7 @@ interface ComposerSendInput {
  * when it fails.
  */
 export function useComposerSend(input: ComposerSendInput) {
+  const uiText = useUiText();
   const {
     environmentId,
     routeThreadKey,
@@ -434,8 +436,10 @@ export function useComposerSend(input: ComposerSendInput) {
       toastManager.add(
         stackedThreadToast({
           type: "info",
-          title: "Annotation attached to draft",
-          description: "Sending is unavailable right now. Finish the current action, then send.",
+          title: uiText("Annotation attached to draft"),
+          description: uiText(
+            "Sending is unavailable right now. Finish the current action, then send.",
+          ),
         }),
       );
     };
@@ -457,13 +461,16 @@ export function useComposerSend(input: ComposerSendInput) {
       const draft = useComposerDraftStore.getState().getComposerDraft(composerDraftTarget);
       toastManager.add({
         type: "warning",
-        ...loadBalancingSendWarning({
-          pending: loadBalancing.pending,
-          threadContexts: draft ? referencedThreadContexts(draft) : [],
-          candidateEnvironmentIds: logicalProjectEnvironments.map(
-            (candidate) => candidate.environmentId,
-          ),
-        }),
+        ...loadBalancingSendWarning(
+          {
+            pending: loadBalancing.pending,
+            threadContexts: draft ? referencedThreadContexts(draft) : [],
+            candidateEnvironmentIds: logicalProjectEnvironments.map(
+              (candidate) => candidate.environmentId,
+            ),
+          },
+          uiText,
+        ),
       });
       return;
     }
@@ -474,8 +481,8 @@ export function useComposerSend(input: ComposerSendInput) {
       toastManager.add({
         ...stackedThreadToast({
           type: "warning",
-          title: "Not connected: message not sent",
-          description: "Reconnecting to the environment. Try again once it is connected.",
+          title: uiText("Not connected: message not sent"),
+          description: uiText("Reconnecting to the environment. Try again once it is connected."),
         }),
         id: `chat-send-environment-unavailable:${toastSlot}`,
       });
@@ -494,7 +501,7 @@ export function useComposerSend(input: ComposerSendInput) {
       toastManager.add(
         stackedThreadToast({
           type: "warning",
-          title: "Side chat not started",
+          title: uiText("Side chat not started"),
           description: sideChatDisabledReason,
         }),
       );
@@ -513,8 +520,8 @@ export function useComposerSend(input: ComposerSendInput) {
         toastManager.add(
           stackedThreadToast({
             type: "warning",
-            title: "Side chats take text only",
-            description: "Remove the attachments and context, then send it again.",
+            title: uiText("Side chats take text only"),
+            description: uiText("Remove the attachments and context, then send it again."),
           }),
         );
         return;
@@ -569,9 +576,10 @@ export function useComposerSend(input: ComposerSendInput) {
       toastManager.add(
         stackedThreadToast({
           type: "warning",
-          title: "Choose models and a base branch",
-          description:
+          title: uiText("Choose models and a base branch"),
+          description: uiText(
             "Multiple models need a new thread in a Git project. Each gets its own worktree.",
+          ),
         }),
       );
       return;
@@ -619,8 +627,11 @@ export function useComposerSend(input: ComposerSendInput) {
       toastManager.add(
         stackedThreadToast({
           type: "warning",
-          title: "Attached thread is on another machine",
-          description: `This machine's agent can't read "${strandedThread.title}". Remove it, or switch back to ${owner} to send.`,
+          title: uiText("Attached thread is on another machine"),
+          description: uiText(
+            "This machine's agent can't read \"{0}\". Remove it, or switch back to {1} to send.",
+            [strandedThread.title, owner],
+          ),
         }),
       );
       return;
@@ -674,8 +685,8 @@ export function useComposerSend(input: ComposerSendInput) {
         toastManager.add(
           stackedThreadToast({
             type: "warning",
-            title: "Start a Codex thread first",
-            description: "Send a message before you submit feedback.",
+            title: uiText("Start a Codex thread first"),
+            description: uiText("Send a message before you submit feedback."),
           }),
         );
         return;
@@ -748,13 +759,16 @@ export function useComposerSend(input: ComposerSendInput) {
       composerRef.current?.resetCursorState();
       const followUpSent = await submitPlanFollowUp({
         text: followUp.text,
-        context: buildMessageContext({
-          terminalContexts: sendableComposerTerminalContexts,
-          reviewComments: composerReviewComments,
-          previewAnnotations: composerPreviewAnnotations,
-          threadContexts: composerThreadContexts,
-          environmentContexts: composerEnvironmentContexts,
-        }),
+        context: buildMessageContext(
+          {
+            terminalContexts: sendableComposerTerminalContexts,
+            reviewComments: composerReviewComments,
+            previewAnnotations: composerPreviewAnnotations,
+            threadContexts: composerThreadContexts,
+            environmentContexts: composerEnvironmentContexts,
+          },
+          uiText,
+        ),
         interactionMode: followUp.interactionMode,
       });
       if (!followUpSent) {
@@ -834,8 +848,8 @@ export function useComposerSend(input: ComposerSendInput) {
       toastManager.add(
         stackedThreadToast({
           type: "warning",
-          title: "Choose a project first",
-          description: "This draft no longer points to an available project.",
+          title: uiText("Choose a project first"),
+          description: uiText("This draft no longer points to an available project."),
         }),
       );
       return;
@@ -889,17 +903,20 @@ export function useComposerSend(input: ComposerSendInput) {
     // row, the upload id (or local id on the data-URL path) on the wire; the server
     // rebinds them to the persisted id.
     const buildOutgoingMessageContext = (attachmentIds: ReadonlyArray<string>) =>
-      buildMessageContext({
-        terminalContexts: composerTerminalContextsSnapshot,
-        reviewComments: composerReviewCommentsSnapshot,
-        previewAnnotations: composerPreviewAnnotationsSnapshot,
-        threadContexts: composerThreadContextsSnapshot,
-        environmentContexts: composerEnvironmentContextsSnapshot,
-        attachments: composerAttachmentsSnapshot.map((attachment, index) => ({
-          attachment,
-          attachmentId: attachmentIds[index] ?? attachment.id,
-        })),
-      });
+      buildMessageContext(
+        {
+          terminalContexts: composerTerminalContextsSnapshot,
+          reviewComments: composerReviewCommentsSnapshot,
+          previewAnnotations: composerPreviewAnnotationsSnapshot,
+          threadContexts: composerThreadContextsSnapshot,
+          environmentContexts: composerEnvironmentContextsSnapshot,
+          attachments: composerAttachmentsSnapshot.map((attachment, index) => ({
+            attachment,
+            attachmentId: attachmentIds[index] ?? attachment.id,
+          })),
+        },
+        uiText,
+      );
     const outgoingMessageContext = buildOutgoingMessageContext(
       composerAttachmentsSnapshot.map((attachment) => attachment.id),
     );
@@ -1145,7 +1162,7 @@ export function useComposerSend(input: ComposerSendInput) {
           toastManager.add({
             type: "info",
             title: notice,
-            description: "Send again when it's ready.",
+            description: uiText("Send again when it's ready."),
           });
         }
         return;
@@ -1247,7 +1264,7 @@ export function useComposerSend(input: ComposerSendInput) {
     const title = deriveThreadTitleSeed({
       text: messageTextForSend,
       attachments: composerAttachmentsSnapshot,
-      fallbackLabels: sendTitleFallbackLabels(sendSnapshot),
+      fallbackLabels: sendTitleFallbackLabels(sendSnapshot, uiText),
     });
     const threadCreateModelSelection = createModelSelection(
       ctxSelectedModelSelection.instanceId,
@@ -1384,7 +1401,7 @@ export function useComposerSend(input: ComposerSendInput) {
           toastManager.add(
             stackedThreadToast({
               type: "warning",
-              title: "Could not open a fresh composer",
+              title: uiText("Could not open a fresh composer"),
               description: error instanceof Error ? error.message : undefined,
             }),
           );
@@ -1414,7 +1431,7 @@ export function useComposerSend(input: ComposerSendInput) {
             toastManager.add(
               stackedThreadToast({
                 type: "success",
-                title: "Started in background",
+                title: uiText("Started in background"),
                 timeout: 5_000,
                 actionProps: {
                   children: "Open",
@@ -1487,9 +1504,10 @@ export function useComposerSend(input: ComposerSendInput) {
               type: "error",
               title:
                 submissionIntent === "background"
-                  ? "Background task failed"
-                  : "Could not start thread",
-              description: error instanceof Error ? error.message : "Failed to send message.",
+                  ? uiText("Background task failed")
+                  : uiText("Could not start thread"),
+              description:
+                error instanceof Error ? error.message : uiText("Failed to send message."),
               actionProps: {
                 children: "Open draft",
                 onClick: () => {

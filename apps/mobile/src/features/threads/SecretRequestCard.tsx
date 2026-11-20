@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { pipe } from "effect/Function";
 import {
   SECRET_REQUEST_DEFAULT_PLACEHOLDER,
@@ -62,9 +63,10 @@ function PendingSecretRequestForm(props: {
   readonly item: SecretRequestItem;
   readonly iconColor: ColorValue;
 }) {
+  const uiText = useUiText();
   const { item } = props;
   const answer = useAtomCommand(serverEnvironment.answerSecretRequest, {
-    label: "answer secret request",
+    label: uiText("answer secret request"),
     // The failure cause holds the request; keep it out of the console.
     reportFailure: false,
     reportDefect: false,
@@ -132,7 +134,7 @@ function PendingSecretRequestForm(props: {
         </Text>
       ) : null}
       <Button
-        label="Save securely"
+        label={uiText("Save securely")}
         tone="primary"
         fullWidth
         disabled={submitting || secret.trim().length === 0}
@@ -151,7 +153,7 @@ function PendingSecretRequestForm(props: {
           </Text>
         </View>
         <Button
-          label="Decline"
+          label={uiText("Decline")}
           tone="text"
           disabled={submitting}
           onPress={() => void send({ type: "decline" })}

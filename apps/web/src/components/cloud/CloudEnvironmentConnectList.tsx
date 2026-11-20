@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { findErrorTraceId } from "@t3tools/client-runtime/errors";
 import {
   type EnvironmentConnectionPresentation,
@@ -89,6 +90,7 @@ export function CloudEnvironmentConnectRows({
     readonly onChange: (environmentId: EnvironmentId, selected: boolean) => void;
   };
 }) {
+  const uiText = useUiText();
   const environmentsState = useRelayEnvironmentDiscovery();
   const registerEnvironment = useAtomCommand(environmentCatalog.register, {
     reportFailure: false,
@@ -154,11 +156,13 @@ export function CloudEnvironmentConnectRows({
       toastManager.add({
         type: "success",
         title: savedWithoutRelay.has(environment.environmentId)
-          ? "T3 Connect route added"
-          : "Environment added",
+          ? uiText("T3 Connect route added")
+          : uiText("Environment added"),
         description: savedWithoutRelay.has(environment.environmentId)
-          ? `${environment.label} falls back to T3 Connect when its other routes are unreachable.`
-          : `Connecting to ${environment.label} through T3 Connect.`,
+          ? uiText("{0} falls back to T3 Connect when its other routes are unreachable.", [
+              environment.label,
+            ])
+          : uiText("Connecting to {0} through T3 Connect.", [environment.label]),
       });
       return true;
     }
@@ -172,7 +176,7 @@ export function CloudEnvironmentConnectRows({
     console.error("[t3-connect] Could not connect environment", { message, traceId, cause });
     toastManager.add({
       type: "error",
-      title: "Could not connect environment",
+      title: uiText("Could not connect environment"),
       description: message,
       data: traceId
         ? {
@@ -289,7 +293,7 @@ export function CloudEnvironmentConnectRows({
       return (
         <div className={ITEM_ROW_CLASSNAME}>
           <p className="text-sm font-medium text-destructive">
-            Could not load T3 Connect environments
+            {uiText("Could not load T3 Connect environments")}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">{discoveryProblem}</p>
           <Button
@@ -298,7 +302,7 @@ export function CloudEnvironmentConnectRows({
             className="mt-3"
             onClick={() => void refreshRelayEnvironments()}
           >
-            Try again
+            {uiText("Try again")}
           </Button>
         </div>
       );
@@ -405,15 +409,15 @@ export function CloudEnvironmentConnectRows({
               )}
             >
               {connectingEnvironmentIds.has(environment.environmentId)
-                ? "Connecting…"
+                ? uiText("Connecting…")
                 : (savedConnection?.buttonLabel ??
                   (availability === "online"
-                    ? "Available"
+                    ? uiText("Available")
                     : availability === "offline"
-                      ? "Offline"
+                      ? uiText("Offline")
                       : availability === "error"
-                        ? "Unavailable"
-                        : "Checking…"))}
+                        ? uiText("Unavailable")
+                        : uiText("Checking…")))}
             </TooltipTrigger>
             <TooltipPopup>{unsupportedDetail ?? statusText}</TooltipPopup>
           </Tooltip>
@@ -473,10 +477,10 @@ export function CloudEnvironmentConnectRows({
             <Tooltip>
               <TooltipTrigger render={<span className="inline-flex" tabIndex={0} />}>
                 <Button size="sm" disabled>
-                  Add
+                  {uiText("Add")}
                 </Button>
               </TooltipTrigger>
-              <TooltipPopup>{unsupportedDetail ?? "Client not supported"}</TooltipPopup>
+              <TooltipPopup>{unsupportedDetail ?? uiText("Client not supported")}</TooltipPopup>
             </Tooltip>
           ) : savedConnection ? (
             <Button size="sm" variant="outline" disabled>
@@ -489,10 +493,10 @@ export function CloudEnvironmentConnectRows({
               onClick={() => void connectEnvironment(environment)}
             >
               {connectingEnvironmentIds.has(environment.environmentId)
-                ? "Adding…"
+                ? uiText("Adding…")
                 : savedWithoutRelay.has(environment.environmentId)
-                  ? "Add route"
-                  : "Add"}
+                  ? uiText("Add route")
+                  : uiText("Add")}
             </Button>
           )}
         </div>

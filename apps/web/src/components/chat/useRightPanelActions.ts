@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { ToolCallDiffTarget } from "../../diffPanelStore";
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
 import type { ThreadPreviewState } from "../../previewStateStore";
@@ -69,6 +70,7 @@ interface RightPanelActionsInput {
  * requests, device, and terminal tabs.
  */
 export function useRightPanelActions(input: RightPanelActionsInput) {
+  const uiText = useUiText();
   const {
     closeRightPanelSurface,
     activeThreadRef,
@@ -123,7 +125,7 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Unable to open browser",
+            title: uiText("Unable to open browser"),
             description: error.message,
           }),
         );
@@ -260,8 +262,8 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Failed to copy path",
-          description: "Clipboard API unavailable.",
+          title: uiText("Failed to copy path"),
+          description: uiText("Clipboard API unavailable."),
         }),
       );
       return;
@@ -275,7 +277,7 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
       () => {
         toastManager.add({
           type: "success",
-          title: "Path copied",
+          title: uiText("Path copied"),
           description: clipboardPath,
         });
       },
@@ -283,8 +285,8 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Failed to copy path",
-            description: error instanceof Error ? error.message : "An error occurred.",
+            title: uiText("Failed to copy path"),
+            description: error instanceof Error ? error.message : uiText("An error occurred."),
           }),
         );
       },

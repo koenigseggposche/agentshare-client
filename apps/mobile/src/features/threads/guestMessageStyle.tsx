@@ -1,12 +1,14 @@
+import { useUiText } from "../../i18n/uiText";
 import { View } from "react-native";
 
 import { AppText as Text } from "../../components/ui/AppText";
 
 /** The guest's name above their message, where "Sent by T3 Code" sits for server messages. */
 export function GuestMessageName(props: { readonly name: string }) {
+  const uiText = useUiText();
   return (
     <Text
-      accessibilityLabel={`${props.name} (guest)`}
+      accessibilityLabel={uiText("{0} (guest)", [props.name])}
       className="mb-1 pr-1 font-t3-medium text-2xs text-adaptive-fuchsia-600-300"
       numberOfLines={1}
     >

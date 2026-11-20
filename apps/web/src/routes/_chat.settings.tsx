@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { workspaceAreaProps } from "../lib/workspaceFocus";
 import { Outlet, createFileRoute, redirect, useLocation } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
@@ -28,6 +29,7 @@ import {
 } from "../components/settings/settingsSearch";
 
 function RestoreDeviceDefaultsButton({ onRestored }: { onRestored: () => void }) {
+  const uiText = useUiText();
   const { changedSettingLabels, restoreDefaults } = useSettingsRestore(onRestored);
   return (
     <Button
@@ -37,12 +39,13 @@ function RestoreDeviceDefaultsButton({ onRestored }: { onRestored: () => void })
       onClick={() => void restoreDefaults()}
     >
       <RotateCcwIcon className="mx-1 size-3.5" />
-      <span className="max-sm:sr-only">Restore device defaults</span>
+      <span className="max-sm:sr-only">{uiText("Restore device defaults")}</span>
     </Button>
   );
 }
 
 function SettingsScopeBoundary({ pathname, children }: { pathname: string; children: ReactNode }) {
+  const uiText = useUiText();
   const { scope, connectedEnvironments } = useSettingsScope();
   const { environments } = useEnvironments();
   const hash = useLocation({ select: (location) => location.hash });
@@ -63,8 +66,13 @@ function SettingsScopeBoundary({ pathname, children }: { pathname: string; child
         eligibleEnvironmentIds={autoSettlementAvailability.eligibleEnvironmentIds}
       >
         {autoSettlementAvailability.eligibleEnvironmentIds.length > 0
-          ? `${searchTarget.title} requires a supporting environment. Choose one to continue.`
-          : `${searchTarget.title} requires a supporting environment. Connect or update an environment to continue.`}
+          ? uiText("{0} requires a supporting environment. Choose one to continue.", [
+              searchTarget.title,
+            ])
+          : uiText(
+              "{0} requires a supporting environment. Connect or update an environment to continue.",
+              [searchTarget.title],
+            )}
       </SettingsScopeNotice>
     );
   }
@@ -81,7 +89,10 @@ function SettingsScopeBoundary({ pathname, children }: { pathname: string; child
         : "all";
     return (
       <SettingsScopeNotice target={target} targetId={hash}>
-        {`${searchTarget.title} is not available for the selected target. Choose its owning scope to continue.`}
+        {uiText(
+          "{0} is not available for the selected target. Choose its owning scope to continue.",
+          [searchTarget.title],
+        )}
       </SettingsScopeNotice>
     );
   }
@@ -98,7 +109,9 @@ function SettingsScopeBoundary({ pathname, children }: { pathname: string; child
     return (
       <SettingsPageContainer>
         <p className="text-sm text-muted-foreground">
-          Reconnect {scope.label} to change its settings.
+          {uiText("Reconnect ")}
+          {scope.label}
+          {uiText(" to change its settings.")}
         </p>
       </SettingsPageContainer>
     );
@@ -107,6 +120,7 @@ function SettingsScopeBoundary({ pathname, children }: { pathname: string; child
 }
 
 function SettingsContentLayout() {
+  const uiText = useUiText();
   const contentArea = workspaceAreaProps("settings", 1, "Settings content");
   const location = useLocation();
   const { search, environment } = useSettingsScope();
@@ -117,7 +131,7 @@ function SettingsContentLayout() {
   const [restoreSignal, setRestoreSignal] = useState(0);
 
   return (
-    <AppRouteModal label="Settings">
+    <AppRouteModal label={uiText("Settings")}>
       <div className="relative flex min-h-0 flex-1">
         <SettingsSidebarNav pathname={location.pathname} />
         <div {...contentArea} className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -153,7 +167,13 @@ function SettingsRouteLayout() {
       singleEnvironment={
         pathname === "/settings/providers" ||
         pathname === "/settings/secrets" ||
-        pathname === "/settings/agentshare"
+        [
+          "/settings/account",
+          "/settings/wallet",
+          "/settings/local-models",
+          "/settings/model-sharing",
+          "/settings/coding-tools",
+        ].includes(pathname)
       }
       onChange={(next) => {
         // Send every axis so retain middleware recognizes "all" as an explicit target.

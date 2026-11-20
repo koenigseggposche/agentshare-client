@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useAndroidFloatingTabs } from "../settings/appearance/AppearancePreferencesProvider";
 import { WorkspaceNoTabs } from "./WorkspaceNoTabs";
 import { useEnabledNavigationTabs } from "./navigation-tabs";
@@ -32,6 +33,7 @@ export function WorkspaceRootScreen() {
 }
 
 function WorkspaceRoot() {
+  const uiText = useUiText();
   const floatingTabsEnabled = useAndroidFloatingTabs();
   const { layout, startNewTask, workspacePageWidth } = useAdaptiveWorkspaceLayout();
   const workspace = useWorkspaceTabs()!;
@@ -88,10 +90,10 @@ function WorkspaceRoot() {
                   ) : layout.usesSplitView ? (
                     <>
                       <NativeStackScreenOptions options={{ headerShown: false }} />
-                      <AppBar embedded title="Pull requests" />
+                      <AppBar embedded title={uiText("Pull requests")} />
                       <View className="flex-1 items-center justify-center px-10">
                         <EmptyState
-                          title="Select a pull request"
+                          title={uiText("Select a pull request")}
                           detail="Choose a pull request from the sidebar to review it."
                           variant="plain"
                         />

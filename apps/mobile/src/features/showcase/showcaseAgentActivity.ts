@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type {
   EnvironmentProject,
   EnvironmentThreadShell,
@@ -42,6 +44,7 @@ export function buildShowcaseAgentActivity(
   threads: ReadonlyArray<EnvironmentThreadShell>,
   projects: ReadonlyArray<EnvironmentProject>,
   now: number,
+  uiText: UiTranslator = uiTranslators.en,
 ): AgentActivityProps | null {
   const rows: AgentActivityRowProps[] = [];
   for (const definition of SHOWCASE_AGENT_ACTIVITY_ROWS) {
@@ -67,8 +70,8 @@ export function buildShowcaseAgentActivity(
     });
   }
   return {
-    title: "T3 Code",
-    subtitle: "Agent work in progress",
+    title: uiText("T3 Code"),
+    subtitle: uiText("Agent work in progress"),
     activeCount: rows.filter((row) => ACTIVE_PHASES.has(row.phase)).length,
     updatedAt: new Date(now).toISOString(),
     activities: rows,

@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import { useAtomCommand } from "~/state/use-atom-command";
 import type { EnvironmentId, PullRequestDetailView, PullRequestRef } from "@t3tools/contracts";
@@ -35,6 +36,7 @@ export function PullRequestCommentForm({
   onCommented: () => void;
   onClose: () => void;
 }) {
+  const uiText = useUiText();
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState<"comment" | "close" | "reopen" | null>(null);
   const postComment = useAtomCommand(pullRequestEnvironment.comment, {
@@ -74,7 +76,7 @@ export function PullRequestCommentForm({
     });
     if (result._tag === "Failure") {
       setSubmitting(null);
-      toastManager.add({ type: "error", title: "Could not post the comment" });
+      toastManager.add({ type: "error", title: uiText("Could not post the comment") });
       return;
     }
     setBody("");
@@ -91,8 +93,10 @@ export function PullRequestCommentForm({
         disabled={submitting !== null || actionPending}
         value={body}
         rows={3}
-        placeholder="Leave a comment"
-        aria-label={`Comment on this ${sourceControlClients.get(detail.provider).changeRequest.singular}`}
+        placeholder={uiText("Leave a comment")}
+        aria-label={uiText("Comment on this {0}", [
+          sourceControlClients.get(detail.provider).changeRequest.singular,
+        ])}
         onChange={(event) => setBody(event.target.value)}
         onKeyDown={(event) => {
           if (event.nativeEvent.isComposing || event.keyCode === 229) return;
@@ -127,20 +131,20 @@ export function PullRequestCommentForm({
               // The longest label holds the width, so the confirming click lands on the button.
               <span className="inline-grid">
                 <span aria-hidden className="invisible col-start-1 row-start-1">
-                  Close with comment
+                  {uiText("Close with comment")}
                 </span>
                 <span className="col-start-1 row-start-1">
                   {submitting === "close"
-                    ? "Closing..."
+                    ? uiText("Closing...")
                     : inlineConfirm.isArmed("close")
-                      ? "Confirm close?"
-                      : "Close with comment"}
+                      ? uiText("Confirm close?")
+                      : uiText("Close with comment")}
                 </span>
               </span>
             ) : submitting === "reopen" ? (
-              "Reopening..."
+              uiText("Reopening...")
             ) : (
-              "Reopen with comment"
+              uiText("Reopen with comment")
             )}
           </Button>
         )}
@@ -151,7 +155,7 @@ export function PullRequestCommentForm({
           onClick={() => void submit("comment")}
         >
           <SendIcon className="size-3.5" />
-          {submitting === "comment" ? "Posting..." : "Comment"}
+          {submitting === "comment" ? uiText("Posting...") : uiText("Comment")}
         </Button>
       </div>
     </div>

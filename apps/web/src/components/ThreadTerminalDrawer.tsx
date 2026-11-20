@@ -1,3 +1,7 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { readUiTranslator } from "../i18n/uiText";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../i18n/uiText";
 import { workspaceAreaProps } from "../lib/workspaceFocus";
 import { useAtomMount, useAtomValue } from "@effect/atom-react";
 import {
@@ -405,31 +409,39 @@ export type TerminalContextMenuAction =
   | "select-all"
   | "scroll-to-bottom";
 
-function terminalSelectionMenuItems(options?: {
-  canAddToChat?: boolean;
-}): ContextMenuItem<"add-to-chat" | "copy">[] {
+function terminalSelectionMenuItems(
+  options?: {
+    canAddToChat?: boolean;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): ContextMenuItem<"add-to-chat" | "copy">[] {
   return [
     ...(options?.canAddToChat === false
       ? []
-      : ([{ id: "add-to-chat", label: "Add to chat" }] satisfies ContextMenuItem<"add-to-chat">[])),
-    { id: "copy", label: "Copy" },
+      : ([
+          { id: "add-to-chat", label: uiText("Add to chat") },
+        ] satisfies ContextMenuItem<"add-to-chat">[])),
+    { id: "copy", label: uiText("Copy") },
   ];
 }
 
-function terminalContextMenuItems(options: {
-  hasSelection: boolean;
-  canAddToChat?: boolean;
-  readOnly?: boolean;
-}): ContextMenuItem<TerminalContextMenuAction>[] {
+function terminalContextMenuItems(
+  options: {
+    hasSelection: boolean;
+    canAddToChat?: boolean;
+    readOnly?: boolean;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): ContextMenuItem<TerminalContextMenuAction>[] {
   const { hasSelection, canAddToChat = true } = options;
   return [
-    ...terminalSelectionMenuItems({ canAddToChat }).map((item) => ({
+    ...terminalSelectionMenuItems({ canAddToChat }, uiText).map((item) => ({
       ...item,
       disabled: !hasSelection,
     })),
-    { id: "paste", label: "Paste", ...(options.readOnly ? { disabled: true } : {}) },
-    { id: "select-all", label: "Select all" },
-    { id: "scroll-to-bottom", label: "Jump to latest" },
+    { id: "paste", label: uiText("Paste"), ...(options.readOnly ? { disabled: true } : {}) },
+    { id: "select-all", label: uiText("Select all") },
+    { id: "scroll-to-bottom", label: uiText("Jump to latest") },
   ];
 }
 
@@ -909,11 +921,14 @@ function TerminalSessionViewport({
         let clicked: TerminalContextMenuAction | null;
         try {
           clicked = await localApi.contextMenu.show(
-            terminalContextMenuItems({
-              hasSelection: selectionAction !== null,
-              canAddToChat: canAddSelectionToChat(),
-              readOnly: !hasTerminalWriteAccess(),
-            }),
+            terminalContextMenuItems(
+              {
+                hasSelection: selectionAction !== null,
+                canAddToChat: canAddSelectionToChat(),
+                readOnly: !hasTerminalWriteAccess(),
+              },
+              readUiTranslator(),
+            ),
             { x: event.clientX, y: event.clientY },
           );
         } catch (error) {
@@ -964,7 +979,10 @@ function TerminalSessionViewport({
         openSelectionMenuRequestIdRef.current = requestId;
         const clicked = await localApi.contextMenu
           .show(
-            terminalSelectionMenuItems({ canAddToChat: canAddSelectionToChat() }),
+            terminalSelectionMenuItems(
+              { canAddToChat: canAddSelectionToChat() },
+              readUiTranslator(),
+            ),
             nextAction.position,
           )
           .finally(() => {
@@ -1068,8 +1086,11 @@ function TerminalSessionViewport({
               toastManager.add(
                 stackedThreadToast({
                   type: "error",
-                  title: "Unable to open link",
-                  description: error instanceof Error ? error.message : "An error occurred.",
+                  title: readUiTranslator()("Unable to open link"),
+                  description:
+                    error instanceof Error
+                      ? error.message
+                      : readUiTranslator()("An error occurred."),
                 }),
               );
             },
@@ -1508,6 +1529,7 @@ export default function ThreadTerminalDrawer({
   terminalLabelsById,
   terminalLaunchLocationsById,
 }: ThreadTerminalDrawerProps) {
+  const uiText = useUiText();
   const canOperateTerminal = useEnvironmentScope(threadRef.environmentId, AuthTerminalOperateScope);
   const terminalArea = workspaceAreaProps("terminal", 5, "Terminal");
   const isPanel = mode === "panel";
@@ -1814,7 +1836,7 @@ export default function ThreadTerminalDrawer({
           />
         ) : null}
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 py-6 text-center text-sm text-muted-foreground">
-          <p>No terminal sessions for this thread yet.</p>
+          <p>{uiText("No terminal sessions for this thread yet.")}</p>
           <Button
             size="xs"
             variant="outline"

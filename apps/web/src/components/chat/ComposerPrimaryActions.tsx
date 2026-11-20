@@ -1,3 +1,5 @@
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { memo, type MouseEventHandler, type PointerEventHandler } from "react";
 import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, Minimize2Icon, PlayIcon } from "lucide-react";
 import { CornerUpRight, ListPlus } from "lucide";
@@ -54,14 +56,17 @@ interface ComposerPrimaryActionsProps {
   onToggleKeepFullHistory?: () => void;
 }
 
-const formatPendingPrimaryActionLabel = (input: {
-  compact: boolean;
-  isLastQuestion: boolean;
-  isResponding: boolean;
-  questionIndex: number;
-}) => {
+const formatPendingPrimaryActionLabel = (
+  input: {
+    compact: boolean;
+    isLastQuestion: boolean;
+    isResponding: boolean;
+    questionIndex: number;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+) => {
   if (input.isResponding) {
-    return "Submitting...";
+    return uiText("Submitting...");
   }
   if (input.compact) {
     return input.isLastQuestion ? "Submit" : "Next";
@@ -69,7 +74,7 @@ const formatPendingPrimaryActionLabel = (input: {
   if (!input.isLastQuestion) {
     return "Next question";
   }
-  return input.questionIndex > 0 ? "Submit answers" : "Submit answer";
+  return input.questionIndex > 0 ? uiText("Submit answers") : "Submit answer";
 };
 
 const messageActionPillClassName =
@@ -107,6 +112,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   keepFullHistory = false,
   onToggleKeepFullHistory,
 }: ComposerPrimaryActionsProps) {
+  const uiText = useUiText();
   const pointerFocusProps = preserveComposerFocusOnPointerDown
     ? { onPointerDown: preventPointerFocus }
     : undefined;
@@ -139,7 +145,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
             onClick={() => {
               if (canOperateThread) onInterrupt();
             }}
-            aria-label="Stop generation"
+            aria-label={uiText("Stop generation")}
           />
         }
       >
@@ -147,7 +153,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
           <rect x="2" y="2" width="8" height="8" rx="1.5" />
         </svg>
       </TooltipTrigger>
-      <TooltipPopup>Interrupt</TooltipPopup>
+      <TooltipPopup>{uiText("Interrupt")}</TooltipPopup>
     </Tooltip>
   );
 
@@ -163,7 +169,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
               {...pointerFocusProps}
               onClick={onPreviousPendingQuestion}
               disabled={pendingAction.isResponding}
-              aria-label="Previous question"
+              aria-label={uiText("Previous question")}
             >
               <ChevronLeftIcon className="size-3.5" />
             </Button>
@@ -175,7 +181,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
               onClick={onPreviousPendingQuestion}
               disabled={pendingAction.isResponding}
             >
-              Previous
+              {uiText("Previous")}
             </Button>
           )
         ) : null}
@@ -190,12 +196,15 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
             (pendingAction.isLastQuestion ? !pendingAction.isComplete : !pendingAction.canAdvance)
           }
         >
-          {formatPendingPrimaryActionLabel({
-            compact,
-            isLastQuestion: pendingAction.isLastQuestion,
-            isResponding: pendingAction.isResponding,
-            questionIndex: pendingAction.questionIndex,
-          })}
+          {formatPendingPrimaryActionLabel(
+            {
+              compact,
+              isLastQuestion: pendingAction.isLastQuestion,
+              isResponding: pendingAction.isResponding,
+              questionIndex: pendingAction.questionIndex,
+            },
+            uiText,
+          )}
         </button>
       </div>
     );
@@ -210,7 +219,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
           {...pointerFocusProps}
           disabled={isSendBusy || isSendDisabled || isEnvironmentUnavailable}
         >
-          {isSendBusy ? "Sending..." : "Refine"}
+          {isSendBusy ? uiText("Sending...") : uiText("Refine")}
         </button>
       );
     }
@@ -223,7 +232,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
           {...pointerFocusProps}
           disabled={isSendBusy || isSendDisabled || isEnvironmentUnavailable}
         >
-          {isSendBusy ? "Sending..." : "Implement"}
+          {isSendBusy ? uiText("Sending...") : uiText("Implement")}
         </button>
         <Menu>
           <MenuTrigger
@@ -234,7 +243,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
                   messageActionPillClassName,
                   "h-9 rounded-l-none border-l border-message-action-foreground/20 px-2 sm:h-8",
                 )}
-                aria-label="Implementation actions"
+                aria-label={uiText("Implementation actions")}
                 onMouseDown={
                   preserveComposerFocusOnPointerDown ? (event) => event.preventDefault() : undefined
                 }
@@ -251,7 +260,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
                 if (canOperateThread) onImplementPlanInNewThread();
               }}
             >
-              Implement in a new thread
+              {uiText("Implement in a new thread")}
             </MenuItem>
           </MenuPopup>
         </Menu>
@@ -364,7 +373,7 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
               className="flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-(--control-radius) px-2 font-medium text-base text-foreground/80 tabular-nums outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-64 sm:text-sm aria-pressed:bg-accent/60 aria-pressed:text-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:text-muted-foreground"
               {...pointerFocusProps}
               aria-pressed={!keepFullHistory}
-              aria-label={`Compact ${compactTokens} tokens of history before sending`}
+              aria-label={uiText("Compact {0} tokens of history before sending", [compactTokens])}
               disabled={!canOperateThread}
               onClick={onToggleKeepFullHistory}
             />
@@ -372,17 +381,21 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
         >
           <Minimize2Icon aria-hidden="true" />
           <span className="@max-[480px]/composer-surface:hidden">
-            {keepFullHistory ? "Keep" : "Compact"}
+            {keepFullHistory ? uiText("Keep") : uiText("Compact")}
           </span>
           <span className="text-muted-foreground">{compactTokens}</span>
         </TooltipTrigger>
         <TooltipPopup>
           <div>
             {keepFullHistory
-              ? `Next send keeps all ${compactTokens} tokens.`
-              : `Next send compacts ${compactTokens} tokens first.`}
+              ? uiText("Next send keeps all {0} tokens.", [compactTokens])
+              : uiText("Next send compacts {0} tokens first.", [compactTokens])}
           </div>
-          <div>{keepFullHistory ? "Click to compact first" : "Click to keep full history"}</div>
+          <div>
+            {keepFullHistory
+              ? uiText("Click to compact first")
+              : uiText("Click to keep full history")}
+          </div>
         </TooltipPopup>
       </Tooltip>
       {submit}

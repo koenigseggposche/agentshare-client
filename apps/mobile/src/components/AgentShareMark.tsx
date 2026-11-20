@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import {
   AGENT_SHARE_MARK_PATH,
   AGENT_SHARE_MARK_TRANSFORM,
@@ -13,9 +14,10 @@ export function AgentShareMark(props: {
   readonly color?: ColorValue;
   readonly colorClassName?: string;
 }) {
+  const uiText = useUiText();
   return (
     <Svg
-      accessibilityLabel="AgentShare"
+      accessibilityLabel={uiText("AgentShare")}
       height={props.height}
       width={props.height}
       viewBox="0 0 64 64"

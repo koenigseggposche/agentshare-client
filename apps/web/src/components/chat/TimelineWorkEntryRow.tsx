@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { localizeModelConnectionMessage } from "@t3tools/client-runtime/errors";
 import { useClientSettings } from "../../hooks/useSettings";
 import { TaskChargesButton } from "./TaskChargesButton";
@@ -175,6 +176,7 @@ export const SimpleWorkEntryRow = memo(function SimpleWorkEntryRow(props: WorkEn
 });
 
 function WorkEntryLogRow(props: WorkEntryRowProps) {
+  const uiText = useUiText();
   const language = useClientSettings((settings) => settings.uiLanguage);
   const { workEntry, workspaceRoot, displayLabel } = props;
   const ctx = use(TimelineRowCtx);
@@ -217,7 +219,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
     // unambiguous. Both read the zone now, since the device's can change.
     const timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
     const resetTime = resetAt
-      ? `${formatUpcomingTimestamp(resetAt, timestampFormat, undefined, timeZone)} (${timeZone})`
+      ? `${formatUpcomingTimestamp(resetAt, timestampFormat, undefined, timeZone, uiText.language)} (${timeZone})`
       : null;
     const label = warning
       ? `Usage limit reached.${resetTime ? ` Retry after ${resetTime}.` : ""}`
@@ -275,7 +277,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
               onClick={() => onRetryWorkspacePreparation(retryRunId)}
             >
               <RotateCcwIcon aria-hidden />
-              Retry
+              {uiText("Retry")}
             </Button>
           </div>
         ) : null}
@@ -417,7 +419,7 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
         <span
           className={iconWrapperClass}
           role={showFailedIndicator ? "img" : undefined}
-          aria-label={showFailedIndicator ? "Tool call failed" : undefined}
+          aria-label={showFailedIndicator ? uiText("Tool call failed") : undefined}
         >
           <ToolActivityIconView
             icon={entryToolIcon}
@@ -478,26 +480,26 @@ function WorkEntryLogRow(props: WorkEntryRowProps) {
             <button
               type="button"
               className="shrink-0 rounded-sm text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-              aria-label={`Open ${createdThread.title ?? "created thread"}`}
+              aria-label={uiText("Open {0}", [createdThread.title ?? "created thread"])}
               onClick={(event) => {
                 event.stopPropagation();
                 ctx.onOpenThread(createdThread.targetThreadId);
               }}
               onKeyDown={stopRowToggle}
             >
-              Open chat
+              {uiText("Open chat")}
             </button>
           ) : null}
           {notifiedSubagentThreadId ? (
             <InlineButton
-              aria-label="Open subagent thread"
+              aria-label={uiText("Open subagent thread")}
               onClick={(event) => {
                 event.stopPropagation();
                 ctx.onOpenThread(notifiedSubagentThreadId);
               }}
               onKeyDown={stopRowToggle}
             >
-              Open subagent
+              {uiText("Open subagent")}
             </InlineButton>
           ) : null}
           {showFailedIndicator &&

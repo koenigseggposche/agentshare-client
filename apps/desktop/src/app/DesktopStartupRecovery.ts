@@ -1,3 +1,4 @@
+import { readUiTranslator } from "../settings/uiLanguage.ts";
 import type { DesktopUpdateState } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -79,32 +80,41 @@ const actionLink = (action: StartupRecoveryAction, label: string, primary = fals
   `<a class="button${primary ? " primary" : ""}" href="${ACTION_ORIGIN}/${action}">${escapeHtml(label)}</a>`;
 
 function describeOffer(offer: StartupRecoveryOffer): { text: string; action: string } {
+  const uiText = readUiTranslator();
   switch (offer._tag) {
     case "Checking":
-      return { text: "Checking for a newer version…", action: "" };
+      return { text: uiText("Checking for a newer version…"), action: "" };
     case "Update":
       return {
-        text: `Version ${offer.version} is available. It can contain a fix.`,
-        action: actionLink("update", `Update to ${offer.version}`, true),
+        text: uiText("Version {0} is available. It can contain a fix.", [offer.version]),
+        action: actionLink("update", uiText("Update to {0}", [offer.version]), true),
       };
     case "Downloading":
       return {
-        text: `Downloading ${offer.version}${offer.percent === null ? "" : ` (${Math.floor(offer.percent / 10) * 10}%)`}. AgentShare Client restarts when the download is done.`,
+        text: uiText("Downloading {0}{1}. AgentShare Client restarts when the download is done.", [
+          offer.version,
+          offer.percent === null ? "" : ` (${Math.floor(offer.percent / 10) * 10}%)`,
+        ]),
         action: "",
       };
     case "Reinstall":
       return {
-        text: `Version ${offer.version} started correctly on this computer. Download it and install it to go back.`,
-        action: actionLink("reinstall", `Download ${offer.version}`, true),
+        text: uiText(
+          "Version {0} started correctly on this computer. Download it and install it to go back.",
+          [offer.version],
+        ),
+        action: actionLink("reinstall", uiText("Download {0}", [offer.version]), true),
       };
     case "Releases":
       return {
-        text: "Get a different version from the releases page.",
-        action: actionLink("releases", "Open releases", true),
+        text: uiText("Get a different version from the releases page."),
+        action: actionLink("releases", uiText("Open releases"), true),
       };
     case "ManagedPolicy":
       return {
-        text: "Your organization's managed policy stopped AgentShare Client from starting. Send the details below to your IT administrator.",
+        text: uiText(
+          "Your organization's managed policy stopped AgentShare Client from starting. Send the details below to your IT administrator.",
+        ),
         action: "",
       };
   }
@@ -116,9 +126,10 @@ function buildStartupRecoveryHtml(input: {
   readonly offer: StartupRecoveryOffer;
   readonly logDir: string;
 }): string {
+  const uiText = readUiTranslator();
   const offer = describeOffer(input.offer);
   const output = input.failure.output.trim();
-  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><title>AgentShare Client could not start</title><style>
+  return `<!doctype html><html lang="${uiText.language}"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><title>${escapeHtml(uiText("AgentShare Client could not start"))}</title><style>
 :root{color-scheme:light dark;--bg:#fff;--fg:#111;--muted:#666;--line:#ddd;--code:#f4f4f4}
 @media (prefers-color-scheme:dark){:root{--bg:#000;--fg:#fff;--muted:#999;--line:#333;--code:#111}}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--fg)}
@@ -129,12 +140,12 @@ h1{font-size:18px;margin:0}p{margin:0}.muted{color:var(--muted)}
 .button.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 pre{flex:1;min-height:60px;margin:0;overflow:auto;background:var(--code);border:1px solid var(--line);border-radius:6px;padding:10px;font:11px/1.4 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
 </style></head><body>
-<h1>AgentShare Client could not start</h1>
+<h1>${escapeHtml(uiText("AgentShare Client could not start"))}</h1>
 <p>${escapeHtml(input.failure.reason)}</p>
 <p>${escapeHtml(offer.text)}</p>
-<div class="actions">${offer.action}${actionLink("copy", "Copy details")}${actionLink("quit", "Quit")}</div>
-<pre>${escapeHtml(output.length > 0 ? output : "The server wrote no output.")}</pre>
-<p class="muted">Version ${escapeHtml(input.appVersion)}. AgentShare Client tries again in the background. Logs: ${escapeHtml(input.logDir)}</p>
+<div class="actions">${offer.action}${actionLink("copy", uiText("Copy details"))}${actionLink("quit", uiText("Quit"))}</div>
+<pre>${escapeHtml(output.length > 0 ? output : uiText("The server wrote no output."))}</pre>
+<p class="muted">${escapeHtml(uiText("Version {0}. AgentShare Client tries again in the background. Logs: {1}", [input.appVersion, input.logDir]))}</p>
 </body></html>`;
 }
 
@@ -268,7 +279,7 @@ export const listen: Effect.Effect<
           minWidth: 420,
           minHeight: 320,
           show: false,
-          title: "AgentShare Client could not start",
+          title: readUiTranslator()("AgentShare Client could not start"),
           autoHideMenuBar: true,
           backgroundColor: shouldUseDarkColors ? "#000000" : "#ffffff",
           webPreferences: {

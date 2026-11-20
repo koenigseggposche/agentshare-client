@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useId, useState } from "react";
 import { Platform, View } from "react-native";
 import { FormSheet, ScreenStack } from "react-native-screens";
@@ -14,6 +15,7 @@ import type { SheetProps } from "./Sheet.types";
 
 /** Native presentation. Scrollable children use automatic insets beneath the iOS header. */
 export function Sheet(props: SheetProps) {
+  const uiText = useUiText();
   const containerStyle = useResolveClassNames("bg-sheet");
   const screenId = useId();
   const [isOpen, setIsOpen] = useState(true);
@@ -55,7 +57,7 @@ export function Sheet(props: SheetProps) {
                 {
                   type: "button",
                   icon: { name: "xmark", type: "sfSymbol" },
-                  accessibilityLabel: `Close ${props.title}`,
+                  accessibilityLabel: uiText("Close {0}", [props.title]),
                   identifier: `app-sheet-close-${screenId}`,
                   onPress: close,
                 },

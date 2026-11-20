@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+
 import type { EnvironmentId, ServerSettingsPatch } from "@t3tools/contracts";
 import {
   isAtomCommandInterrupted,
@@ -38,7 +40,7 @@ export function useSettingsWriter() {
     );
     const failures = outcomes.filter((outcome) => outcome !== null);
     if (failures.length > 0) {
-      Dialog.alert("Could not save settings", failures.join("\n\n"));
+      Dialog.alert(readUiText("Could not save settings"), failures.join("\n\n"));
     }
   };
 }

@@ -125,11 +125,7 @@ describe("model management state across clients", () => {
       remote_access: { [model.id]: { visibility: "community", connected: true } },
     };
     const inputs = modelManagerEntries(running, "en")[0]?.actions.map((item) => item.input);
-    expect(inputs).toEqual([
-      { operation: "stopModel", target: model.id },
-      { operation: "modelSharing", body: { id: model.id, visibility: "off" } },
-      { operation: "modelSharing", body: { id: model.id, visibility: "owner_only" } },
-    ]);
+    expect(inputs).toEqual([{ operation: "stopModel", target: model.id }]);
     expect(
       modelManagerEntries(
         {

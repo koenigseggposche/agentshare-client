@@ -1,3 +1,4 @@
+import { useUiText } from "../../../i18n/uiText";
 import { Button } from "../../../components/ui/Button";
 import type { PullRequestReviewGuide } from "@t3tools/contracts";
 import { stopFilePaths } from "@t3tools/client-runtime/review-guide-tour";
@@ -18,28 +19,33 @@ export function GuideOutline({
   readonly onOpen: (position: number) => void;
   readonly onRewrite?: () => void;
 }) {
+  const uiText = useUiText();
   const { appearance, setCodeWordBreak } = useAppearancePreferences();
   const files = new Set(guide.stops.flatMap(stopFilePaths));
   return (
     <View>
       <View className="mb-5 flex-row items-center justify-between">
         <View className="flex-row items-baseline gap-2">
-          <Text className="text-base font-t3-semibold">{guide.stops.length} stops</Text>
+          <Text className="text-base font-t3-semibold">
+            {guide.stops.length}
+            {uiText(" stops")}
+          </Text>
           <Text className="text-sm text-foreground-muted">
-            through {files.size} {files.size === 1 ? "file" : "files"}
+            {uiText("through ")}
+            {files.size} {files.size === 1 ? uiText("file") : uiText("files")}
           </Text>
         </View>
         <Menu
-          title="Guide options"
+          title={uiText("Guide options")}
           actions={[
             {
               id: "word-wrap",
-              title: "Word wrap",
+              title: uiText("Word wrap"),
               image: "text.alignleft",
               state: appearance.codeWordBreak ? "on" : "off",
             },
             ...(onRewrite
-              ? [{ id: "rewrite", title: "Rewrite guide", image: "arrow.clockwise" }]
+              ? [{ id: "rewrite", title: uiText("Rewrite guide"), image: "arrow.clockwise" }]
               : []),
           ]}
           onPressAction={({ nativeEvent }) =>
@@ -50,7 +56,7 @@ export function GuideOutline({
         >
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Guide options"
+            accessibilityLabel={uiText("Guide options")}
             className="h-11 w-11 items-center justify-center rounded-full active:bg-grouped-card"
           >
             <SymbolView name="ellipsis" size={20} tintColorClassName="accent-icon-muted" />
@@ -70,7 +76,7 @@ export function GuideOutline({
           <Pressable
             key={`${guide.headSha}:${JSON.stringify(stop)}`}
             accessibilityRole="button"
-            accessibilityLabel={`Stop ${position + 1}: ${stop.title}`}
+            accessibilityLabel={uiText("Stop {0}: {1}", [position + 1, stop.title])}
             onPress={() => onOpen(position)}
             className="flex-row gap-4 active:opacity-60"
           >
@@ -89,7 +95,7 @@ export function GuideOutline({
                   <SymbolView name="eye" size={14} tintColorClassName="accent-warning-foreground" />
                 ) : null}
                 <Text className="shrink text-xs text-foreground-muted" numberOfLines={1}>
-                  {filename ?? "Context"}
+                  {filename ?? uiText("Context")}
                   {paths.length > 1 ? ` +${paths.length - 1}` : ""}
                 </Text>
               </View>
@@ -102,7 +108,12 @@ export function GuideOutline({
       })}
       {guide.stops.length ? (
         <View className="self-end">
-          <Button label="Start tour" tone="text" onPress={() => onOpen(0)} icon="arrow.right" />
+          <Button
+            label={uiText("Start tour")}
+            tone="text"
+            onPress={() => onOpen(0)}
+            icon="arrow.right"
+          />
         </View>
       ) : null}
     </View>

@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { resolveEnvironmentMachineKind } from "@t3tools/contracts";
 import { useLocation } from "@tanstack/react-router";
 import { CheckIcon, ChevronDownIcon, LayersIcon } from "lucide-react";
@@ -77,7 +78,15 @@ export function SettingsScopeSentence() {
     environments,
     onChange: scope.selectScope,
   };
-  if (pathname === "/settings/agentshare") {
+  if (
+    [
+      "/settings/account",
+      "/settings/wallet",
+      "/settings/local-models",
+      "/settings/model-sharing",
+      "/settings/coding-tools",
+    ].includes(pathname)
+  ) {
     const hostLabel = language === "zh" ? "执行电脑" : "Execution host";
     return (
       <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -257,8 +266,9 @@ function EnvironmentScopeMenu({
   singleEnvironment,
   ariaLabel = "Environment scope",
 }: SettingsScopeMenuProps & { readonly ariaLabel?: string }) {
+  const uiText = useUiText();
   const language = useClientSettings((settings) => settings.uiLanguage);
-  const resolved = resolveSettingsScope(value, groups, environments);
+  const resolved = resolveSettingsScope(value, groups, environments, uiText);
   const environmentValue = environmentAxisValue(
     value,
     resolved.kind === "checkout" ? resolved.environmentId : null,

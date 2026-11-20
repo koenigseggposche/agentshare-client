@@ -1,3 +1,8 @@
+import { readUiText } from "../../i18n/uiText";
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { Spinner } from "~/components/ui/spinner";
 import type {
   PullRequestActor,
@@ -61,24 +66,27 @@ export function PullRequestLabelChip({
   );
 }
 
-function reviewDecisionPresentation(decision: PullRequestReviewDecision) {
+function reviewDecisionPresentation(
+  decision: PullRequestReviewDecision,
+  uiText: UiTranslator = uiTranslators.en,
+) {
   switch (decision) {
     case "approved":
       return {
         Icon: UserCheckIcon,
-        label: "Approved",
-        toneClassName: CHECK_STATUS_PRESENTATION.success.toneClassName,
+        label: uiText("Approved"),
+        toneClassName: translateUiLabels(CHECK_STATUS_PRESENTATION, uiText).success.toneClassName,
       };
     case "changes-requested":
       return {
         Icon: UserRoundXIcon,
-        label: "Changes requested",
+        label: uiText("Changes requested"),
         toneClassName: "text-amber-600/90 dark:text-amber-400/80",
       };
     case "review-required":
       return {
         Icon: UserRoundIcon,
-        label: "Awaiting review",
+        label: uiText("Awaiting review"),
         toneClassName: "text-muted-foreground/60",
       };
   }
@@ -89,7 +97,8 @@ export function PullRequestReviewDecisionGlyph({
 }: {
   decision: PullRequestReviewDecision;
 }) {
-  const presentation = reviewDecisionPresentation(decision);
+  const uiText = useUiText();
+  const presentation = reviewDecisionPresentation(decision, uiText);
   return (
     <Tooltip>
       <TooltipTrigger render={<span className="inline-flex shrink-0" />}>
@@ -101,12 +110,15 @@ export function PullRequestReviewDecisionGlyph({
   );
 }
 
-export function resolvePullRequestState(input: {
-  readonly state: PullRequestState;
-  readonly isDraft: boolean;
-}): PullRequestStatePresentation {
+export function resolvePullRequestState(
+  input: {
+    readonly state: PullRequestState;
+    readonly isDraft: boolean;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): PullRequestStatePresentation {
   const key = input.state === "open" && input.isDraft ? "draft" : input.state;
-  return PULL_REQUEST_STATE_PRESENTATION[key];
+  return translateUiLabels(PULL_REQUEST_STATE_PRESENTATION, uiText)[key];
 }
 
 export interface PullRequestConflictPresentation {
@@ -125,7 +137,9 @@ function resolvePullRequestConflict(input: {
     return null;
   }
   return {
-    label: input.baseBranch ? `Conflicts with ${input.baseBranch}` : "Has conflicts",
+    label: input.baseBranch
+      ? readUiText("Conflicts with {0}", [input.baseBranch])
+      : readUiText("Has conflicts"),
     toneClassName: "text-destructive",
     Icon: PullRequestGlyph.conflicting,
   };
@@ -140,7 +154,8 @@ export function PullRequestStateGlyph({
   isDraft: boolean;
   className?: string;
 }) {
-  const presentation = resolvePullRequestState({ state, isDraft });
+  const uiText = useUiText();
+  const presentation = resolvePullRequestState({ state, isDraft }, uiText);
   return (
     <Tooltip>
       <TooltipTrigger render={<span className="inline-flex shrink-0" />}>
@@ -220,14 +235,16 @@ function isWorkflowApprovalCheck(check: Pick<PullRequestCheck, "status" | "url">
 
 export function pullRequestCheckStatusLabel(
   check: Pick<PullRequestCheck, "status" | "url">,
+  uiText: UiTranslator = uiTranslators.en,
 ): string {
   return isWorkflowApprovalCheck(check)
     ? "Awaiting approval"
-    : CHECK_STATUS_PRESENTATION[check.status].label;
+    : translateUiLabels(CHECK_STATUS_PRESENTATION, uiText)[check.status].label;
 }
 
 export function PullRequestCheckStatusIcon({ status }: { status: PullRequestCheckStatus }) {
-  const presentation = CHECK_STATUS_PRESENTATION[status];
+  const uiText = useUiText();
+  const presentation = translateUiLabels(CHECK_STATUS_PRESENTATION, uiText)[status];
   return (
     <presentation.Icon
       aria-hidden
@@ -257,8 +274,11 @@ const CHECKS_STATE_PRESENTATION = {
   { label: string; Icon: typeof CircleCheckIcon; toneClassName: string }
 >;
 
-export function pullRequestChecksStatePresentation(state: PullRequestChecksState) {
-  return CHECKS_STATE_PRESENTATION[state];
+export function pullRequestChecksStatePresentation(
+  state: PullRequestChecksState,
+  uiText: UiTranslator = uiTranslators.en,
+) {
+  return translateUiLabels(CHECKS_STATE_PRESENTATION, uiText)[state];
 }
 
 export function pullRequestChecksState(
@@ -314,21 +334,28 @@ const REVIEW_OUTCOME_PRESENTATION = {
   }
 >;
 
-export function pullRequestReviewOutcomeToneClassName(outcome: PullRequestReviewOutcome): string {
-  return REVIEW_OUTCOME_PRESENTATION[outcome].toneClassName;
+export function pullRequestReviewOutcomeToneClassName(
+  outcome: PullRequestReviewOutcome,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
+  return translateUiLabels(REVIEW_OUTCOME_PRESENTATION, uiText)[outcome].toneClassName;
 }
 
 // Mix rings with the background to prevent avatars showing through their overlap.
 export function pullRequestReviewOutcomeRingClassName(
   outcome: PullRequestReviewOutcome,
   stale = false,
+  uiText: UiTranslator = uiTranslators.en,
 ): string {
-  const presentation = REVIEW_OUTCOME_PRESENTATION[outcome];
+  const presentation = translateUiLabels(REVIEW_OUTCOME_PRESENTATION, uiText)[outcome];
   return stale ? presentation.staleRingClassName : presentation.ringClassName;
 }
 
-export function pullRequestReviewOutcomeStaleLabel(outcome: PullRequestReviewOutcome): string {
-  return `${REVIEW_OUTCOME_PRESENTATION[outcome].label} earlier changes`;
+export function pullRequestReviewOutcomeStaleLabel(
+  outcome: PullRequestReviewOutcome,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
+  return `${translateUiLabels(REVIEW_OUTCOME_PRESENTATION, uiText)[outcome].label} earlier changes`;
 }
 
 export function PullRequestReviewOutcomeIcon({
@@ -338,7 +365,8 @@ export function PullRequestReviewOutcomeIcon({
   outcome: PullRequestReviewOutcome;
   className?: string;
 }) {
-  const presentation = REVIEW_OUTCOME_PRESENTATION[outcome];
+  const uiText = useUiText();
+  const presentation = translateUiLabels(REVIEW_OUTCOME_PRESENTATION, uiText)[outcome];
   return (
     <presentation.Icon
       aria-hidden
@@ -355,7 +383,8 @@ export function PullRequestReviewOutcomeAvatarBadge({
   outcome: PullRequestReviewOutcome;
   stale?: boolean;
 }) {
-  const presentation = REVIEW_OUTCOME_PRESENTATION[outcome];
+  const uiText = useUiText();
+  const presentation = translateUiLabels(REVIEW_OUTCOME_PRESENTATION, uiText)[outcome];
   return (
     <presentation.Icon
       aria-hidden
@@ -369,8 +398,11 @@ export function PullRequestReviewOutcomeAvatarBadge({
   );
 }
 
-export function pullRequestReviewOutcomeLabel(outcome: PullRequestReviewOutcome): string {
-  return REVIEW_OUTCOME_PRESENTATION[outcome].label;
+export function pullRequestReviewOutcomeLabel(
+  outcome: PullRequestReviewOutcome,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
+  return translateUiLabels(REVIEW_OUTCOME_PRESENTATION, uiText)[outcome].label;
 }
 
 export function PullRequestReviewOutcomeBadge({
@@ -380,7 +412,8 @@ export function PullRequestReviewOutcomeBadge({
   outcome: PullRequestReviewOutcome;
   className?: string;
 }) {
-  const presentation = REVIEW_OUTCOME_PRESENTATION[outcome];
+  const uiText = useUiText();
+  const presentation = translateUiLabels(REVIEW_OUTCOME_PRESENTATION, uiText)[outcome];
   return (
     <Badge size="sm" variant={presentation.badgeVariant} className={className}>
       <span className="inline-flex items-baseline gap-1">
@@ -436,6 +469,7 @@ export function PullRequestActorLabel({
   tooltip?: boolean;
   profileUrl?: string | null;
 }) {
+  const uiText = useUiText();
   const login = actor?.login ?? "ghost";
   const label = (
     <span className={cn("flex min-w-0 items-baseline", variant === "label" && "gap-1.5")}>
@@ -459,7 +493,7 @@ export function PullRequestActorLabel({
                   href={profileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`Open ${login}'s profile`}
+                  aria-label={uiText("Open {0}'s profile", [login])}
                 />
               }
             />
@@ -472,7 +506,7 @@ export function PullRequestActorLabel({
       </TooltipTrigger>
       <TooltipPopup side="top">
         {actor?.name && actor.name !== login ? `${actor.name} (@${login})` : login}
-        {profileUrl ? " · Open profile" : ""}
+        {profileUrl ? uiText(" · Open profile") : ""}
       </TooltipPopup>
     </Tooltip>
   );
@@ -530,8 +564,11 @@ export function PullRequestMetaLine({
   );
 }
 
-export function summarizePullRequestChecks(checks: ReadonlyArray<PullRequestCheck>): string {
-  if (checks.length === 0) return "No checks reported";
+export function summarizePullRequestChecks(
+  checks: ReadonlyArray<PullRequestCheck>,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
+  if (checks.length === 0) return uiText("No checks reported");
   const actionRequired = checks.filter((check) => check.status === "action-required");
   const workflowApprovalRequired = actionRequired.filter(isWorkflowApprovalCheck).length;
   const otherActionRequired = actionRequired.length - workflowApprovalRequired;

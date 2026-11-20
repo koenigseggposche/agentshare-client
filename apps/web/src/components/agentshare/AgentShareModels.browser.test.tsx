@@ -112,6 +112,23 @@ it("combines model search with source filters and lets users recover from no mat
   await search.fill("COMMUNITY");
   await expect.element(page.getByText(local.name, { exact: true })).not.toBeInTheDocument();
   await expect.element(page.getByText(community.name, { exact: true })).toBeVisible();
+  await _screen.rerender(
+    <AgentShareModels
+      environmentId={EnvironmentId.make("generated-host")}
+      owner="generated-owner"
+      language="zh"
+    />,
+  );
+  await expect.element(page.getByRole("searchbox")).toHaveValue("COMMUNITY");
+  await expect.element(page.getByRole("button", { name: "全部来源", exact: true })).toBeVisible();
+  await expect.element(page.getByText(community.name, { exact: true })).toBeVisible();
+  await _screen.rerender(
+    <AgentShareModels
+      environmentId={EnvironmentId.make("generated-host")}
+      owner="generated-owner"
+      language="en"
+    />,
+  );
   await search.fill("missing-model");
   await expect.element(page.getByText("No matching models.")).toBeVisible();
   await search.fill("");

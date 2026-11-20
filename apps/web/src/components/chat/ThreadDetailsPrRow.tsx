@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { resolvePullRequestDetailChecks } from "@t3tools/client-runtime/pull-request-checks";
 import {
   capitalizeTerm,
@@ -106,6 +107,7 @@ export function ThreadDetailsPrRow({
   onActed?: () => void;
   onStopWatching?: (() => void) | undefined;
 }) {
+  const uiText = useUiText();
   const serverConfigs = useServerConfigs();
   const supportsPullRequests = serverConfigs.get(environmentId) !== undefined;
   const repository = sourceControlClients.repositorySelector(project?.repositoryIdentity);
@@ -223,10 +225,13 @@ export function ThreadDetailsPrRow({
   const statePresentation =
     detail === null
       ? null
-      : resolvePullRequestState({
-          state: detail.state,
-          isDraft: detail.isDraft,
-        });
+      : resolvePullRequestState(
+          {
+            state: detail.state,
+            isDraft: detail.isDraft,
+          },
+          uiText,
+        );
   const icon = statePresentation ? (
     <statePresentation.Icon
       aria-hidden
@@ -285,7 +290,7 @@ export function ThreadDetailsPrRow({
                   }
                 />
                 <div className="min-w-0 truncate text-foreground/75">
-                  {describePullRequestChecks(detail.checks)}
+                  {describePullRequestChecks(detail.checks, uiText)}
                 </div>
               </div>
             ) : null}
@@ -293,15 +298,16 @@ export function ThreadDetailsPrRow({
               <div className="flex min-w-0 items-start gap-2 text-destructive">
                 <TriangleAlertIcon aria-hidden className="mt-0.5 size-3 shrink-0 stroke-current" />
                 <div className="min-w-0 flex-1 wrap-break-word">
-                  Merge conflicts with {detail.baseBranch}
+                  {uiText("Merge conflicts with ")}
+                  {detail.baseBranch}
                 </div>
               </div>
             ) : null}
             <div className="flex min-w-0 items-center gap-2">
               <FileDiffIcon className="size-3 shrink-0 stroke-muted-foreground" />
               <div className="min-w-0 flex items-baseline gap-1 truncate text-foreground/75">
-                {detail.changedFiles.toLocaleString()}{" "}
-                {detail.changedFiles === 1 ? "file" : "files"}
+                {detail.changedFiles.toLocaleString(uiText.language)}{" "}
+                {detail.changedFiles === 1 ? uiText("file") : uiText("files")}
                 <PullRequestDiffStat additions={detail.additions} deletions={detail.deletions} />
               </div>
             </div>
@@ -320,42 +326,45 @@ export function ThreadDetailsPrRow({
   const trailingAction =
     rowAction === "resolve"
       ? {
-          label: "Resolve",
+          label: uiText("Resolve"),
           pendingLabel: "Preparing...",
           pending: handoff === "conflicts",
           destructive: true,
           suffix: <ArrowUpRightIcon aria-hidden className="size-3 shrink-0" />,
-          tooltip: "Check the branch out and resolve the conflicts in a new thread",
+          tooltip: uiText("Check the branch out and resolve the conflicts in a new thread"),
           onClick: startResolveConflicts,
         }
       : rowAction === "ready"
         ? {
-            label: "Ready",
+            label: uiText("Ready"),
             pendingLabel: "Marking...",
             pending: actionPending,
             destructive: false,
             suffix: null,
-            tooltip: `Mark this ${terminology.singular} as ready for review`,
+            tooltip: uiText("Mark this {0} as ready for review", [terminology.singular]),
             onClick: () => void perform("ready"),
           }
         : rowAction === "fix"
           ? {
-              label: "Fix",
+              label: uiText("Fix"),
               pendingLabel: "Preparing...",
               pending: handoff === "findings",
               destructive: true,
               suffix: <ArrowUpRightIcon aria-hidden className="size-3 shrink-0" />,
-              tooltip: "Fix the failing checks in a new thread",
+              tooltip: uiText("Fix the failing checks in a new thread"),
               onClick: startFixChecks,
             }
           : rowAction === "merge"
             ? {
-                label: "Merge",
+                label: uiText("Merge"),
                 pendingLabel: "Merging...",
                 pending: actionPending,
                 destructive: false,
                 suffix: null,
-                tooltip: `Merge this ${terminology.singular} (${selectedMergeMethod})`,
+                tooltip: uiText("Merge this {0} ({1})", [
+                  terminology.singular,
+                  selectedMergeMethod,
+                ]),
                 onClick: () => setConfirmingMerge(true),
               }
             : null;
@@ -373,7 +382,7 @@ export function ThreadDetailsPrRow({
               size="sm"
               part={part}
               className="group/watch"
-              aria-label={`Stop watching #${number}`}
+              aria-label={uiText("Stop watching #{0}", [number])}
               onClick={onStopWatching}
             />
           }
@@ -391,8 +400,9 @@ export function ThreadDetailsPrRow({
           />
         </TooltipTrigger>
         <TooltipPopup side="top">
-          Watching: the agent wakes when checks finish, someone comments, or the branch conflicts.
-          Click to stop.
+          {uiText(
+            "Watching: the agent wakes when checks finish, someone comments, or the branch conflicts. Click to stop.",
+          )}
         </TooltipPopup>
       </Tooltip>
     ) : null;
@@ -486,14 +496,20 @@ export function ThreadDetailsPrRow({
         <AlertDialog open={confirmingMerge} onOpenChange={(open) => setConfirmingMerge(open)}>
           <AlertDialogPopup>
             <AlertDialogHeader>
-              <AlertDialogTitle>Merge {terminology.singular}?</AlertDialogTitle>
+              <AlertDialogTitle>
+                {uiText("Merge ")}
+                {terminology.singular}?
+              </AlertDialogTitle>
               <AlertDialogDescription>
-                This merges #{number} using {selectedMergeMethod}.
+                {uiText("This merges #")}
+                {number}
+                {uiText(" using ")}
+                {selectedMergeMethod}.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogClose render={<Button variant="outline" size="sm" />}>
-                Cancel
+                {uiText("Cancel")}
               </AlertDialogClose>
               <Button
                 size="sm"
@@ -503,7 +519,7 @@ export function ThreadDetailsPrRow({
                   void perform("merge", selectedMergeMethod);
                 }}
               >
-                Merge
+                {uiText("Merge")}
               </Button>
             </AlertDialogFooter>
           </AlertDialogPopup>

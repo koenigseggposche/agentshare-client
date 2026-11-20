@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   AuthOrchestrationOperateScope,
   AuthPreviewOperateScope,
@@ -37,18 +39,24 @@ const CHAT_ROUTE_ID = "/_chat";
  * modal page (Settings, Usage) covers it. Everything is read at event time, so
  * the scope is registered once instead of re-registering on every store change.
  */
-export function installChatRouteCommands(router: AnyRouter): () => void {
+export function installChatRouteCommands(
+  router: AnyRouter,
+  uiText: UiTranslator = uiTranslators.en,
+): () => void {
   const handleNewThread = createNewThreadHandler(router);
-  const scratch = createScratchProjectActions({
-    environments: () =>
-      [...appAtomRegistry.get(environmentPresentations.presentationsAtom)].map(
-        ([environmentId, presentation]) => ({ ...presentation, environmentId }),
-      ),
-    primaryEnvironmentId: () => appAtomRegistry.get(primaryEnvironmentIdAtom),
-    registry: appAtomRegistry,
-    canOperate: (id) => readEnvironmentScope(id, AuthOrchestrationOperateScope),
-    handleNewThread,
-  });
+  const scratch = createScratchProjectActions(
+    {
+      environments: () =>
+        [...appAtomRegistry.get(environmentPresentations.presentationsAtom)].map(
+          ([environmentId, presentation]) => ({ ...presentation, environmentId }),
+        ),
+      primaryEnvironmentId: () => appAtomRegistry.get(primaryEnvironmentIdAtom),
+      registry: appAtomRegistry,
+      canOperate: (id) => readEnvironmentScope(id, AuthOrchestrationOperateScope),
+      handleNewThread,
+    },
+    uiText,
+  );
 
   const readRouteTarget = () => resolveThreadRouteTarget(router.state.matches.at(-1)?.params ?? {});
   const readRouteThreadRef = () => {
@@ -154,8 +162,8 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
           toastManager.add(
             stackedThreadToast({
               type: "info",
-              title: "Preview is desktop-only",
-              description: "Open T3 Code in the desktop app to use the in-app preview.",
+              title: uiText("Preview is desktop-only"),
+              description: uiText("Open T3 Code in the desktop app to use the in-app preview."),
             }),
           );
           return;

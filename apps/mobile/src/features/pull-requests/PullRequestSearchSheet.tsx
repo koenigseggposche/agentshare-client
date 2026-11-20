@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useNavigation } from "@react-navigation/native";
 import { useRef, type ReactNode } from "react";
 import { Platform, View, type TextInputInstance } from "react-native";
@@ -28,6 +29,7 @@ export function PullRequestSearchSheet(props: {
   /** Renders the list, given the bottom padding that keeps its end clear of the search bar. */
   readonly children: (list: { readonly paddingBottom: number }) => ReactNode;
 }) {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const integratedSearch = useNativeMailSearchToolbar();
   const searchRef = useRef<TextInputInstance>(null);
@@ -63,12 +65,15 @@ export function PullRequestSearchSheet(props: {
         options={{
           unstable_headerToolbarItems: integratedSearch
             ? () => [
-                createNativeMailSearchToolbarItem({
-                  placeholder: props.placeholder,
-                  onSearchTextChange: props.onQueryChange,
-                  showsSearchDismissButton: true,
-                  searchTextChangeId: props.searchTextChangeId,
-                }),
+                createNativeMailSearchToolbarItem(
+                  {
+                    placeholder: props.placeholder,
+                    onSearchTextChange: props.onQueryChange,
+                    showsSearchDismissButton: true,
+                    searchTextChangeId: props.searchTextChangeId,
+                  },
+                  uiText,
+                ),
               ]
             : undefined,
           headerSearchBarOptions: integratedSearch

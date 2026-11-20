@@ -52,8 +52,7 @@ wallet records to confirm charges instead of repeating a task to test settlement
 
 ## Provider tools
 
-Client updates and model-tool updates are separate. In **Settings → AgentShare →
-Manage coding tools**, select the execution computer, inspect its installed Codex
+Client updates and model-tool updates are separate. In **Settings → Coding tools**, select the execution computer, inspect its installed Codex
 and Claude versions and choose the version for subsequent tasks. An in-progress
 task continues with the process it already started. Refresh the operation record
 after a disconnect before starting another installation.

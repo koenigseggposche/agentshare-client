@@ -1,3 +1,4 @@
+import { readUiTranslator } from "../../i18n/uiText";
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -43,12 +44,15 @@ export function formatNextScheduledTaskRun(nextRunAt: string, now: number): stri
     return `Next run in ${count} ${unit}${count === 1 ? "" : "s"}`;
   }
 
-  const time = next.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const time = next.toLocaleTimeString(readUiTranslator().language, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
   if (days === 1) return `Next run tomorrow at ${time}`;
   if (days <= 7) {
-    return `Next run next ${next.toLocaleDateString([], { weekday: "long" })} at ${time}`;
+    return `Next run next ${next.toLocaleDateString(readUiTranslator().language, { weekday: "long" })} at ${time}`;
   }
-  const date = next.toLocaleDateString([], {
+  const date = next.toLocaleDateString(readUiTranslator().language, {
     month: "short",
     day: "numeric",
     ...(next.getFullYear() !== current.getFullYear() ? { year: "numeric" as const } : {}),

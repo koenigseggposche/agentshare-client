@@ -1,3 +1,5 @@
+import { readUiText } from "../i18n/uiText";
+import { useUiText } from "../i18n/uiText";
 import * as Dialog from "./ui/Dialog";
 import { ComposerContextId } from "@t3tools/contracts";
 import { useAtomValue } from "@effect/atom-react";
@@ -56,6 +58,7 @@ export function ComposerEditor({
   onInertChipPress,
   ...props
 }: ComposerEditorProps) {
+  const uiText = useUiText();
   const draft = useComposerDraft(draftKey ?? null);
   const preferencesResult = useAtomValue(mobilePreferencesAtom);
   const preferredEnterBehavior = AsyncResult.isSuccess(preferencesResult)
@@ -112,8 +115,8 @@ export function ComposerEditor({
       }
       if (!insertComposerDraftContext(draftKey, result, insertion)) {
         Dialog.alert(
-          "Could not paste context",
-          "Remove some attachments or context items from the draft, then paste again.",
+          readUiText("Could not paste context"),
+          readUiText("Remove some attachments or context items from the draft, then paste again."),
         );
         return;
       }
@@ -128,7 +131,7 @@ export function ComposerEditor({
         );
       if (warnings.length > 0)
         Dialog.alert(
-          "Some context is unavailable",
+          readUiText("Some context is unavailable"),
           [...warnings, "Those references are marked unavailable."].join("\n\n"),
         );
     });
@@ -137,8 +140,8 @@ export function ComposerEditor({
     if (AsyncResult.isFailure(settled) && !signal.aborted) {
       const error = squashAtomCommandFailure(settled);
       Dialog.alert(
-        "Could not paste context",
-        error instanceof Error ? error.message : "Try copying again.",
+        readUiText("Could not paste context"),
+        error instanceof Error ? error.message : readUiText("Try copying again."),
       );
     }
   };
@@ -212,12 +215,15 @@ export function ComposerEditor({
         }}
       />
       {importing ? (
-        <Text className="py-2 text-xs text-foreground-muted">Copying context…</Text>
+        <Text className="py-2 text-xs text-foreground-muted">{uiText("Copying context…")}</Text>
       ) : null}
       {selected && (selectedReference || selectedSkill) ? (
         <ComposerContextSheet
           label={
-            selectedReference?.label ?? selectedSkill?.displayName ?? selectedSkill?.name ?? "Skill"
+            selectedReference?.label ??
+            selectedSkill?.displayName ??
+            selectedSkill?.name ??
+            uiText("Skill")
           }
           record={
             record ??

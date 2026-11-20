@@ -1,4 +1,6 @@
-import { HostModels } from "../settings/SettingsAgentShareRouteScreen";
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
+import { HostModels } from "../settings/AgentShareModels";
 import { Sheet } from "../../components/ui/Sheet";
 import { agentShareEnvironment } from "../../state/agentShare";
 import { useEnvironmentQuery } from "../../state/query";
@@ -158,6 +160,7 @@ export function NewTaskDraftScreen(props: {
   readonly draftId?: string;
   readonly incomingShareId?: string;
 }) {
+  const uiText = useUiText();
   const labels = useWorkbenchLabels();
   const language = useWorkbenchLanguage();
   const [creationMetadata] = useState(makeTurnCommandMetadata);
@@ -234,7 +237,10 @@ export function NewTaskDraftScreen(props: {
     const result = await action();
     if (AsyncResult.isFailure(result)) {
       const error = Cause.squash(result.cause);
-      Dialog.alert(title, error instanceof Error ? error.message : "An error occurred.");
+      Dialog.alert(
+        title,
+        error instanceof Error ? error.message : readUiText("An error occurred."),
+      );
     }
   };
   const deleteProject = useAtomCommand(projectEnvironment.delete, { reportFailure: false });
@@ -248,8 +254,8 @@ export function NewTaskDraftScreen(props: {
     if (AsyncResult.isFailure(result)) {
       const error = Cause.squash(result.cause);
       Dialog.alert(
-        "Failed to remove project",
-        error instanceof Error ? error.message : "An error occurred.",
+        readUiText("Failed to remove project"),
+        error instanceof Error ? error.message : readUiText("An error occurred."),
       );
       return;
     }
@@ -625,6 +631,7 @@ export function NewTaskDraftScreen(props: {
         selectedEnvironmentServerConfig,
         modelSelection,
         selectedProject.id,
+        uiText,
       );
       Dialog.alert(title, detail);
       return null;
@@ -632,15 +639,17 @@ export function NewTaskDraftScreen(props: {
     // Recovery may retain over-cap attachments; block send before uploading a turn the server would reject.
     if (draft.attachments.length > PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
       Dialog.alert(
-        "Too many attachments",
-        `Remove attachments until there are at most ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS}.`,
+        readUiText("Too many attachments"),
+        readUiText("Remove attachments until there are at most {0}.", [
+          PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+        ]),
       );
       return null;
     }
 
     const contextBlockReason = composerContextSendBlockReason(draft.context);
     if (contextBlockReason) {
-      Dialog.alert("Too much context", contextBlockReason);
+      Dialog.alert(readUiText("Too much context"), contextBlockReason);
       return null;
     }
     const strandedThread = threadContextsOutsideEnvironment({
@@ -655,8 +664,11 @@ export function NewTaskDraftScreen(props: {
           (environment) => environment.environmentId === strandedThread.environmentId,
         )?.environmentLabel ?? "its machine";
       Dialog.alert(
-        "Attached thread unavailable",
-        `"${strandedThread.title}" is on another machine. Switch back to ${owner} or remove it from the draft.`,
+        readUiText("Attached thread unavailable"),
+        readUiText('"{0}" is on another machine. Switch back to {1} or remove it from the draft.', [
+          strandedThread.title,
+          owner,
+        ]),
       );
       return null;
     }
@@ -674,8 +686,10 @@ export function NewTaskDraftScreen(props: {
     if (AsyncResult.isFailure(queued)) {
       const error = squashAtomCommandFailure(queued);
       Dialog.alert(
-        "Could not queue task",
-        error instanceof Error ? error.message : "The task could not be saved to the outbox.",
+        readUiText("Could not queue task"),
+        error instanceof Error
+          ? error.message
+          : readUiText("The task could not be saved to the outbox."),
       );
       return null;
     }
@@ -742,7 +756,9 @@ export function NewTaskDraftScreen(props: {
   );
   const shareUnavailableNotice = isIncomingShareUnavailable ? (
     <Text textRole="footnote" className="text-center text-foreground-muted">
-      The shared content is no longer in the inbox. You can continue editing this task draft.
+      {uiText(
+        "The shared content is no longer in the inbox. You can continue editing this task draft.",
+      )}
     </Text>
   ) : null;
   const hero = flow.isScratchDraft ? (
@@ -836,7 +852,9 @@ export function NewTaskDraftScreen(props: {
   const workspaceControls = (
     <View className="flex-row items-center gap-1 px-2">
       <ComposerInlineControl
-        accessibilityHint={`Switches to ${flow.workspaceMode === "local" ? "a new worktree" : "the current checkout"}`}
+        accessibilityHint={uiText("Switches to {0}", [
+          flow.workspaceMode === "local" ? "a new worktree" : "the current checkout",
+        ])}
         accessibilityLabel={workspaceLabel}
         disabled={isComposerInteractionLocked || !flow.isGitRepo}
         renderIcon={(size) => (
@@ -858,7 +876,7 @@ export function NewTaskDraftScreen(props: {
           chevronDirection="right"
           disabled={isComposerInteractionLocked || !flow.isGitRepo}
           icon="arrow.triangle.branch"
-          label={showBranchLoading ? "Loading branches…" : selectedBranchLabel}
+          label={showBranchLoading ? uiText("Loading branches…") : selectedBranchLabel}
           maxWidth="100%"
           onPress={() => openContextPicker("NewTaskBranch")}
         />
@@ -937,17 +955,20 @@ export function NewTaskDraftScreen(props: {
       </ThreadScreenFallback>
     );
   }
-  const thread = draftThreadShell({
-    environmentId: selectedProject.environmentId,
-    projectId: selectedProject.id,
-    threadId: ThreadId.make(creationMetadata.threadId),
-    modelSelection: flow.selectedModel,
-    runtimeMode: flow.runtimeMode,
-    interactionMode: flow.interactionMode,
-    branch: flow.selectedBranchName,
-    worktreePath: flow.selectedWorktreePath,
-    createdAt: creationMetadata.createdAt,
-  });
+  const thread = draftThreadShell(
+    {
+      environmentId: selectedProject.environmentId,
+      projectId: selectedProject.id,
+      threadId: ThreadId.make(creationMetadata.threadId),
+      modelSelection: flow.selectedModel,
+      runtimeMode: flow.runtimeMode,
+      interactionMode: flow.interactionMode,
+      branch: flow.selectedBranchName,
+      worktreePath: flow.selectedWorktreePath,
+      createdAt: creationMetadata.createdAt,
+    },
+    uiText,
+  );
   return (
     <>
       <ThreadScreenBinding
@@ -994,7 +1015,7 @@ export function NewTaskDraftScreen(props: {
         selectedThread={thread}
         selectedThreadDetailRef={null}
         contentPresentation={{ kind: "ready" }}
-        screenTone={connectionTone(connectionState)}
+        screenTone={connectionTone(connectionState, uiText)}
         connectionError={environmentRuntime?.connectionError ?? null}
         environmentLabel={selectedEnvironmentLabel}
         feedbackSubmissions={[]}

@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { AsyncResult } from "effect/reactivity";
 import { useAtomRefresh } from "@effect/atom-react";
 import { StackActions, useNavigation, type StaticScreenProps } from "@react-navigation/native";
@@ -64,6 +66,7 @@ const VERDICTS = [
 export function PullRequestReviewSheet({
   route,
 }: StaticScreenProps<PullRequestParams & { readonly mode: "review" | "comment" }>) {
+  const uiText = useUiText();
   const params = route.params;
   const target = pullRequestTarget(params);
   const result = useEnvironmentQuery(composerPullRequests.detail(target));
@@ -83,7 +86,9 @@ export function PullRequestReviewSheet({
     }));
   const stale = store.draft.comments.some((comment) => comment.headSha !== result.data?.headSha);
   const [requestedVerdict, setRequestedVerdict] = useState<PullRequestReviewVerdict>("comment");
-  const offered = VERDICTS.filter((option) => permissions.verdicts.includes(option.value));
+  const offered = translateUiLabels(VERDICTS, uiText).filter((option) =>
+    permissions.verdicts.includes(option.value),
+  );
   const verdict = offered.find((option) => option.value === requestedVerdict) ?? offered[0];
   const reviewing = params.mode === "review";
   const canSubmitComments = !store.draft.comments.length || permissions.canInlineComment;
@@ -132,21 +137,21 @@ export function PullRequestReviewSheet({
     });
   return (
     <SheetContent
-      title={reviewing ? "Submit review" : "Add comment"}
+      title={reviewing ? uiText("Submit review") : uiText("Add comment")}
       subtitle={`#${params.number}${reviewing && result.data?.headSha ? ` · reviewing ${result.data.headSha.slice(0, 7)}` : ` · ${params.repository}`}`}
       busy={submission.busy}
       footer={
         <Button
           label={
             submission.busy
-              ? "Submitting…"
+              ? uiText("Submitting…")
               : reviewing
                 ? verdict?.value === "approve"
-                  ? "Approve"
+                  ? uiText("Approve")
                   : verdict?.value === "request-changes"
-                    ? "Request changes"
-                    : "Submit review"
-                : "Post comment"
+                    ? uiText("Request changes")
+                    : uiText("Submit review")
+                : uiText("Post comment")
           }
           fullWidth
           tone={Platform.OS === "android" ? "primary" : "contrast"}
@@ -167,17 +172,17 @@ export function PullRequestReviewSheet({
         />
       ) : null}
       <Text className="px-4 text-xs text-foreground-muted">
-        {reviewing ? "Summary" : "Comment"}
+        {reviewing ? uiText("Summary") : uiText("Comment")}
       </Text>
       <TextInput
         multiline
-        accessibilityLabel={reviewing ? "Review summary" : "Comment"}
+        accessibilityLabel={reviewing ? uiText("Review summary") : uiText("Comment")}
         placeholder={
           reviewing
             ? summaryRequired
-              ? "Summary required to request changes…"
-              : "Summarize your review…"
-            : "Write a comment…"
+              ? uiText("Summary required to request changes…")
+              : uiText("Summarize your review…")
+            : uiText("Write a comment…")
         }
         placeholderTextColorClassName="accent-foreground-muted"
         editable={store.ready && !submission.busy}
@@ -190,8 +195,9 @@ export function PullRequestReviewSheet({
       {reviewing && store.draft.comments.length ? (
         <View className="gap-2">
           <Text className="text-sm font-t3-medium">
-            {store.draft.comments.length} pending line{" "}
-            {store.draft.comments.length === 1 ? "comment" : "comments"}
+            {store.draft.comments.length}
+            {uiText(" pending line")}{" "}
+            {store.draft.comments.length === 1 ? uiText("comment") : uiText("comments")}
           </Text>
           {store.draft.comments.map((draft) => (
             <Pressable
@@ -227,8 +233,8 @@ export function PullRequestReviewSheet({
               </Text>
               <Text className="text-2xs text-foreground-muted">
                 {draft.headSha !== result.data?.headSha
-                  ? "Branch changed · Tap to choose a new line"
-                  : "Tap to edit"}
+                  ? uiText("Branch changed · Tap to choose a new line")
+                  : uiText("Tap to edit")}
               </Text>
             </Pressable>
           ))}
@@ -236,14 +242,16 @@ export function PullRequestReviewSheet({
       ) : null}
       {reviewing && stale ? (
         <Text className="text-sm text-danger-foreground">
-          The branch changed since you wrote a comment. Choose its current line before submitting.
+          {uiText(
+            "The branch changed since you wrote a comment. Choose its current line before submitting.",
+          )}
         </Text>
       ) : null}
       {reviewing && !canSubmitComments ? (
         <Text className="text-sm text-danger-foreground">
-          You can no longer submit line comments on this{" "}
-          {sourceControlClients.get(result.data?.provider).changeRequest.singular}. Your drafts are
-          kept here.
+          {uiText("You can no longer submit line comments on this")}{" "}
+          {sourceControlClients.get(result.data?.provider).changeRequest.singular}
+          {uiText(". Your drafts are kept here.")}
         </Text>
       ) : null}
       {submission.error || result.error || store.error ? (

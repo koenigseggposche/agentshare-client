@@ -1,3 +1,4 @@
+import { useUiText } from "../../../i18n/uiText";
 import type { NativeStackHeaderItem } from "@react-navigation/native-stack";
 import { resolveEnvironmentMachineKind } from "@t3tools/contracts";
 import { Platform } from "react-native";
@@ -11,6 +12,7 @@ import { useSettingsEnvironmentFilter } from "../settings-environment-filter";
 export function SettingsEnvironmentFilterHeader(props: {
   readonly trailingItems?: readonly NativeStackHeaderItem[];
 }) {
+  const uiText = useUiText();
   const {
     availableTargets,
     selectedTargets,
@@ -46,23 +48,23 @@ export function SettingsEnvironmentFilterHeader(props: {
       options={{
         unstable_headerRightItems: () => [
           withNativeGlassHeaderItem({
-            accessibilityLabel: "Filter settings environments and projects",
+            accessibilityLabel: uiText("Filter settings environments and projects"),
             icon: { name: filterIcon, type: "sfSymbol" },
             label: "",
             type: "menu",
             menu: {
-              title: "Settings scope",
+              title: uiText("Settings scope"),
               items: [
                 {
                   type: "submenu",
                   label:
                     selectedIds === null
-                      ? "All environments"
+                      ? uiText("All environments")
                       : `${selectedTargets.length} ${selectedTargets.length === 1 ? "environment" : "environments"}`,
                   items: [
                     {
                       type: "action",
-                      label: "All connected environments",
+                      label: uiText("All connected environments"),
                       state: selectedIds === null ? "on" : undefined,
                       onPress: selectAll,
                     },
@@ -89,11 +91,13 @@ export function SettingsEnvironmentFilterHeader(props: {
                   label:
                     selectableProjectGroups.find((group) => group.key === selectedProjectKey)
                       ?.label ??
-                    (selectedProjectKey === null ? "All projects" : "Unavailable project"),
+                    (selectedProjectKey === null
+                      ? uiText("All projects")
+                      : uiText("Unavailable project")),
                   items: [
                     {
                       type: "action",
-                      label: "All projects",
+                      label: uiText("All projects"),
                       state: selectedProjectKey === null ? "on" : undefined,
                       onPress: () => selectProject(null),
                     },
@@ -117,6 +121,7 @@ export function SettingsEnvironmentFilterHeader(props: {
 
 /** Android's settings scope filter, as an `AppBar` menu. */
 export function useSettingsEnvironmentMenu(): AppBarMenu {
+  const uiText = useUiText();
   const {
     availableTargets,
     selectedIds,
@@ -127,7 +132,7 @@ export function useSettingsEnvironmentMenu(): AppBarMenu {
     selectProject,
   } = useSettingsEnvironmentFilter();
   return {
-    title: "Filter settings environments and projects",
+    title: uiText("Filter settings environments and projects"),
     icon:
       selectedIds === null && selectedProjectKey === null
         ? "line.3.horizontal.decrease.circle"
@@ -135,13 +140,13 @@ export function useSettingsEnvironmentMenu(): AppBarMenu {
     items: [
       {
         id: "all",
-        title: "All connected environments",
+        title: uiText("All connected environments"),
         selected: selectedIds === null,
         onPress: selectAll,
       },
       ...availableTargets.map((entry) => ({
         id: `environment:${entry.environmentId}`,
-        title: `Environment · ${entry.label}`,
+        title: uiText("Environment · {0}", [entry.label]),
         icon: ENVIRONMENT_MACHINE_SYMBOLS[resolveEnvironmentMachineKind(entry.serverConfig)],
         subtitle: entry.displayUrl ?? undefined,
         selected: selectedIds === null || selectedIds.has(entry.environmentId),
@@ -149,13 +154,13 @@ export function useSettingsEnvironmentMenu(): AppBarMenu {
       })),
       {
         id: "project:all",
-        title: "All projects",
+        title: uiText("All projects"),
         selected: selectedProjectKey === null,
         onPress: () => selectProject(null),
       },
       ...selectableProjectGroups.map((group) => ({
         id: `project:${group.key}`,
-        title: `Project · ${projectMenuLabel(group)}`,
+        title: uiText("Project · {0}", [projectMenuLabel(group)]),
         selected: selectedProjectKey === group.key,
         onPress: () => selectProject(group.key),
       })),

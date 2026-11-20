@@ -1,3 +1,6 @@
+import { readUiText } from "../../i18n/uiText";
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { NativeAppBarExample } from "./NativeAppBarExample";
 import { Toast } from "../../components/ui/Toast";
 import { Progress } from "../../components/ui/Progress";
@@ -35,6 +38,7 @@ const CHOICES = [
 ];
 
 export function ComponentCatalogScreen() {
+  const uiText = useUiText();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const appearance = useAppearancePreferences();
@@ -50,23 +54,23 @@ export function ComponentCatalogScreen() {
   const announceAction = () => setNotice(true);
   const confirm = () => {
     Dialog.confirm({
-      title: "Discard changes?",
-      message: "This example only changes local catalog state.",
-      confirmText: "Discard",
+      title: uiText("Discard changes?"),
+      message: uiText("This example only changes local catalog state."),
+      confirmText: readUiText("Discard"),
       destructive: true,
       onConfirm: () => setText(""),
     });
   };
   return (
     <View className="flex-1 bg-screen">
-      <AppBar title="UI components" onBack={() => navigation.goBack()} />
+      <AppBar title={uiText("UI components")} onBack={() => navigation.goBack()} />
       <ScreenScrollView
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
         <View className="gap-3">
-          <AppText className="text-sm text-foreground-muted">Theme preview</AppText>
+          <AppText className="text-sm text-foreground-muted">{uiText("Theme preview")}</AppText>
           <View className="flex-row flex-wrap gap-2">
             {MOBILE_THEME_IDS.filter(
               (id) => id !== "material-you" || appearance.systemColorsAvailable,
@@ -81,8 +85,8 @@ export function ComponentCatalogScreen() {
           </View>
           <SegmentedControl
             options={[
-              { value: "light", label: "Light" },
-              { value: "dark", label: "Dark" },
+              { value: "light", label: uiText("Light") },
+              { value: "dark", label: uiText("Dark") },
             ]}
             selected={appearance.themeAppearance}
             onSelect={appearance.setThemeMode}
@@ -91,9 +95,9 @@ export function ComponentCatalogScreen() {
         </View>
         <SegmentedControl
           options={[
-            { value: "controls", label: "Controls" },
-            { value: "forms", label: "Forms" },
-            { value: "feedback", label: "Feedback" },
+            { value: "controls", label: uiText("Controls") },
+            { value: "forms", label: uiText("Forms") },
+            { value: "feedback", label: uiText("Feedback") },
           ]}
           selected={page}
           onSelect={setPage}
@@ -102,36 +106,47 @@ export function ComponentCatalogScreen() {
         {page === "controls" ? (
           <>
             <View className="gap-3">
-              <AppText className="text-lg font-t3-semibold">Lists and selection</AppText>
+              <AppText className="text-lg font-t3-semibold">
+                {uiText("Lists and selection")}
+              </AppText>
               <ListSection>
                 <View className="p-4">
                   <SegmentedControl
                     variant="card"
-                    options={CHOICES}
+                    options={translateUiLabels(CHOICES, uiText)}
                     selected={tab}
                     onSelect={setTab}
                     size="compact"
                     role="tab"
                   />
                 </View>
-                <ListRow icon="folder" label="Projects" detail="4" onPress={() => setSheet(true)} />
+                <ListRow
+                  icon="folder"
+                  label={uiText("Projects")}
+                  detail="4"
+                  onPress={() => setSheet(true)}
+                />
                 <ListToggleRow
                   icon="bell.badge"
-                  label="Notifications"
-                  description="Updates from your active threads"
+                  label={uiText("Notifications")}
+                  description={uiText("Updates from your active threads")}
                   value={enabled}
                   onValueChange={setEnabled}
                 />
-                <ListChoiceRow label="Selected option" selected onPress={announceAction} />
+                <ListChoiceRow
+                  label={uiText("Selected option")}
+                  selected
+                  onPress={announceAction}
+                />
                 <ListActionRow
                   icon="trash"
-                  label="Discard changes"
+                  label={uiText("Discard changes")}
                   tone="danger"
                   onPress={confirm}
                 />
               </ListSection>
               <SegmentedControl
-                options={CHOICES}
+                options={translateUiLabels(CHOICES, uiText)}
                 selected={tab}
                 onSelect={setTab}
                 size="compact"
@@ -139,27 +154,27 @@ export function ComponentCatalogScreen() {
               />
               <View className="flex-row flex-wrap gap-2">
                 <Chip
-                  label="Selected filter"
+                  label={uiText("Selected filter")}
                   selected={enabled}
                   onPress={() => setEnabled(!enabled)}
                 />
-                <Chip label="Label" size="small" />
-                <Chip label="Disabled" disabled onPress={announceAction} />
+                <Chip label={uiText("Label")} size="small" />
+                <Chip label={uiText("Disabled")} disabled onPress={announceAction} />
               </View>
             </View>
             <View className="gap-3">
               <NativeAppBarExample />
-              <AppText className="text-lg font-t3-semibold">Buttons</AppText>
+              <AppText className="text-lg font-t3-semibold">{uiText("Buttons")}</AppText>
               <View className="flex-row flex-wrap gap-2">
-                <Button label="Primary" tone="primary" onPress={announceAction} />
-                <Button label="Secondary" onPress={announceAction} />
-                <Button label="Contrast" tone="contrast" onPress={announceAction} />
+                <Button label={uiText("Primary")} tone="primary" onPress={announceAction} />
+                <Button label={uiText("Secondary")} onPress={announceAction} />
+                <Button label={uiText("Contrast")} tone="contrast" onPress={announceAction} />
               </View>
               <View className="flex-row flex-wrap gap-2">
-                <Button label="Disabled" disabled onPress={announceAction} />
-                <Button label="Loading" loading onPress={announceAction} />
+                <Button label={uiText("Disabled")} disabled onPress={announceAction} />
+                <Button label={uiText("Loading")} loading onPress={announceAction} />
                 <IconButton
-                  accessibilityLabel="Open example sheet"
+                  accessibilityLabel={uiText("Open example sheet")}
                   icon="plus"
                   variant="tonal"
                   onPress={() => setSheet(true)}
@@ -170,28 +185,28 @@ export function ComponentCatalogScreen() {
         ) : null}
         {page === "forms" ? (
           <View className="gap-3">
-            <AppText className="text-lg font-t3-semibold">Forms</AppText>
+            <AppText className="text-lg font-t3-semibold">{uiText("Forms")}</AppText>
             <AppTextInput
-              accessibilityLabel="Example name"
-              placeholder="Name"
+              accessibilityLabel={uiText("Example name")}
+              placeholder={uiText("Name")}
               value={text}
               onChangeText={setText}
             />
             <View className="flex-row">
               <SearchField
                 inputRef={searchRef}
-                accessibilityLabel="Search examples"
+                accessibilityLabel={uiText("Search examples")}
                 clearAccessibilityLabel="Clear examples search"
-                placeholder="Search examples"
+                placeholder={uiText("Search examples")}
                 value={search}
                 onChangeText={setSearch}
                 autoFocus={false}
               />
             </View>
             <View className="flex-row items-center justify-between">
-              <AppText>Count</AppText>
+              <AppText>{uiText("Count")}</AppText>
               <NumberField
-                label="Example count"
+                label={uiText("Example count")}
                 min={1}
                 max={10}
                 value={value}
@@ -201,7 +216,7 @@ export function ComponentCatalogScreen() {
             <ListSection>
               <SliderRow
                 icon="textformat.size"
-                label="Example slider"
+                label={uiText("Example slider")}
                 valueLabel={String(value)}
                 min={1}
                 max={10}
@@ -214,55 +229,57 @@ export function ComponentCatalogScreen() {
         ) : null}
         {page === "feedback" ? (
           <View className="gap-3">
-            <AppText className="text-lg font-t3-semibold">Feedback and presentation</AppText>
-            <Notice message="This action could not finish. Try again." tone="danger" />
-            <Button label="Show notice" onPress={announceAction} />
+            <AppText className="text-lg font-t3-semibold">
+              {uiText("Feedback and presentation")}
+            </AppText>
+            <Notice message={uiText("This action could not finish. Try again.")} tone="danger" />
+            <Button label={uiText("Show notice")} onPress={announceAction} />
             <View className="flex-row flex-wrap gap-2">
-              <Button label="Sheet" onPress={() => setSheet(true)} />
-              <Button label="Dialog" onPress={confirm} />
+              <Button label={uiText("Sheet")} onPress={() => setSheet(true)} />
+              <Button label={uiText("Dialog")} onPress={confirm} />
               <Button
-                label="Alert"
+                label={uiText("Alert")}
                 onPress={() =>
-                  Dialog.alert("Example alert", "Choose an action.", [
+                  Dialog.alert(readUiText("Example alert"), readUiText("Choose an action."), [
                     {
-                      text: "More info",
+                      text: readUiText("More info"),
                       onPress: () =>
                         Dialog.alert("More information", "This second alert stays open."),
                     },
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Continue", onPress: announceAction },
+                    { text: readUiText("Cancel"), style: "cancel" },
+                    { text: readUiText("Continue"), onPress: announceAction },
                   ])
                 }
               />
               <Button
-                label="Prompt"
+                label={uiText("Prompt")}
                 onPress={() =>
                   Dialog.prompt({
-                    title: "Rename example",
+                    title: uiText("Rename example"),
                     initialValue: text,
-                    confirmText: "Rename",
+                    confirmText: readUiText("Rename"),
                     onConfirm: setText,
                   })
                 }
               />
               <Menu
-                title="Example menu"
+                title={uiText("Example menu")}
                 actions={[
-                  { id: "copy", title: "Copy", image: "doc.on.doc" },
-                  { id: "discard", title: "Discard", attributes: { destructive: true } },
+                  { id: "copy", title: uiText("Copy"), image: "doc.on.doc" },
+                  { id: "discard", title: uiText("Discard"), attributes: { destructive: true } },
                 ]}
                 onPressAction={({ nativeEvent }) =>
                   nativeEvent.event === "discard" ? confirm() : announceAction()
                 }
               >
-                <Chip label="Menu" trailingIcon="chevron.down" />
+                <Chip label={uiText("Menu")} trailingIcon="chevron.down" />
               </Menu>
             </View>
-            <Progress value={0.6} label="Example upload" />
-            <Progress label="Connecting" />
+            <Progress value={0.6} label={uiText("Example upload")} />
+            <Progress label={uiText("Connecting")} />
             <View className="items-start">
               <FloatingActionButton
-                label="New thread"
+                label={uiText("New thread")}
                 icon="plus"
                 variant="extended"
                 tone="primary"
@@ -280,11 +297,11 @@ export function ComponentCatalogScreen() {
           pointerEvents="box-none"
         >
           <Toast
-            message="Changes are ready to review."
+            message={uiText("Changes are ready to review.")}
             tone="success"
             dismissMode="swipe"
             action={{
-              label: "Undo",
+              label: uiText("Undo"),
               onPress: () => {
                 setNotice(false);
                 setText("Restored example");
@@ -295,19 +312,19 @@ export function ComponentCatalogScreen() {
         </View>
       ) : null}
       {sheet ? (
-        <Sheet title="Example sheet" onClose={() => setSheet(false)}>
+        <Sheet title={uiText("Example sheet")} onClose={() => setSheet(false)}>
           <ScreenScrollView
             contentInsetAdjustmentBehavior="automatic"
             contentContainerClassName="p-4"
           >
             <ListSection>
               <ListChoiceRow
-                label="Overview"
+                label={uiText("Overview")}
                 selected={tab === "overview"}
                 onPress={() => setTab("overview")}
               />
               <ListChoiceRow
-                label="Activity"
+                label={uiText("Activity")}
                 selected={tab === "activity"}
                 onPress={() => setTab("activity")}
               />

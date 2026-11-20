@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useState } from "react";
 import {
   computeStableMessagesTimelineRows,
@@ -43,10 +44,11 @@ export function useIncrementalTimelineRows(
   identity: string,
   input: MessagesTimelineRowsInput,
 ): MessagesTimelineRow[] {
+  const uiText = useUiText();
   const [state, setState] = useState(() => ({
     identity,
     input,
-    projection: deriveMessagesTimelineRowsWithState(input),
+    projection: deriveMessagesTimelineRowsWithState(input, undefined, uiText),
   }));
   if (state.identity === identity && sameRowsInput(state.input, input)) {
     return state.projection.rows;
@@ -54,6 +56,7 @@ export function useIncrementalTimelineRows(
   const projection = deriveMessagesTimelineRowsWithState(
     input,
     state.identity === identity ? state.projection : null,
+    uiText,
   );
   setState({ identity, input, projection });
   return projection.rows;

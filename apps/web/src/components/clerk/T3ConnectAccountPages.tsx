@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { useAuth, useClerk } from "@clerk/react";
 import { MessageSquareIcon, ServerIcon, SmartphoneIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -37,6 +39,7 @@ export function useT3ConnectAccountPage(): {
   readonly open: ((page?: T3ConnectAccountPageUrl) => void) | null;
   readonly portals: ReactNode;
 } {
+  const uiText = useUiText();
   const clerk = useClerk();
   const { isSignedIn } = useAuth();
   const [targets, setTargets] = useState<PortalTargets>({});
@@ -46,7 +49,7 @@ export function useT3ConnectAccountPage(): {
       setTargets((current) => ({ ...current, [key]: element }));
     clerk.openUserProfile({
       __experimental_startPath: `/${page}`,
-      customPages: T3_CONNECT_ACCOUNT_PAGES.map((page) => ({
+      customPages: translateUiLabels(T3_CONNECT_ACCOUNT_PAGES, uiText).map((page) => ({
         label: page.label,
         url: page.url,
         mount: (element: HTMLDivElement) => setTarget(`content:${page.url}`, element),
@@ -57,7 +60,7 @@ export function useT3ConnectAccountPage(): {
     });
   };
 
-  const portals = T3_CONNECT_ACCOUNT_PAGES.flatMap((page) => {
+  const portals = translateUiLabels(T3_CONNECT_ACCOUNT_PAGES, uiText).flatMap((page) => {
     const content = targets[`content:${page.url}`];
     const icon = targets[`icon:${page.url}`];
     return [

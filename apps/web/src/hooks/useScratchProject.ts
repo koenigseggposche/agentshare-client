@@ -1,3 +1,5 @@
+import { useUiText } from "../i18n/uiText";
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
 import { RegistryContext } from "@effect/atom-react";
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
 import { availableScratchWorkspaceRoot } from "@t3tools/client-runtime/operations/projects";
@@ -21,12 +23,16 @@ import { projectEnvironment } from "~/state/projects";
 import { useEnvironmentsWithScope } from "~/state/session";
 import { type NewThreadHandler, useNewThreadHandler } from "./useHandleNewThread";
 
-function reportScratchFailure(title: string, error: unknown) {
+function reportScratchFailure(
+  title: string,
+  error: unknown,
+  uiText: UiTranslator = uiTranslators.en,
+) {
   toastManager.add(
     stackedThreadToast({
       type: "error",
       title,
-      description: error instanceof Error ? error.message : "An error occurred.",
+      description: error instanceof Error ? error.message : uiText("An error occurred."),
     }),
   );
 }
@@ -35,13 +41,16 @@ type ScratchEnvironment = Pick<EnvironmentPresentation, "connection" | "serverCo
   readonly environmentId: EnvironmentId;
 };
 
-export function createScratchProjectActions(input: {
-  readonly environments: () => Iterable<ScratchEnvironment>;
-  readonly primaryEnvironmentId: () => EnvironmentId | null;
-  readonly registry: AtomRegistry.AtomRegistry;
-  readonly canOperate: (environmentId: EnvironmentId) => boolean;
-  readonly handleNewThread: NewThreadHandler;
-}) {
+export function createScratchProjectActions(
+  input: {
+    readonly environments: () => Iterable<ScratchEnvironment>;
+    readonly primaryEnvironmentId: () => EnvironmentId | null;
+    readonly registry: AtomRegistry.AtomRegistry;
+    readonly canOperate: (environmentId: EnvironmentId) => boolean;
+    readonly handleNewThread: NewThreadHandler;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+) {
   const scratchWorkspaceRootFor = (environmentId: EnvironmentId | null): string | null => {
     let environment: ScratchEnvironment | undefined;
     for (const entry of input.environments()) {
@@ -75,7 +84,7 @@ export function createScratchProjectActions(input: {
     );
     if (result._tag === "Success") return result.value;
     if (!isAtomCommandInterrupted(result)) {
-      reportScratchFailure(failureTitle, squashAtomCommandFailure(result));
+      reportScratchFailure(failureTitle, squashAtomCommandFailure(result), uiText);
     }
     return null;
   };
@@ -86,7 +95,7 @@ export function createScratchProjectActions(input: {
       await input
         .handleNewThread(scopeProjectRef(project.environmentId, project.id))
         .catch((error: unknown) =>
-          reportScratchFailure("Could not start without a project", error),
+          reportScratchFailure("Could not start without a project", error, uiText),
         );
     }
   };
@@ -95,19 +104,23 @@ export function createScratchProjectActions(input: {
 }
 
 export function useScratchProject() {
+  const uiText = useUiText();
   const { environments } = useEnvironments();
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const registry = useContext(RegistryContext);
   const handleNewThread = useNewThreadHandler();
   const writable = useEnvironmentsWithScope(environments, AuthOrchestrationOperateScope);
   return {
-    ...createScratchProjectActions({
-      environments: () => environments,
-      primaryEnvironmentId: () => primaryEnvironmentId,
-      registry,
-      canOperate: (id) => writable.has(id),
-      handleNewThread,
-    }),
+    ...createScratchProjectActions(
+      {
+        environments: () => environments,
+        primaryEnvironmentId: () => primaryEnvironmentId,
+        registry,
+        canOperate: (id) => writable.has(id),
+        handleNewThread,
+      },
+      uiText,
+    ),
     canCreateProject: environments.some(
       (entry) => entry.connection.phase === "connected" && writable.has(entry.environmentId),
     ),

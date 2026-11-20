@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import type { EnvironmentId, OrchestrationV2Subagent } from "@t3tools/contracts";
 import { useState } from "react";
@@ -39,7 +40,9 @@ export function SubagentStopButton(props: {
         : interruptTurn({ environmentId: props.environmentId, input: target.input })
     ).finally(() => setStopping(false));
     if (result._tag === "Failure") {
-      Dialog.alert(workflow ? "Could not stop workflow" : "Could not stop agent");
+      Dialog.alert(
+        workflow ? readUiText("Could not stop workflow") : readUiText("Could not stop agent"),
+      );
     }
   };
 
@@ -52,9 +55,11 @@ export function SubagentStopButton(props: {
         disabled={stopping}
         onPress={() =>
           Dialog.confirm({
-            title: workflow ? "Stop workflow?" : "Stop agent?",
-            message: workflow ? `Every running agent in ${label} stops.` : `Stop ${label}?`,
-            confirmText: "Stop",
+            title: workflow ? readUiText("Stop workflow?") : readUiText("Stop agent?"),
+            message: workflow
+              ? readUiText("Every running agent in {0} stops.", [label])
+              : readUiText("Stop {0}?", [label]),
+            confirmText: readUiText("Stop"),
             destructive: true,
             onConfirm: () => void stop(),
           })

@@ -5,6 +5,7 @@ import * as Schema from "effect/Schema";
 
 import * as DesktopClientSettings from "../../settings/DesktopClientSettings.ts";
 import * as DesktopSnapShot from "../../snapShot/DesktopSnapShot.ts";
+import * as DesktopApplicationMenu from "../../window/DesktopApplicationMenu.ts";
 import * as IpcChannels from "../channels.ts";
 import * as DesktopIpc from "../DesktopIpc.ts";
 
@@ -25,7 +26,11 @@ export const setClientSettings = DesktopIpc.makeIpcMethod({
   handler: Effect.fn("desktop.ipc.clientSettings.set")(function* (settings) {
     const clientSettings = yield* DesktopClientSettings.DesktopClientSettings;
     const snapShot = yield* DesktopSnapShot.DesktopSnapShot;
+    const previous = yield* clientSettings.get;
     yield* clientSettings.set(settings);
+    if (Option.isNone(previous) || previous.value.uiLanguage !== settings.uiLanguage) {
+      yield* (yield* DesktopApplicationMenu.DesktopApplicationMenu).configure;
+    }
     yield* snapShot.configure(settings);
   }),
 });

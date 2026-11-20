@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { useState } from "react";
 import {
   deriveTimelineEntriesFromVisibleTurnItemsWithState,
@@ -21,9 +22,10 @@ export function useIncrementalTimelineEntries(
   threadKey: string | null,
   input: TimelineEntriesInput,
 ): TimelineEntriesProjection["entries"] {
+  const uiText = useUiText();
   const [state, setState] = useState(() => ({
     threadKey,
-    projection: deriveTimelineEntriesFromVisibleTurnItemsWithState(input),
+    projection: deriveTimelineEntriesFromVisibleTurnItemsWithState(input, undefined, uiText),
   }));
   if (state.threadKey === threadKey && sameInput(state.projection.input, input)) {
     return state.projection.entries;
@@ -31,6 +33,7 @@ export function useIncrementalTimelineEntries(
   const projection = deriveTimelineEntriesFromVisibleTurnItemsWithState(
     input,
     state.threadKey === threadKey ? state.projection : null,
+    uiText,
   );
   setState({ threadKey, projection });
   return projection.entries;

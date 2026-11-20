@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { decodeComposerContextFragment } from "@t3tools/shared/composerContextClipboard";
 import {
   collectComposerContextReferences,
@@ -162,6 +163,7 @@ function enrichedStyle(
 }
 
 export function MobileEnrichedMarkdownText(props: SelectableMarkdownTextProps) {
+  const uiText = useUiText();
   const { renderImage, resolveImageSource, fileEmbedLabel } = props;
   const { themeAppearance, mathRenderingEnabled } = useAppearancePreferences();
   const { markdown, fileHrefs } = useMemo(() => {
@@ -222,9 +224,9 @@ export function MobileEnrichedMarkdownText(props: SelectableMarkdownTextProps) {
             const menu = fileContextMenu?.(url) ?? {
               title: url,
               actions: [
-                { id: "enriched-open-link", title: "Open link" },
-                { id: "enriched-copy-link", title: "Copy link" },
-                { id: "enriched-share-link", title: "Share link" },
+                { id: "enriched-open-link", title: uiText("Open link") },
+                { id: "enriched-copy-link", title: uiText("Copy link") },
+                { id: "enriched-share-link", title: uiText("Share link") },
               ],
             };
             return [
@@ -294,8 +296,8 @@ export function MobileEnrichedMarkdownText(props: SelectableMarkdownTextProps) {
             const menu = props.fileContextMenu?.(url) ?? {
               title: url,
               actions: [
-                { id: "enriched-open-link", title: "Open link" },
-                { id: "enriched-copy-link", title: "Copy link" },
+                { id: "enriched-open-link", title: uiText("Open link") },
+                { id: "enriched-copy-link", title: uiText("Copy link") },
               ],
             };
             setActiveMenu({ url, menu });

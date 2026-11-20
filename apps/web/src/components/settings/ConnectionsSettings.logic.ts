@@ -1,3 +1,4 @@
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
 import * as DateTime from "effect/DateTime";
 
 import { resolveDesktopPairingUrl, resolveHostedPairingUrl } from "./pairingUrls";
@@ -95,7 +96,10 @@ export function isWslSettingsRowVisible(input: {
  * Once client/server versions match, this passive Version label follows the sidebar update action,
  * including retryable failures. Rechecks retain downloaded-update labels; `state` is null outside desktop.
  */
-export function resolveLocalVersionStatusLabel(state: DesktopUpdateState | null): string {
+export function resolveLocalVersionStatusLabel(
+  state: DesktopUpdateState | null,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
   if (!state) return "Up to date";
   if (state.status === "downloading") {
     return state.availableVersion
@@ -109,7 +113,7 @@ export function resolveLocalVersionStatusLabel(state: DesktopUpdateState | null)
     (state.status === "checking" && state.downloadedVersion !== null)
   ) {
     const version = getDesktopUpdateDownloadedVersion(state);
-    return version ? `Update ${version} downloaded` : "Update downloaded";
+    return version ? `Update ${version} downloaded` : uiText("Update downloaded");
   }
   if (action === "download") {
     return state.availableVersion

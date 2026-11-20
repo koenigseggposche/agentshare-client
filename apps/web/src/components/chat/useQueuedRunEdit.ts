@@ -1,3 +1,6 @@
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
+
+import { useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import {
   makeQueuedRunEditStore,
@@ -87,13 +90,16 @@ function queuedEditDraftTarget(routeThreadRef: ScopedThreadRef, runId: RunId) {
   return DraftId.make(`queued-edit:${scopedThreadKey(routeThreadRef)}:${runId}`);
 }
 
-async function submitQueuedRunEdit(input: {
-  readonly environmentId: EnvironmentId;
-  readonly draftTarget: ComposerThreadTarget;
-  readonly editing: EditingQueuedRun;
-  readonly content: QueuedRunEditContent;
-  readonly editQueuedRun: ReturnType<typeof useEditQueuedRunCommand>;
-}): Promise<string | null> {
+async function submitQueuedRunEdit(
+  input: {
+    readonly environmentId: EnvironmentId;
+    readonly draftTarget: ComposerThreadTarget;
+    readonly editing: EditingQueuedRun;
+    readonly content: QueuedRunEditContent;
+    readonly editQueuedRun: ReturnType<typeof useEditQueuedRunCommand>;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): Promise<string | null> {
   const { environmentId, draftTarget, editing, content } = input;
   const editText = content.prompt.trim();
   const newAttachments = [...content.images, ...content.files];
@@ -131,19 +137,22 @@ async function submitQueuedRunEdit(input: {
         editing.existingAttachments.some((attachment) => attachment.id === record.attachmentId),
     );
     const newRecords =
-      buildMessageContext({
-        terminalContexts: content.terminalContexts.filter(
-          (context) => context.text.trim().length > 0,
-        ),
-        reviewComments: content.reviewComments,
-        previewAnnotations: content.previewAnnotations,
-        threadContexts: content.threadContexts,
-        environmentContexts: content.environmentContexts,
-        attachments: newAttachments.map((attachment, index) => ({
-          attachment,
-          attachmentId: uploads[editing.existingAttachments.length + index]?.id ?? attachment.id,
-        })),
-      })?.records ?? [];
+      buildMessageContext(
+        {
+          terminalContexts: content.terminalContexts.filter(
+            (context) => context.text.trim().length > 0,
+          ),
+          reviewComments: content.reviewComments,
+          previewAnnotations: content.previewAnnotations,
+          threadContexts: content.threadContexts,
+          environmentContexts: content.environmentContexts,
+          attachments: newAttachments.map((attachment, index) => ({
+            attachment,
+            attachmentId: uploads[editing.existingAttachments.length + index]?.id ?? attachment.id,
+          })),
+        },
+        uiText,
+      )?.records ?? [];
     const result = await input.editQueuedRun({
       environmentId,
       input: {
@@ -186,6 +195,7 @@ export function useQueuedRunEdit(input: {
   readonly promptRef: { current: string };
   readonly composerRef: RefObject<ChatComposerHandle | null>;
 }) {
+  const uiText = useUiText();
   const {
     environmentId,
     routeThreadRef,
@@ -274,11 +284,11 @@ export function useQueuedRunEdit(input: {
           toastManager.add(
             stackedThreadToast({
               type: recovery === "kept" ? "info" : "warning",
-              title: "Queued message is no longer queued",
+              title: uiText("Queued message is no longer queued"),
               description:
                 recovery === "kept"
-                  ? `Your unsaved edit${where} was kept in the composer.`
-                  : `Your unsaved edit${where} was discarded.`,
+                  ? uiText("Your unsaved edit{0} was kept in the composer.", [where])
+                  : uiText("Your unsaved edit{0} was discarded.", [where]),
             }),
           );
         },
@@ -327,13 +337,16 @@ export function useQueuedRunEdit(input: {
     // The save's result decides the edit's fate, even if the run starts meanwhile.
     const finishSave = queuedRunEdits.startSave(editKey);
     if (finishSave === null) return;
-    const error = await submitQueuedRunEdit({
-      environmentId,
-      draftTarget,
-      editing,
-      content,
-      editQueuedRun: editQueuedRunCommand,
-    });
+    const error = await submitQueuedRunEdit(
+      {
+        environmentId,
+        draftTarget,
+        editing,
+        content,
+        editQueuedRun: editQueuedRunCommand,
+      },
+      uiText,
+    );
     setThreadError(editing.threadId, error);
     const current = finishSave(error === null);
     if (error !== null) return;

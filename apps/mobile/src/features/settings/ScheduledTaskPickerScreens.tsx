@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useNavigation } from "@react-navigation/native";
 import * as Haptics from "expo-haptics";
 import { useMemo, useState } from "react";
@@ -13,9 +14,12 @@ import { SettingsScreen } from "./components/SettingsScreen";
 import { useScheduledTaskEditor } from "./scheduled-task-editor";
 
 function MissingTaskDraft() {
+  const uiText = useUiText();
   return (
-    <SettingsScreen title="Scheduled task">
-      <Text className="p-5 text-base text-foreground-muted">Open a scheduled task form first.</Text>
+    <SettingsScreen title={uiText("Scheduled task")}>
+      <Text className="p-5 text-base text-foreground-muted">
+        {uiText("Open a scheduled task form first.")}
+      </Text>
     </SettingsScreen>
   );
 }
@@ -105,6 +109,7 @@ export function ScheduledTaskModelPickerRouteScreen() {
 }
 
 export function ScheduledTaskBranchPickerRouteScreen() {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const { editor, setEditor } = useScheduledTaskEditor();
   const projects = useProjects();
@@ -128,7 +133,7 @@ export function ScheduledTaskBranchPickerRouteScreen() {
 
   return (
     <BranchPickerScreen
-      title="Base branch"
+      title={uiText("Base branch")}
       project={project}
       branches={visibleBranches}
       selectedBranchName={editor.draft.baseRef}

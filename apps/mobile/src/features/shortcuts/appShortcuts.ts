@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { Action } from "expo-quick-actions";
 import type { NavigationState } from "@react-navigation/native";
 import { EnvironmentId, ThreadId, type ScopedThreadRef } from "@t3tools/contracts";
@@ -88,11 +90,14 @@ export function withRecentThreadShortcut(
   ].slice(0, MAX_RECENT_THREAD_SHORTCUTS);
 }
 
-export function buildShortcutActions(recents: ReadonlyArray<RecentThreadShortcut>): Action[] {
+export function buildShortcutActions(
+  recents: ReadonlyArray<RecentThreadShortcut>,
+  uiText: UiTranslator = uiTranslators.en,
+): Action[] {
   return [
     {
       id: NEW_TASK_SHORTCUT_ID,
-      title: "New task",
+      title: uiText("New task"),
       icon: SHORTCUT_ICON,
       params: { href: NEW_TASK_SHORTCUT_HREF },
     },

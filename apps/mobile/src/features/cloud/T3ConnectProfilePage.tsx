@@ -1,3 +1,6 @@
+import { readUiText } from "../../i18n/uiText";
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { findErrorTraceId } from "@t3tools/client-runtime/errors";
 import {
   isAtomCommandInterrupted,
@@ -39,10 +42,17 @@ function endpointLabel(environment: RelayClientEnvironmentRecord): string {
 function confirmDeregister(environment: RelayClientEnvironmentRecord, onConfirm: () => void) {
   const title = "Deregister server?";
   const message = `“${environment.label}” will be removed from this account. T3 Connect access will be revoked, any managed tunnel will be removed, and a host space will become available. Local connections on your devices are not changed.`;
-  Dialog.confirm({ title, message, confirmText: "Deregister", destructive: true, onConfirm });
+  Dialog.confirm({
+    title,
+    message,
+    confirmText: readUiText("Deregister"),
+    destructive: true,
+    onConfirm,
+  });
 }
 
 export function T3ConnectProfilePage() {
+  const uiText = useUiText();
   const environmentsState = useManagedRelayEnvironments();
   const deregisterEnvironment = useAtomCommand(deregisterManagedRelayEnvironmentCommand, {
     reportFailure: false,
@@ -94,15 +104,15 @@ export function T3ConnectProfilePage() {
       cause,
     });
     Dialog.alert(
-      "Could not deregister server",
-      traceId ? `${message}\n\nTrace ID: ${traceId}` : message,
+      readUiText("Could not deregister server"),
+      traceId ? readUiText("{0}\n\nTrace ID: {1}", [message, traceId]) : message,
       traceId
         ? [
             {
-              text: "Copy trace ID",
+              text: readUiText("Copy trace ID"),
               onPress: () => copyTextWithHaptic(traceId, { target: "connection-trace-id" }),
             },
-            { text: "OK", style: "cancel" },
+            { text: readUiText("OK"), style: "cancel" },
           ]
         : undefined,
     );
@@ -132,17 +142,17 @@ export function T3ConnectProfilePage() {
         />
       }
     >
-      <ClerkSectionHeader>Registered servers</ClerkSectionHeader>
+      <ClerkSectionHeader>{uiText("Registered servers")}</ClerkSectionHeader>
 
       {environmentsState.error ? (
         <>
           <ClerkRow
-            title="Could not load T3 Connect environments"
+            title={uiText("Could not load T3 Connect environments")}
             subtitle={environmentsState.error}
           />
           {errorTraceId ? (
             <ClerkButtonRow
-              label="Copy trace ID"
+              label={uiText("Copy trace ID")}
               onPress={() => {
                 copyTextWithHaptic(errorTraceId, { target: "connection-trace-id" });
               }}
@@ -152,7 +162,9 @@ export function T3ConnectProfilePage() {
       ) : isInitialLoad ? (
         <View className="flex-row items-center gap-3 px-6 py-4">
           <AppActivityIndicator colorClassName={"accent-clerk-foreground-muted"} size="small" />
-          <Text className="text-base text-clerk-foreground-muted">Loading environments</Text>
+          <Text className="text-base text-clerk-foreground-muted">
+            {uiText("Loading environments")}
+          </Text>
         </View>
       ) : environments.length > 0 ? (
         environments.map((environment) => (
@@ -168,14 +180,14 @@ export function T3ConnectProfilePage() {
                 />
               ) : (
                 <Menu
-                  actions={ENVIRONMENT_MENU_ACTIONS}
+                  actions={translateUiLabels(ENVIRONMENT_MENU_ACTIONS, uiText)}
                   isAnchoredToRight
                   onPressAction={() =>
                     confirmDeregister(environment, () => void handleDeregister(environment))
                   }
                 >
                   <Pressable
-                    accessibilityLabel={`Actions for ${environment.label}`}
+                    accessibilityLabel={uiText("Actions for {0}", [environment.label])}
                     accessibilityRole="button"
                     disabled={deregisteringEnvironmentId !== null}
                     className="size-[30px] items-center justify-center active:opacity-60 disabled:opacity-50"
@@ -196,13 +208,13 @@ export function T3ConnectProfilePage() {
         ))
       ) : (
         <ClerkRow
-          title="No servers registered"
-          subtitle="Link a server from its local Settings to reach it through T3 Connect."
+          title={uiText("No servers registered")}
+          subtitle={uiText("Link a server from its local Settings to reach it through T3 Connect.")}
         />
       )}
 
       <Text className="px-6 pt-6 text-xs leading-normal text-clerk-foreground-muted">
-        Connections on this device are managed in Settings.
+        {uiText("Connections on this device are managed in Settings.")}
       </Text>
     </ScrollView>
   );

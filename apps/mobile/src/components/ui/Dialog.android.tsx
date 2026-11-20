@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import { NativeThemeHost } from "./NativeThemeHost.android";
 import {
   AlertDialog,
@@ -68,7 +69,7 @@ function getPresented() {
 }
 
 export function alert(...[title, message, buttons, options]: Parameters<typeof Alert.alert>): void {
-  const actions = buttons?.length ? buttons.slice(0, 3) : [{ text: "OK" }];
+  const actions = buttons?.length ? buttons.slice(0, 3) : [{ text: readUiText("OK") }];
   const normalized = actions.map((action, index) =>
     index === actions.length - 1 ? { ...action, text: action.text || "OK" } : action,
   );
@@ -115,7 +116,7 @@ export function Host() {
           message: presented.request.message ?? undefined,
           confirmText: "",
         }}
-        alertActions={presented.request.buttons ?? [{ text: "OK" }]}
+        alertActions={presented.request.buttons ?? [{ text: readUiText("OK") }]}
         dismissable={presented.request.options?.cancelable ?? false}
         onAlertAction={(action) => {
           dismiss(presented.id);

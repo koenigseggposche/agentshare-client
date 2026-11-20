@@ -1,3 +1,7 @@
+import { readUiText } from "../../i18n/uiText";
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import * as Dialog from "../../components/ui/Dialog";
 import type {
   EnvironmentId,
@@ -98,18 +102,21 @@ export function resolveComposerMenuSelection(input: {
   return { start: Math.min(input.local.start, length), end: Math.min(input.local.end, length) };
 }
 
-export function buildComposerSlashCommandItems(input: {
-  readonly query: string;
-  readonly atMessageStart: boolean;
-  readonly hasThread: boolean;
-  readonly hasCompactableConversation?: boolean;
-  readonly offersUsageLimits?: boolean;
-  readonly allowInteractionMode: boolean;
-  readonly selectedProviderStatus: Pick<
-    ServerProvider,
-    "driver" | "slashCommands" | "showInteractionModeToggle"
-  > | null;
-}): ComposerCommandItem[] {
+export function buildComposerSlashCommandItems(
+  input: {
+    readonly query: string;
+    readonly atMessageStart: boolean;
+    readonly hasThread: boolean;
+    readonly hasCompactableConversation?: boolean;
+    readonly offersUsageLimits?: boolean;
+    readonly allowInteractionMode: boolean;
+    readonly selectedProviderStatus: Pick<
+      ServerProvider,
+      "driver" | "slashCommands" | "showInteractionModeToggle"
+    > | null;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): ComposerCommandItem[] {
   const query = input.query.toLowerCase();
   const allowInteractionMode =
     input.allowInteractionMode && input.selectedProviderStatus?.showInteractionModeToggle !== false;
@@ -119,21 +126,21 @@ export function buildComposerSlashCommandItems(input: {
       type: "slash-command",
       command: "model",
       label: "/model",
-      description: "Switch model",
+      description: uiText("Switch model"),
     },
     {
       id: "cmd:plan",
       type: "slash-command",
       command: "plan",
       label: "/plan",
-      description: "Switch to plan mode",
+      description: uiText("Switch to plan mode"),
     },
     {
       id: "cmd:default",
       type: "slash-command",
       command: "default",
       label: "/default",
-      description: "Switch to default mode",
+      description: uiText("Switch to default mode"),
     },
   ] satisfies ComposerCommandItem[];
   const items: ComposerCommandItem[] = builtIn.filter(
@@ -247,6 +254,7 @@ export function useComposerCommandMenu({
   readonly onUpdateInteractionMode?: (mode: ProviderInteractionMode) => void;
   readonly onUsageLimits?: () => void;
 }) {
+  const uiText = useUiText();
   const [localSelection, setLocalSelection] = useState(() => ({
     ownerKey,
     ...composerSelectionAtEnd(draftMessage),
@@ -343,23 +351,26 @@ export function useComposerCommandMenu({
     if (trigger.kind === "slash-command") {
       const q = trigger.query.toLowerCase();
       const visibleSkills = getProviderSkillsForSlashMenu(skills, true);
-      const commandItems = buildComposerSlashCommandItems({
-        query: q,
-        atMessageStart: trigger.rangeStart === 0,
-        hasThread,
-        hasCompactableConversation,
-        offersUsageLimits,
-        allowInteractionMode: onUpdateInteractionMode !== undefined,
-        selectedProviderStatus: selectedProviderStatus
-          ? {
-              ...selectedProviderStatus,
-              slashCommands: getProviderSlashCommandsForSlashMenu(
-                resolveProviderSlashCommandsForCwd(selectedProviderStatus, projectCwd),
-                visibleSkills,
-              ),
-            }
-          : null,
-      });
+      const commandItems = buildComposerSlashCommandItems(
+        {
+          query: q,
+          atMessageStart: trigger.rangeStart === 0,
+          hasThread,
+          hasCompactableConversation,
+          offersUsageLimits,
+          allowInteractionMode: onUpdateInteractionMode !== undefined,
+          selectedProviderStatus: selectedProviderStatus
+            ? {
+                ...selectedProviderStatus,
+                slashCommands: getProviderSlashCommandsForSlashMenu(
+                  resolveProviderSlashCommandsForCwd(selectedProviderStatus, projectCwd),
+                  visibleSkills,
+                ),
+              }
+            : null,
+        },
+        uiText,
+      );
 
       const skillItems = visibleSkills
         .filter((skill) => matchesSlashSkillQuery(skill, q))
@@ -367,7 +378,7 @@ export function useComposerCommandMenu({
           id: `skill:${skill.name}`,
           type: "skill" as const,
           skill,
-          label: `skill:${skill.name}`,
+          label: uiText("skill:{0}", [skill.name]),
           description: skill.shortDescription ?? skill.description ?? "",
         }));
 
@@ -499,7 +510,10 @@ export function useComposerCommandMenu({
       const existing = getComposerDraftSnapshot(ownerKey).context?.records ?? [];
       const alreadyAttached = existing.some((entry) => entry.contextId === record.contextId);
       if (!alreadyAttached && existing.length >= COMPOSER_CONTEXT_MAX_RECORDS) {
-        Dialog.alert("Too many context items", "Remove some context from the draft and try again.");
+        Dialog.alert(
+          readUiText("Too many context items"),
+          readUiText("Remove some context from the draft and try again."),
+        );
         return;
       }
       const result = replaceTextRange(
@@ -531,7 +545,10 @@ export function useComposerCommandMenu({
       const existing = getComposerDraftSnapshot(ownerKey).context?.records ?? [];
       const alreadyAttached = existing.some((entry) => entry.contextId === record.contextId);
       if (!alreadyAttached && existing.length >= COMPOSER_CONTEXT_MAX_RECORDS) {
-        Dialog.alert("Too many context items", "Remove some context from the draft and try again.");
+        Dialog.alert(
+          readUiText("Too many context items"),
+          readUiText("Remove some context from the draft and try again."),
+        );
         return;
       }
       const result = replaceTextRange(
@@ -563,7 +580,10 @@ export function useComposerCommandMenu({
         (getComposerDraftSnapshot(ownerKey).context?.records.length ?? 0) >=
         COMPOSER_CONTEXT_MAX_RECORDS
       ) {
-        Dialog.alert("Too many context items", "Remove some context from the draft and try again.");
+        Dialog.alert(
+          readUiText("Too many context items"),
+          readUiText("Remove some context from the draft and try again."),
+        );
         return;
       }
       const result = replaceTextRange(

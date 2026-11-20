@@ -1,5 +1,6 @@
+import { SettingsDisclosure } from "../settings/SettingsDisclosure";
+import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { AgentShareFunds } from "./AgentShareFunds";
-import { AgentShareDevices } from "./AgentShareDevices";
 import { useState } from "react";
 import { useAtomValue } from "@effect/atom-react";
 import type {
@@ -116,9 +117,7 @@ export function AgentShareWallet({
   return (
     <SettingsSection
       title={
-        taskId === undefined
-          ? t("账号钱包与设备", "Account wallet and devices")
-          : t("任务账单", "Task charges")
+        taskId === undefined ? t("钱包与账单", "Wallet and records") : t("任务账单", "Task charges")
       }
       hideTitle={taskId !== undefined}
     >
@@ -160,26 +159,32 @@ export function AgentShareWallet({
                 : t("返回余额", "Back to balances")}
           </Button>
         ) : null}
+
         {taskId === undefined ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setSelection({ action: "devices", owner })}
+          <Select
+            value={selection.action === "history" ? selection.kind : null}
+            onValueChange={(kind) => {
+              if (kinds.some(([value]) => value === kind))
+                setSelection({
+                  action: "history",
+                  owner,
+                  kind: kind as AgentShareWalletHistoryKind,
+                  cursor: "",
+                });
+            }}
           >
-            {t("已登录设备", "Signed-in devices")}
-          </Button>
+            <SelectTrigger aria-label={t("记录类型", "Record type")}>
+              <SelectValue placeholder={t("查看全部记录", "Browse records")} />
+            </SelectTrigger>
+            <SelectPopup>
+              {kinds.map(([kind, label]) => (
+                <SelectItem key={kind} value={kind}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectPopup>
+          </Select>
         ) : null}
-        {taskId === undefined &&
-          kinds.map(([kind, label]) => (
-            <Button
-              key={kind}
-              size="sm"
-              variant="outline"
-              onClick={() => setSelection({ action: "history", owner, kind, cursor: "" })}
-            >
-              {label}
-            </Button>
-          ))}
       </div>
       {query.error ? (
         <p role="alert">
@@ -206,21 +211,24 @@ export function AgentShareWallet({
             control={<strong>{money(wallet.available_micros, wallet.currency)}</strong>}
           />
           <SettingsRow
-            title={t("冻结余额", "Held balance")}
-            control={<span>{money(wallet.held_micros, wallet.currency)}</span>}
-          />
-          <SettingsRow
-            title={t("待结算收益", "Pending earnings")}
-            control={<span>{money(wallet.pending_earnings_micros, wallet.currency)}</span>}
-          />
-          <SettingsRow
             title={t("可用收益", "Available earnings")}
             control={<span>{money(wallet.available_earnings_micros, wallet.currency)}</span>}
           />
-          <SettingsRow
-            title={t("提现处理中", "Withdrawal hold")}
-            control={<span>{money(wallet.withdrawal_held_micros, wallet.currency)}</span>}
-          />
+          <SettingsDisclosure title={t("资金明细", "Balance details")}>
+            <SettingsRow
+              title={t("冻结余额", "Held balance")}
+              control={<span>{money(wallet.held_micros, wallet.currency)}</span>}
+            />
+            <SettingsRow
+              title={t("待结算收益", "Pending earnings")}
+              control={<span>{money(wallet.pending_earnings_micros, wallet.currency)}</span>}
+            />
+
+            <SettingsRow
+              title={t("提现处理中", "Withdrawal hold")}
+              control={<span>{money(wallet.withdrawal_held_micros, wallet.currency)}</span>}
+            />
+          </SettingsDisclosure>
         </div>
       ))}
       {overview ? (
@@ -233,82 +241,66 @@ export function AgentShareWallet({
             title={t("累计收益", "Total earnings")}
             control={<span>{money(overview.summary.earned_micros, overview.currency)}</span>}
           />
-          <SettingsRow
-            title={t("收益优先支付", "Pay from earnings first")}
-            description={t(
-              "优先使用可用收益支付新请求；已开始的请求保持原付款方式。",
-              "Use available earnings first for new requests. Requests already started keep their payment method.",
-            )}
-            control={
-              <div className="flex items-center gap-3">
-                <span>
-                  {overview.payment_preference.earnings_first
-                    ? t("已开启", "On")
-                    : t("已关闭", "Off")}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!canCommand || commandPending || commandUnconfirmed || query.isPending}
-                  onClick={async () => {
-                    setCommandPending(true);
-                    try {
-                      const result = await command({
-                        environmentId,
-                        input: {
-                          action: "paymentPreference",
-                          owner,
-                          currency: overview.payment_preference.currency,
-                          earnings_first: !overview.payment_preference.earnings_first,
-                        },
-                      });
-                      if (result._tag === "Success") query.refresh();
-                      else setCommandUnconfirmed(true);
-                    } catch {
-                      setCommandUnconfirmed(true);
+          <SettingsDisclosure title={t("支付偏好", "Payment preferences")}>
+            <SettingsRow
+              title={t("收益优先支付", "Pay from earnings first")}
+              description={t(
+                "优先使用可用收益支付新请求；已开始的请求保持原付款方式。",
+                "Use available earnings first for new requests. Requests already started keep their payment method.",
+              )}
+              control={
+                <div className="flex items-center gap-3">
+                  <span>
+                    {overview.payment_preference.earnings_first
+                      ? t("已开启", "On")
+                      : t("已关闭", "Off")}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={
+                      !canCommand || commandPending || commandUnconfirmed || query.isPending
                     }
-                    setCommandPending(false);
-                  }}
-                >
-                  {overview.payment_preference.earnings_first
-                    ? t("关闭", "Turn off")
-                    : t("开启", "Turn on")}
-                </Button>
-              </div>
-            }
-          />
-          <AgentShareFunds
-            environmentId={environmentId}
-            owner={owner}
-            language={language}
-            overview={overview}
-            onChanged={query.refresh}
-          />
+                    onClick={async () => {
+                      setCommandPending(true);
+                      try {
+                        const result = await command({
+                          environmentId,
+                          input: {
+                            action: "paymentPreference",
+                            owner,
+                            currency: overview.payment_preference.currency,
+                            earnings_first: !overview.payment_preference.earnings_first,
+                          },
+                        });
+                        if (result._tag === "Success") query.refresh();
+                        else setCommandUnconfirmed(true);
+                      } catch {
+                        setCommandUnconfirmed(true);
+                      }
+                      setCommandPending(false);
+                    }}
+                  >
+                    {overview.payment_preference.earnings_first
+                      ? t("关闭", "Turn off")
+                      : t("开启", "Turn on")}
+                  </Button>
+                </div>
+              }
+            />
+          </SettingsDisclosure>
+          <SettingsDisclosure title={t("充值与提现", "Top up and withdraw")}>
+            <AgentShareFunds
+              environmentId={environmentId}
+              owner={owner}
+              language={language}
+              overview={overview}
+              onChanged={query.refresh}
+            />
+          </SettingsDisclosure>
           <p className="text-sm text-muted-foreground">{t("最近消费", "Recent spending")}</p>
           {overview.spending.slice(0, 6).map(record)}
         </>
-      ) : null}
-      {value?.action === "devices" ? (
-        <AgentShareDevices
-          devices={value.data.devices}
-          currentDeviceId={value.data.current_device_id}
-          language={language}
-          disabled={!canCommand || commandPending || commandUnconfirmed || query.isPending}
-          onRevoke={async (device_id) => {
-            setCommandPending(true);
-            try {
-              const result = await command({
-                environmentId,
-                input: { action: "revokeDevice", owner, device_id },
-              });
-              if (result._tag === "Success") query.refresh();
-              else setCommandUnconfirmed(true);
-            } catch {
-              setCommandUnconfirmed(true);
-            }
-            setCommandPending(false);
-          }}
-        />
       ) : null}
       {value?.action === "history" ? (
         <>

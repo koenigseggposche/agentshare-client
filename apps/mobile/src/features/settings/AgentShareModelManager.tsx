@@ -1,3 +1,6 @@
+import { useNavigation } from "@react-navigation/native";
+import { useUiText } from "../../i18n/uiText";
+import { SettingsDisclosure } from "./components/SettingsDisclosure";
 import { uuidv4 } from "../../lib/uuid";
 import { useState } from "react";
 import { View } from "react-native";
@@ -31,6 +34,8 @@ export function AgentShareModelManager({
   owner: string;
   language: "zh" | "en";
 }) {
+  const uiText = useUiText();
+  const navigation = useNavigation();
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const query = useEnvironmentQuery(
     agentShareEnvironment.modelManager({ environmentId, input: { owner } }),
@@ -46,6 +51,7 @@ export function AgentShareModelManager({
   );
   const [submissionUnknown, setSubmissionUnknown] = useState(false);
   const [message, setMessage] = useState<{ zh: string; en: string } | null>(null);
+  const [showCatalog, setShowCatalog] = useState(false);
   const [importId, setImportId] = useState("");
   const [importPath, setImportPath] = useState("");
   const [libraryPath, setLibraryPath] = useState("");
@@ -81,6 +87,9 @@ export function AgentShareModelManager({
     !operations?.some((operation) => operation.id === submitted.id);
   const libraryBlocked = blocked || operations === undefined || libraryBusy || unresolved;
   const entries = data ? modelManagerEntries(data, language) : [];
+  const visibleEntries = entries.filter((entry) =>
+    showCatalog ? !entry.installed : entry.installed,
+  );
   return (
     <>
       <SettingsSection title={t("执行电脑的本机模型", "Local models on the host")}>
@@ -92,9 +101,11 @@ export function AgentShareModelManager({
         </Text>
         {hw ? (
           <Text className="px-5 pb-3" textRole="footnote">
-            {hw.os} · {hw.arch} · {hw.version} · RAM {formatModelBytes(hw.ram_bytes)}
+            {hw.os} · {hw.arch} · {hw.version}
+            {uiText(" · RAM ")}
+            {formatModelBytes(hw.ram_bytes)}
             {hw.gpu ? ` · ${hw.gpu}` : ""}
-            {hw.vram_bytes ? ` · VRAM ${formatModelBytes(hw.vram_bytes)}` : ""}
+            {hw.vram_bytes ? uiText(" · VRAM {0}", [formatModelBytes(hw.vram_bytes)]) : ""}
           </Text>
         ) : null}
         <ListActionRow
@@ -187,16 +198,34 @@ export function AgentShareModelManager({
             )}
           </Text>
         ) : null}
-        {data && entries.length === 0 ? (
+        {data && visibleEntries.length === 0 ? (
           <Text className="px-5 py-3">
             {t(
-              "尚无模型，先刷新目录或导入离线包。",
-              "No models yet. Refresh the catalog or import an offline bundle.",
+              showCatalog
+                ? "没有可下载的模型，请刷新目录。"
+                : "尚未安装模型，请选择下载模型或导入离线包。",
+              showCatalog
+                ? "No models to download. Refresh the catalog."
+                : "No installed models. Choose Download models or import an offline bundle.",
             )}
           </Text>
         ) : null}
       </SettingsSection>
-      {entries.map((entry) => (
+      <SettingsSection title={t("模型库", "Model library")}>
+        <ListActionRow
+          label={t("管理模型分享", "Manage model sharing")}
+          onPress={() => navigation.navigate("SettingsModelSharing")}
+        />
+        <ListActionRow
+          label={t("已安装与下载中", "Installed and downloading")}
+          onPress={() => setShowCatalog(false)}
+        />
+        <ListActionRow
+          label={t("下载模型", "Download models")}
+          onPress={() => setShowCatalog(true)}
+        />
+      </SettingsSection>
+      {visibleEntries.map((entry) => (
         <SettingsSection key={entry.id} title={entry.name}>
           <Text className="px-5 py-3" textRole="footnote">
             {entry.id} · {entry.details}
@@ -234,76 +263,80 @@ export function AgentShareModelManager({
       ))}
       {data ? (
         <>
-          <ResourceBudget
-            key={`${data.state.budget.ram_bytes}:${data.state.budget.vram_bytes}:${data.state.budget.max_concurrent}`}
-            budget={data.state.budget}
-            language={language}
-            blocked={blocked}
-            run={run}
-          />
-          <SettingsSection title={t("离线导入", "Offline import")}>
-            <View className="gap-3 px-5 py-3">
-              <PathField
-                label={t("模型 ID", "Model ID")}
-                value={importId}
-                change={setImportId}
-                blocked={blocked}
-              />
-              <PathField
-                label={t(
-                  "离线包目录（执行电脑上的绝对路径）",
-                  "Bundle directory (absolute path on the host)",
-                )}
-                value={importPath}
-                change={setImportPath}
-                blocked={blocked}
-              />
-            </View>
-            <ListActionRow
-              label={t("校验并导入", "Verify and import")}
-              disabled={libraryBlocked || !importId.trim() || !importPath.trim()}
-              onPress={() =>
-                void run({
-                  operation: "importModel",
-                  body: {
-                    id: uuidv4(),
-                    owner,
-                    kind: "import",
-                    model_id: importId.trim(),
-                    path: importPath.trim(),
-                  },
-                })
-              }
+          <SettingsDisclosure
+            title={t("高级：资源、导入与存储", "Advanced: resources, imports and storage")}
+          >
+            <ResourceBudget
+              key={`${data.state.budget.ram_bytes}:${data.state.budget.vram_bytes}:${data.state.budget.max_concurrent}`}
+              budget={data.state.budget}
+              language={language}
+              blocked={blocked}
+              run={run}
             />
-          </SettingsSection>
-          <SettingsSection title={t("模型库位置", "Model library location")}>
-            <Text selectable className="px-5 py-3" textRole="footnote">
-              {data.library_path}
-            </Text>
-            <View className="px-5 pb-3">
-              <PathField
-                label={t(
-                  "新位置（执行电脑上的绝对路径）",
-                  "New location (absolute path on the host)",
-                )}
-                value={libraryPath}
-                change={setLibraryPath}
-                blocked={blocked}
+            <SettingsSection title={t("离线导入", "Offline import")}>
+              <View className="gap-3 px-5 py-3">
+                <PathField
+                  label={t("模型 ID", "Model ID")}
+                  value={importId}
+                  change={setImportId}
+                  blocked={blocked}
+                />
+                <PathField
+                  label={t(
+                    "离线包目录（执行电脑上的绝对路径）",
+                    "Bundle directory (absolute path on the host)",
+                  )}
+                  value={importPath}
+                  change={setImportPath}
+                  blocked={blocked}
+                />
+              </View>
+              <ListActionRow
+                label={t("校验并导入", "Verify and import")}
+                disabled={libraryBlocked || !importId.trim() || !importPath.trim()}
+                onPress={() =>
+                  void run({
+                    operation: "importModel",
+                    body: {
+                      id: uuidv4(),
+                      owner,
+                      kind: "import",
+                      model_id: importId.trim(),
+                      path: importPath.trim(),
+                    },
+                  })
+                }
               />
-            </View>
-            <ListActionRow
-              label={t("迁移模型库", "Move model library")}
-              disabled={
-                libraryBlocked || !libraryPath.trim() || libraryPath.trim() === data.library_path
-              }
-              onPress={() =>
-                void run({
-                  operation: "moveLibrary",
-                  body: { id: uuidv4(), owner, kind: "move", path: libraryPath.trim() },
-                })
-              }
-            />
-          </SettingsSection>
+            </SettingsSection>
+            <SettingsSection title={t("模型库位置", "Model library location")}>
+              <Text selectable className="px-5 py-3" textRole="footnote">
+                {data.library_path}
+              </Text>
+              <View className="px-5 pb-3">
+                <PathField
+                  label={t(
+                    "新位置（执行电脑上的绝对路径）",
+                    "New location (absolute path on the host)",
+                  )}
+                  value={libraryPath}
+                  change={setLibraryPath}
+                  blocked={blocked}
+                />
+              </View>
+              <ListActionRow
+                label={t("迁移模型库", "Move model library")}
+                disabled={
+                  libraryBlocked || !libraryPath.trim() || libraryPath.trim() === data.library_path
+                }
+                onPress={() =>
+                  void run({
+                    operation: "moveLibrary",
+                    body: { id: uuidv4(), owner, kind: "move", path: libraryPath.trim() },
+                  })
+                }
+              />
+            </SettingsSection>
+          </SettingsDisclosure>
         </>
       ) : null}
     </>
@@ -347,6 +380,7 @@ function ResourceBudget({
   blocked: boolean;
   run: (input: AgentShareCommandInput) => Promise<void>;
 }) {
+  const uiText = useUiText();
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const [ram, setRam] = useState((budget.ram_bytes / 1024 ** 3).toFixed(3));
   const [vram, setVram] = useState(((budget.vram_bytes ?? 0) / 1024 ** 3).toFixed(3));
@@ -362,8 +396,8 @@ function ResourceBudget({
       </Text>
       <View className="gap-3 px-5 pb-3">
         {[
-          { label: "RAM (GiB)", value: ram, change: setRam },
-          { label: "VRAM (GiB)", value: vram, change: setVram },
+          { label: uiText("RAM (GiB)"), value: ram, change: setRam },
+          { label: uiText("VRAM (GiB)"), value: vram, change: setVram },
           {
             label: t("并发（1–8）", "Concurrency (1–8)"),
             value: concurrency,

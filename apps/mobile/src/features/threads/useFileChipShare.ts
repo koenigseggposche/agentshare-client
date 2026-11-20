@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import { resolveAssetUrl } from "@t3tools/client-runtime/state/assets";
 import type { EnvironmentId, ThreadId } from "@t3tools/contracts";
@@ -47,8 +48,8 @@ export function useFileChipShare(
       .catch((error: unknown) => {
         if (!request.signal.aborted) {
           Dialog.alert(
-            "Could not share file",
-            error instanceof Error ? error.message : "Try again.",
+            readUiText("Could not share file"),
+            error instanceof Error ? error.message : readUiText("Try again."),
           );
         }
       })

@@ -1,3 +1,5 @@
+import { readUiTranslator } from "../../i18n/uiText";
+
 import {
   type EnvironmentId,
   type ProjectId,
@@ -89,8 +91,9 @@ export function useThreadLinkedPullRequest(input: {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Unable to update the thread pull request",
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: readUiTranslator()("Unable to update the thread pull request"),
+          description:
+            error instanceof Error ? error.message : readUiTranslator()("An error occurred."),
         }),
       );
     });

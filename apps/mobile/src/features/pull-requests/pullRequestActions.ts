@@ -1,3 +1,4 @@
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   sourceControlClients,
   type ChangeRequestTerminology,
@@ -38,6 +39,7 @@ export const MERGE_METHODS = {
 export function pullRequestActionLabel(
   action: PullRequestAction,
   terminology: ChangeRequestTerminology,
+  uiText: UiTranslator = uiTranslators.en,
 ): string {
   switch (action) {
     case "merge":
@@ -45,23 +47,23 @@ export function pullRequestActionLabel(
     case "ready":
       return "Mark ready for review";
     case "draft":
-      return "Convert to draft";
+      return uiText("Convert to draft");
     case "close":
       return `Close ${terminology.singular}`;
     case "reopen":
       return `Reopen ${terminology.singular}`;
     case "update-branch":
-      return "Update branch";
+      return uiText("Update branch");
     case "enable-auto-merge":
-      return "Enable auto-merge";
+      return uiText("Enable auto-merge");
     case "disable-auto-merge":
-      return "Disable auto-merge";
+      return uiText("Disable auto-merge");
     case "revert":
       return `Create revert ${terminology.singular}`;
     case "delete-branch":
-      return "Delete branch";
+      return uiText("Delete branch");
     case "approve-workflows":
-      return "Approve workflows";
+      return uiText("Approve workflows");
   }
 }
 

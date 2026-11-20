@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { ChatAttachment } from "@t3tools/contracts";
 import { formatAttachmentSize } from "@t3tools/client-runtime/state/attachments";
 
@@ -24,6 +25,7 @@ export function GuestMessageAttachments(props: {
   readonly fileHref?: (attachment: ChatFileAttachment) => string;
   readonly onOpenFile?: (attachment: ChatFileAttachment) => void;
 }) {
+  const uiText = useUiText();
   const { resolvedTheme } = useTheme();
   const images = props.attachments.filter(isImageAttachment);
   const files = props.attachments.filter(isFileAttachment);
@@ -40,7 +42,7 @@ export function GuestMessageAttachments(props: {
                   <button
                     type="button"
                     className="block size-full cursor-zoom-in"
-                    aria-label={`Preview ${image.name}`}
+                    aria-label={uiText("Preview {0}", [image.name])}
                     onClick={() => props.onOpenImage(image)}
                   >
                     {/* Isolate the thumbnail raster from nearby activity repaints in Chromium. */}
@@ -86,7 +88,7 @@ export function GuestMessageAttachments(props: {
           <button
             key={file.id}
             type="button"
-            aria-label={`Preview ${file.name}`}
+            aria-label={uiText("Preview {0}", [file.name])}
             onClick={() => props.onOpenFile?.(file)}
             className={cn(FILE_ROW, "cursor-pointer hover:underline")}
           >

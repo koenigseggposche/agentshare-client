@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { ListChoiceRow } from "../../components/ui/ListChoiceRow";
 import * as Dialog from "../../components/ui/Dialog";
 import { useAtomValue } from "@effect/atom-react";
@@ -49,6 +50,7 @@ const options: ReadonlyArray<{
 ];
 
 export function PullRequestRoutingSettings() {
+  const uiText = useUiText();
   const language = useWorkbenchLanguage();
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const catalog = useAtomValue(environmentCatalog.catalogValueAtom);
@@ -89,7 +91,7 @@ export function PullRequestRoutingSettings() {
                     {entry.target.label}
                   </Text>
                   <Text className="text-xs text-foreground-muted" numberOfLines={1}>
-                    {connectionCatalogDisplayUrl(entry) ?? "T3 Connect"}
+                    {connectionCatalogDisplayUrl(entry) ?? uiText("T3 Connect")}
                   </Text>
                 </View>
                 <Text className="text-sm text-foreground-muted">

@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { PullRequestReviewGuideResult } from "@t3tools/contracts";
 
 export function reviewGuideState(data: PullRequestReviewGuideResult | null) {
@@ -13,21 +15,26 @@ export function reviewGuideState(data: PullRequestReviewGuideResult | null) {
   };
 }
 
-export function guideNoticeState(state: {
-  readonly data: PullRequestReviewGuideResult | null;
-  readonly isPending: boolean;
-  readonly running: boolean;
-  readonly startError: string | null;
-  readonly error: string | null;
-}) {
+export function guideNoticeState(
+  state: {
+    readonly data: PullRequestReviewGuideResult | null;
+    readonly isPending: boolean;
+    readonly running: boolean;
+    readonly startError: string | null;
+    readonly error: string | null;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+) {
   const { guide, stale, failure } = reviewGuideState(state.data);
   if (state.running) {
     return {
       kind: "writing" as const,
-      title: "Rewriting guide",
+      title: uiText("Rewriting guide"),
       description: guide
-        ? "You can keep reading this guide while the agent writes the update."
-        : "An agent is reading the change and writing the tour. You can leave and come back when it’s ready.",
+        ? uiText("You can keep reading this guide while the agent writes the update.")
+        : uiText(
+            "An agent is reading the change and writing the tour. You can leave and come back when it’s ready.",
+          ),
       action: guide ? "Rewriting…" : "Writing guide…",
     };
   }
@@ -35,7 +42,7 @@ export function guideNoticeState(state: {
   if (error) {
     return {
       kind: "failed" as const,
-      title: "Could not write guide",
+      title: uiText("Could not write guide"),
       description: error,
       action: "Try again",
     };
@@ -43,7 +50,7 @@ export function guideNoticeState(state: {
   if (state.error) {
     return {
       kind: "unavailable" as const,
-      title: "Could not refresh guide",
+      title: uiText("Could not refresh guide"),
       description: state.error,
       action: "Try again",
     };
@@ -51,24 +58,25 @@ export function guideNoticeState(state: {
   if (!state.data) {
     return {
       kind: "loading" as const,
-      title: "Review guide",
-      description: "Checking for a saved guide…",
+      title: uiText("Review guide"),
+      description: uiText("Checking for a saved guide…"),
       action: "Loading guide…",
     };
   }
   if (stale) {
     return {
       kind: "stale" as const,
-      title: "New changes since this guide",
-      description: "You can read the previous guide, or rewrite it for the latest changes.",
+      title: uiText("New changes since this guide"),
+      description: uiText("You can read the previous guide, or rewrite it for the latest changes."),
       action: "Rewrite guide",
     };
   }
   return {
     kind: guide ? ("ready" as const) : ("empty" as const),
-    title: "Review guide",
-    description:
+    title: uiText("Review guide"),
+    description: uiText(
       "Get a tour of the change, with code excerpts and notes on what needs a closer look.",
+    ),
     action: "Write guide",
   };
 }

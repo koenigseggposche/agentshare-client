@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { useUiText } from "../../i18n/uiText";
 import { workspaceConnectionEmptyState } from "../connection/workspace-empty-state";
 import { useWorkbenchLanguage } from "../workspace/navigation-tabs";
 import { isDraftThreadRoute } from "./thread-route-state";
@@ -84,6 +86,7 @@ function NewTaskHeader(props: {
   readonly searchText: string;
   readonly onSearchTextChange: (text: string) => void;
 }) {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const goBack = () => {
     if (navigation.canGoBack()) navigation.goBack();
@@ -101,7 +104,7 @@ function NewTaskHeader(props: {
           props.canAddProject
             ? [
                 {
-                  accessibilityLabel: "Add project",
+                  accessibilityLabel: uiText("Add project"),
                   icon: "plus",
                   onPress: () => navigation.dispatch(StackActions.push("AddProject")),
                 },
@@ -111,7 +114,7 @@ function NewTaskHeader(props: {
         search={{
           value: props.searchText,
           onChangeText: props.onSearchTextChange,
-          placeholder: "Search projects",
+          placeholder: uiText("Search projects"),
         }}
       />
     </>
@@ -119,6 +122,7 @@ function NewTaskHeader(props: {
 }
 
 export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRouteParams | undefined>) {
+  const uiText = useUiText();
   const projects = useProjects();
   const [searchText, setSearchText] = useState("");
   const { projectScopes, selectedEnvironmentId, setProject } = useNewTaskFlow();
@@ -199,10 +203,10 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
         await releaseShareReservation(incomingShare.id, incomingShare.destination);
       } catch (error) {
         Dialog.alert(
-          "Could not change project",
+          readUiText("Could not change project"),
           error instanceof Error
             ? error.message
-            : "The shared content reservation could not be updated.",
+            : readUiText("The shared content reservation could not be updated."),
         );
         return;
       }
@@ -239,10 +243,10 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
       if (!isAtomCommandInterrupted(result)) {
         const error = squashAtomCommandFailure(result);
         Dialog.alert(
-          "Could not start without a project",
+          readUiText("Could not start without a project"),
           error instanceof Error
             ? error.message
-            : "The folder for threads without a project could not be created.",
+            : readUiText("The folder for threads without a project could not be created."),
         );
       }
       return;
@@ -427,10 +431,10 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
           ) : visibleScopes.length === 0 ? (
             <View className="items-center gap-2 px-6 py-8">
               <Text className="text-center text-lg font-t3-bold text-foreground">
-                No matching projects
+                {uiText("No matching projects")}
               </Text>
               <Text className="text-center text-sm leading-normal text-foreground-muted">
-                Try a different project name or workspace path.
+                {uiText("Try a different project name or workspace path.")}
               </Text>
             </View>
           ) : (
@@ -457,7 +461,7 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
                       title={scope.title}
                       subtitle={
                         hasMultipleProjects
-                          ? `${scope.projects.length} workspaces`
+                          ? uiText("{0} workspaces", [scope.projects.length])
                           : selectionTarget.workspaceRoot
                       }
                       subtitleNumberOfLines={1}
@@ -509,7 +513,7 @@ export function NewTaskRouteScreen({ route }: StaticScreenProps<NewTaskRoutePara
                           numberOfLines={1}
                         >
                           {hasMultipleProjects
-                            ? `${scope.projects.length} workspaces`
+                            ? uiText("{0} workspaces", [scope.projects.length])
                             : selectionTarget.workspaceRoot}
                         </Text>
                       </View>

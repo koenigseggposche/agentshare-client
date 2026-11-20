@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { liveUiText } from "./i18n/uiText";
 import { scopedThreadKey, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import type { ClientSettings } from "@t3tools/contracts/settings";
 import { createBrowserHistory, createHashHistory } from "@tanstack/react-router";
@@ -61,6 +63,7 @@ function startClientAppearance(): void {
   let appliedSeparateFonts: boolean | null = null;
   const apply = () => {
     const settings = getClientSettings();
+    root.lang = settings.uiLanguage === "zh" ? "zh-CN" : "en";
     const previous = applied;
     applied = settings;
     const separateFonts = readLocalStorageValue(
@@ -162,9 +165,9 @@ function startThreadOverlayRetention(router: AppRouter): void {
  * Starts every app-lifetime service once, before the first render, and returns the router.
  * They run for the life of the page, so their disposers are dropped here.
  */
-export function startAppServices(): AppRouter {
+export function startAppServices(uiText: UiTranslator = liveUiText): AppRouter {
   // Ahead of the history: the provider auth code must leave the address before anything reads it.
-  startProviderAuthDelivery();
+  startProviderAuthDelivery(uiText);
 
   // Electron loads the app from a file-backed shell, so hash history avoids path resolution issues.
   const router = getRouter(isElectron ? createHashHistory() : createBrowserHistory());
@@ -186,8 +189,8 @@ export function startAppServices(): AppRouter {
   if (isElectron) startElectronBrowserHost();
   startPreviewTitleRecording();
   startBrowserProfileReporting();
-  installChatRouteCommands(router);
-  installCommandPaletteCommands(router);
+  installChatRouteCommands(router, uiText);
+  installCommandPaletteCommands(router, undefined, uiText);
   registerOpenFavoriteEditorCommand();
   startThreadOverlayRetention(router);
   // Drafts promote as their server threads arrive, wherever the user is.
@@ -208,12 +211,12 @@ export function startAppServices(): AppRouter {
   startThreadVisitedMigration(appAtomRegistry);
   startSshPasswordPromptQueue();
 
-  startKeybindingsUpdateToasts();
-  startSlowRpcRequestToasts();
+  startKeybindingsUpdateToasts(uiText);
+  startSlowRpcRequestToasts(uiText);
   startHostFreezeToasts();
   startThreadNotifications(appAtomRegistry, router);
   startGuideRunNotifications(appAtomRegistry, router);
-  if (isElectron) startDesktopUpdateLaunchNotice();
+  if (isElectron) startDesktopUpdateLaunchNotice(uiText);
 
   return router;
 }

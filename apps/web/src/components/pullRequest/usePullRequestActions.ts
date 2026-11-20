@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
 import {
@@ -186,6 +187,7 @@ export function usePullRequestActionRunner({
 }
 
 export function usePullRequestCloseBatch(onClosed: (entry: EnvironmentPullRequestEntry) => void) {
+  const uiText = useUiText();
   const runAction = useAtomCommand(pullRequestEnvironment.runAction, { reportFailure: false });
   const pending = useRef(new Set<string>());
   const [closingKeys, setClosingKeys] = useState<ReadonlySet<string>>(() => new Set());
@@ -228,8 +230,8 @@ export function usePullRequestCloseBatch(onClosed: (entry: EnvironmentPullReques
       type: failures.length > 0 ? "error" : "success",
       title:
         failures.length > 0
-          ? `Closed ${closed} of ${batch.length} pull requests`
-          : `Closed ${closed} pull request${closed === 1 ? "" : "s"}`,
+          ? uiText("Closed {0} of {1} pull requests", [closed, batch.length])
+          : uiText("Closed {0} pull request{1}", [closed, closed === 1 ? "" : "s"]),
       ...(failures.length > 0 ? { description: failures.slice(0, 3).join("\n") } : {}),
     });
   };
@@ -255,6 +257,7 @@ export function usePullRequestHandoffs({
   environmentId: EnvironmentId;
   detail: PullRequestHandoffDetail | null;
 }) {
+  const uiText = useUiText();
   const newThread = useNewThreadHandler();
   const prepareThread = usePreparePullRequestThreadAction({
     environmentId,
@@ -311,18 +314,20 @@ export function usePullRequestHandoffs({
     if (opened === null) {
       toastManager.add({
         type: "error",
-        title: "Could not open a thread",
-        description: "Try again from the project, or open a thread first.",
+        title: uiText("Could not open a thread"),
+        description: uiText("Try again from the project, or open a thread first."),
       });
       return;
     }
     toastManager.add({
       type: "success",
-      title: "Asked in a thread",
+      title: uiText("Asked in a thread"),
       description:
         task.prompt.length > 0
-          ? "The question is in the composer. Read it over, then send."
-          : `The ${terminology.singular} is in the composer. Type your question, then send.`,
+          ? uiText("The question is in the composer. Read it over, then send.")
+          : uiText("The {0} is in the composer. Type your question, then send.", [
+              terminology.singular,
+            ]),
     });
   };
 
@@ -336,7 +341,7 @@ export function usePullRequestHandoffs({
     // Explicit timeouts survive toast updates and would pin the result after loading.
     const toastId = toastManager.add({
       type: "loading",
-      title: `Preparing the ${terminology.singular} checkout...`,
+      title: uiText("Preparing the {0} checkout...", [terminology.singular]),
     });
     const projectRef = scopeProjectRef(environmentId, detail.projectId);
     // Checkout setup requires the thread to exist first.
@@ -348,8 +353,8 @@ export function usePullRequestHandoffs({
       setHandoff(null);
       toastManager.update(toastId, {
         type: "error",
-        title: "Could not open a thread for the checkout",
-        description: "Try again from the project, or open a thread first.",
+        title: uiText("Could not open a thread for the checkout"),
+        description: uiText("Try again from the project, or open a thread first."),
       });
       return;
     }
@@ -362,7 +367,7 @@ export function usePullRequestHandoffs({
       setHandoff(null);
       toastManager.update(toastId, {
         type: "error",
-        title: `Could not prepare the ${terminology.singular} checkout`,
+        title: uiText("Could not prepare the {0} checkout", [terminology.singular]),
         description: checkoutFailureDescription(
           isAtomCommandInterrupted(prepared) ? undefined : squashAtomCommandFailure(prepared),
         ),
@@ -381,8 +386,11 @@ export function usePullRequestHandoffs({
       setHandoff(null);
       toastManager.update(toastId, {
         type: "error",
-        title: "Checked out, but the thread stayed where it was",
-        description: `The checkout is ready on \`${prepared.value.branch}\`. Point a thread at it from the branch picker, then ask again.`,
+        title: uiText("Checked out, but the thread stayed where it was"),
+        description: uiText(
+          "The checkout is ready on `{0}`. Point a thread at it from the branch picker, then ask again.",
+          [prepared.value.branch],
+        ),
       });
       return;
     }
@@ -393,13 +401,17 @@ export function usePullRequestHandoffs({
         prepared.value.isOnPullRequestHead
           ? {
               type: "success",
-              title: mode === "local" ? "Checked out here" : "Checked out",
+              title: mode === "local" ? uiText("Checked out here") : uiText("Checked out"),
               description:
                 mode === "local"
-                  ? `This repository is on the ${terminology.singular}'s branch, with a thread open on it.`
-                  : `The ${terminology.singular} is in its own worktree, with a thread open on it.`,
+                  ? uiText("This repository is on the {0}'s branch, with a thread open on it.", [
+                      terminology.singular,
+                    ])
+                  : uiText("The {0} is in its own worktree, with a thread open on it.", [
+                      terminology.singular,
+                    ]),
             }
-          : offHeadPullRequestCheckoutToast(terminology),
+          : offHeadPullRequestCheckoutToast(terminology, uiText),
       );
       return;
     }
@@ -409,10 +421,10 @@ export function usePullRequestHandoffs({
       prepared.value.isOnPullRequestHead
         ? {
             type: "success",
-            title: "Checkout ready",
-            description: "The task is in the composer. Read it over, then send.",
+            title: uiText("Checkout ready"),
+            description: uiText("The task is in the composer. Read it over, then send."),
           }
-        : offHeadPullRequestCheckoutToast(terminology),
+        : offHeadPullRequestCheckoutToast(terminology, uiText),
     );
   };
 

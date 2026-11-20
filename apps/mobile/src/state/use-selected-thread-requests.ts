@@ -1,3 +1,4 @@
+import { readUiText } from "../i18n/uiText";
 import * as Dialog from "../components/ui/Dialog";
 import { useServerConfigs } from "./entities";
 import {
@@ -360,8 +361,8 @@ export function useSelectedThreadRequests() {
         )
       ) {
         Dialog.alert(
-          "Attachments are not ready",
-          "Wait for uploads to finish, or retry failed uploads.",
+          readUiText("Attachments are not ready"),
+          readUiText("Wait for uploads to finish, or retry failed uploads."),
         );
         return;
       }

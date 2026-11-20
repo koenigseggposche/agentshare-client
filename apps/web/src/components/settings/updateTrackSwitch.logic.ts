@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import type { DesktopBridge, DesktopUpdateChannel, DesktopUpdateState } from "@t3tools/contracts";
 import { acceptsTrackSwitchRelease } from "@t3tools/shared/cliRelease";
 
@@ -28,7 +29,8 @@ export async function prepareLocalTrackSwitch(
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "The update track did not change.",
+      message:
+        error instanceof Error ? error.message : readUiText("The update track did not change."),
     };
   }
   if (!input.reinstall) return { ok: true, local: null };
@@ -44,8 +46,12 @@ export async function prepareLocalTrackSwitch(
     ok: false,
     message:
       found !== null
-        ? `This app found ${found}, which is older than ${input.version}. Try again in a few minutes.`
-        : (local.message ?? `This app found no build of ${input.version} to install.`),
+        ? readUiText("This app found {0}, which is older than {1}. Try again in a few minutes.", [
+            found,
+            input.version,
+          ])
+        : (local.message ??
+          readUiText("This app found no build of {0} to install.", [input.version])),
   };
 }
 

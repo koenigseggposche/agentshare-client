@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { useScopedSettingsWriteAllowed } from "./useScopedSettings";
 import { SettingsIcon } from "lucide-react";
 import { useState } from "react";
@@ -94,6 +96,7 @@ function BackgroundActivityAdvancedDialog({
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
 }) {
+  const uiText = useUiText();
   const canWriteSettings = useScopedSettingsWriteAllowed();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
@@ -116,9 +119,9 @@ function BackgroundActivityAdvancedDialog({
     <Dialog open={open && canWriteSettings} onOpenChange={onOpenChange}>
       <DialogPopup className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Background Activity</DialogTitle>
+          <DialogTitle>{uiText("Background Activity")}</DialogTitle>
           <DialogDescription>
-            Tune the shared power policy and the background intervals that feed it.
+            {uiText("Tune the shared power policy and the background intervals that feed it.")}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel>
@@ -128,9 +131,11 @@ function BackgroundActivityAdvancedDialog({
           >
             <div className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 space-y-1">
-                <div className="text-sm font-medium">Shared policy</div>
+                <div className="text-sm font-medium">{uiText("Shared policy")}</div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Controls whether background work may run after a subscribed interval fires.
+                  {uiText(
+                    "Controls whether background work may run after a subscribed interval fires.",
+                  )}
                 </p>
               </div>
               <Select
@@ -150,7 +155,7 @@ function BackgroundActivityAdvancedDialog({
                 <SelectTrigger
                   size="sm"
                   className="w-full sm:w-40"
-                  aria-label="Shared background policy"
+                  aria-label={uiText("Shared background policy")}
                 >
                   <SelectValue>{BACKGROUND_ACTIVITY_PROFILE_LABELS[activeProfile]}</SelectValue>
                 </SelectTrigger>
@@ -174,12 +179,12 @@ function BackgroundActivityAdvancedDialog({
                   {searchableSetting("git-fetch-interval").title}
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Refresh remote branch status in the background.
+                  {uiText("Refresh remote branch status in the background.")}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <IntervalSecondsField
-                  label="Git fetch interval"
+                  label={uiText("Git fetch interval")}
                   value={automaticGitFetchIntervalSeconds}
                   min={0}
                   step={5}
@@ -194,21 +199,22 @@ function BackgroundActivityAdvancedDialog({
                     )
                   }
                 />
-                <span className="text-xs text-muted-foreground">seconds</span>
+                <span className="text-xs text-muted-foreground">{uiText("seconds")}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 space-y-1">
-                <div className="text-sm font-medium">Provider health interval</div>
+                <div className="text-sm font-medium">{uiText("Provider health interval")}</div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Refresh provider availability, versions, and auth state. Model catalog updates
-                  follow Provider update checks.
+                  {uiText(
+                    "Refresh provider availability, versions, and auth state. Model catalog updates follow Provider update checks.",
+                  )}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <IntervalSecondsField
-                  label="provider health interval"
+                  label={uiText("provider health interval")}
                   value={providerHealthRefreshIntervalSeconds}
                   min={0}
                   step={PROVIDER_HEALTH_INTERVAL_STEP_SECONDS}
@@ -223,20 +229,20 @@ function BackgroundActivityAdvancedDialog({
                     )
                   }
                 />
-                <span className="text-xs text-muted-foreground">seconds</span>
+                <span className="text-xs text-muted-foreground">{uiText("seconds")}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 space-y-1">
-                <div className="text-sm font-medium">Host power monitor</div>
+                <div className="text-sm font-medium">{uiText("Host power monitor")}</div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Poll host power state while clients are active.
+                  {uiText("Poll host power state while clients are active.")}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <IntervalSecondsField
-                  label="active host power interval"
+                  label={uiText("active host power interval")}
                   value={hostPowerMonitorActiveIntervalSeconds}
                   min={5}
                   step={5}
@@ -251,20 +257,20 @@ function BackgroundActivityAdvancedDialog({
                     )
                   }
                 />
-                <span className="text-xs text-muted-foreground">seconds</span>
+                <span className="text-xs text-muted-foreground">{uiText("seconds")}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0 space-y-1">
-                <div className="text-sm font-medium">Idle host monitor</div>
+                <div className="text-sm font-medium">{uiText("Idle host monitor")}</div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  Poll host power state when no foreground client is active.
+                  {uiText("Poll host power state when no foreground client is active.")}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <IntervalSecondsField
-                  label="idle host power interval"
+                  label={uiText("idle host power interval")}
                   value={hostPowerMonitorIdleIntervalSeconds}
                   min={5}
                   step={30}
@@ -279,34 +285,36 @@ function BackgroundActivityAdvancedDialog({
                     )
                   }
                 />
-                <span className="text-xs text-muted-foreground">seconds</span>
+                <span className="text-xs text-muted-foreground">{uiText("seconds")}</span>
               </div>
             </div>
 
             <div className="grid gap-0 border-t sm:grid-cols-2">
-              {BACKGROUND_ACTIVITY_BOOLEAN_OVERRIDES.map(({ key, label }) => (
-                <label
-                  key={key}
-                  className="flex items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0 sm:border-r sm:even:border-r-0"
-                >
-                  <span className="text-sm font-medium">{label}</span>
-                  <Switch
-                    checked={resolvedBackgroundActivity[key]}
-                    onCheckedChange={(checked) =>
-                      updateSettings(
-                        backgroundActivityOverrideSettings(
-                          settings.backgroundActivity,
-                          resolvedBackgroundActivity,
-                          {
-                            [key]: Boolean(checked),
-                          },
-                        ),
-                      )
-                    }
-                    aria-label={label}
-                  />
-                </label>
-              ))}
+              {translateUiLabels(BACKGROUND_ACTIVITY_BOOLEAN_OVERRIDES, uiText).map(
+                ({ key, label }) => (
+                  <label
+                    key={key}
+                    className="flex items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0 sm:border-r sm:even:border-r-0"
+                  >
+                    <span className="text-sm font-medium">{label}</span>
+                    <Switch
+                      checked={resolvedBackgroundActivity[key]}
+                      onCheckedChange={(checked) =>
+                        updateSettings(
+                          backgroundActivityOverrideSettings(
+                            settings.backgroundActivity,
+                            resolvedBackgroundActivity,
+                            {
+                              [key]: Boolean(checked),
+                            },
+                          ),
+                        )
+                      }
+                      aria-label={label}
+                    />
+                  </label>
+                ),
+              )}
             </div>
           </fieldset>
         </DialogPanel>
@@ -316,9 +324,9 @@ function BackgroundActivityAdvancedDialog({
             disabled={!canWriteSettings}
             onClick={() => updateSettings(resetBackgroundActivitySettings())}
           >
-            Reset all
+            {uiText("Reset all")}
           </Button>
-          <Button onClick={() => onOpenChange(false)}>Done</Button>
+          <Button onClick={() => onOpenChange(false)}>{uiText("Done")}</Button>
         </DialogFooter>
       </DialogPopup>
     </Dialog>
@@ -326,6 +334,7 @@ function BackgroundActivityAdvancedDialog({
 }
 
 export function BackgroundActivitySettingsRow() {
+  const uiText = useUiText();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   const { scope, environment } = useSettingsScope();
@@ -356,8 +365,9 @@ export function BackgroundActivitySettingsRow() {
         <span className="inline-flex items-center gap-1.5">
           {searchableSetting("background-activity").title}
           <PolicyTooltip>
-            This shared policy gates background work such as Git refreshes and provider health
-            probes after their individual intervals elapse.
+            {uiText(
+              "This shared policy gates background work such as Git refreshes and provider health probes after their individual intervals elapse.",
+            )}
           </PolicyTooltip>
         </span>
       }
@@ -365,7 +375,7 @@ export function BackgroundActivitySettingsRow() {
       resetAction={
         canResetBackgroundActivity ? (
           <SettingResetButton
-            label="background activity"
+            label={uiText("background activity")}
             onClick={() => updateSettings(resetBackgroundActivitySettings())}
           />
         ) : null
@@ -387,7 +397,7 @@ export function BackgroundActivitySettingsRow() {
             <SelectTrigger
               size="sm"
               className="w-full sm:w-40"
-              aria-label="Background activity profile"
+              aria-label={uiText("Background activity profile")}
             >
               <SelectValue>
                 {(value: BackgroundActivityProfileOption | null) =>
@@ -408,7 +418,9 @@ export function BackgroundActivitySettingsRow() {
               <SelectItem hideIndicator value="advanced" disabled={!isEnvironmentScope}>
                 {isEnvironmentScope
                   ? BACKGROUND_ACTIVITY_PROFILE_OPTION_LABELS.advanced
-                  : `${BACKGROUND_ACTIVITY_PROFILE_OPTION_LABELS.advanced} (one environment)`}
+                  : uiText("{0} (one environment)", [
+                      BACKGROUND_ACTIVITY_PROFILE_OPTION_LABELS.advanced,
+                    ])}
               </SelectItem>
             </SelectPopup>
           </Select>
@@ -419,14 +431,14 @@ export function BackgroundActivitySettingsRow() {
                   <Button
                     size="icon-sm"
                     variant="outline"
-                    aria-label="Configure advanced background activity"
+                    aria-label={uiText("Configure advanced background activity")}
                     onClick={() => setBackgroundActivityDialogOpen(true)}
                   >
                     <SettingsIcon className="size-4" />
                   </Button>
                 }
               />
-              <TooltipPopup side="top">Configure background activity</TooltipPopup>
+              <TooltipPopup side="top">{uiText("Configure background activity")}</TooltipPopup>
             </Tooltip>
           ) : null}
           <BackgroundActivityAdvancedDialog

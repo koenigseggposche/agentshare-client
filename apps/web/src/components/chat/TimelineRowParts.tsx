@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { type ReactNode } from "react";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "~/lib/utils";
@@ -21,6 +22,7 @@ export function TimelineRowTimestamp({
   className?: string;
   alwaysVisible?: boolean;
 }) {
+  const uiText = useUiText();
   return (
     <Tooltip>
       <TooltipTrigger
@@ -34,9 +36,11 @@ export function TimelineRowTimestamp({
           />
         }
       >
-        {formatDayAwareTimestamp(createdAt, timestampFormat)}
+        {formatDayAwareTimestamp(createdAt, timestampFormat, undefined, undefined, uiText.language)}
       </TooltipTrigger>
-      <TooltipPopup>{formatChatTimestampTooltip(createdAt, timestampFormat)}</TooltipPopup>
+      <TooltipPopup>
+        {formatChatTimestampTooltip(createdAt, timestampFormat, uiText.language)}
+      </TooltipPopup>
     </Tooltip>
   );
 }

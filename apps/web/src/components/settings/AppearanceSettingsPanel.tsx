@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import {
@@ -85,6 +87,7 @@ const EFFORT_DISPLAY_LABELS: Record<EffortDisplay, string> = {
 };
 
 export function AppearanceSettingsPanel() {
+  const uiText = useUiText();
   const {
     appearanceMode,
     refreshTheme,
@@ -144,7 +147,7 @@ export function AppearanceSettingsPanel() {
 
   return (
     <SettingsPageContainer>
-      <SettingsSection id="appearance" title="Colors & themes" variant="plain" hideTitle>
+      <SettingsSection id="appearance" title={uiText("Colors & themes")} variant="plain" hideTitle>
         <div id={searchableSetting("theme").id}>
           <ThemeLibrary
             appearanceMode={appearanceMode}
@@ -162,14 +165,14 @@ export function AppearanceSettingsPanel() {
         </div>
       </SettingsSection>
 
-      <SettingsSection id="appearance-interface" title="Interface">
+      <SettingsSection id="appearance-interface" title={uiText("Interface")}>
         <SettingsRow
           {...searchableSetting("setting-appearance-contrast")}
-          description="Adjust the contrast of colors and borders across the interface."
+          description={uiText("Adjust the contrast of colors and borders across the interface.")}
           resetAction={
             settings.appearanceContrast !== DEFAULT_UNIFIED_SETTINGS.appearanceContrast ? (
               <SettingResetButton
-                label="contrast"
+                label={uiText("contrast")}
                 onClick={() =>
                   updateSettings({
                     appearanceContrast: DEFAULT_UNIFIED_SETTINGS.appearanceContrast,
@@ -187,7 +190,7 @@ export function AppearanceSettingsPanel() {
                 {settings.appearanceContrast}%
               </output>
               <input
-                aria-label="Contrast"
+                aria-label={uiText("Contrast")}
                 className="settings-slider min-w-0 flex-1"
                 id="appearance-contrast"
                 max={MAX_APPEARANCE_CONTRAST}
@@ -213,11 +216,11 @@ export function AppearanceSettingsPanel() {
 
         <SettingsRow
           {...searchableSetting("setting-glass-opacity")}
-          description="Higher values make menus, dialogs, and the composer more solid."
+          description={uiText("Higher values make menus, dialogs, and the composer more solid.")}
           resetAction={
             settings.glassOpacity !== DEFAULT_UNIFIED_SETTINGS.glassOpacity ? (
               <SettingResetButton
-                label="glass opacity"
+                label={uiText("glass opacity")}
                 onClick={() =>
                   updateSettings({ glassOpacity: DEFAULT_UNIFIED_SETTINGS.glassOpacity })
                 }
@@ -233,7 +236,7 @@ export function AppearanceSettingsPanel() {
                 {settings.glassOpacity}%
               </output>
               <input
-                aria-label="Glass opacity"
+                aria-label={uiText("Glass opacity")}
                 className="settings-slider min-w-0 flex-1"
                 id="glass-opacity"
                 max={MAX_GLASS_OPACITY}
@@ -259,11 +262,11 @@ export function AppearanceSettingsPanel() {
 
         <SettingsRow
           {...searchableSetting("chat-width")}
-          description="Set how wide messages and the composer can grow on large screens."
+          description={uiText("Set how wide messages and the composer can grow on large screens.")}
           resetAction={
             settings.chatWidth !== DEFAULT_UNIFIED_SETTINGS.chatWidth ? (
               <SettingResetButton
-                label="chat width"
+                label={uiText("chat width")}
                 onClick={() => updateSettings({ chatWidth: DEFAULT_UNIFIED_SETTINGS.chatWidth })}
               />
             ) : null
@@ -277,13 +280,17 @@ export function AppearanceSettingsPanel() {
                     updateSettings({ chatWidth: value });
                 }}
               >
-                <SelectTrigger size="sm" className="w-full min-w-0" aria-label="Chat width">
+                <SelectTrigger
+                  size="sm"
+                  className="w-full min-w-0"
+                  aria-label={uiText("Chat width")}
+                >
                   <SelectValue>{CHAT_WIDTH_LABELS[settings.chatWidth]}</SelectValue>
                 </SelectTrigger>
                 <SelectPopup align="end" alignItemWithTrigger={false}>
-                  <SelectItem value="comfortable">Comfortable (default)</SelectItem>
-                  <SelectItem value="wide">Wide</SelectItem>
-                  <SelectItem value="full">Full</SelectItem>
+                  <SelectItem value="comfortable">{uiText("Comfortable (default)")}</SelectItem>
+                  <SelectItem value="wide">{uiText("Wide")}</SelectItem>
+                  <SelectItem value="full">{uiText("Full")}</SelectItem>
                 </SelectPopup>
               </Select>
             </div>
@@ -292,11 +299,13 @@ export function AppearanceSettingsPanel() {
         <ThreadDetailsItemsRow />
         <SettingsRow
           {...searchableSetting("effort-display")}
-          description="Show reasoning effort in the composer as its name, such as High, or as bars."
+          description={uiText(
+            "Show reasoning effort in the composer as its name, such as High, or as bars.",
+          )}
           resetAction={
             settings.effortDisplay !== DEFAULT_UNIFIED_SETTINGS.effortDisplay ? (
               <SettingResetButton
-                label="effort display"
+                label={uiText("effort display")}
                 onClick={() =>
                   updateSettings({ effortDisplay: DEFAULT_UNIFIED_SETTINGS.effortDisplay })
                 }
@@ -312,12 +321,18 @@ export function AppearanceSettingsPanel() {
                     updateSettings({ effortDisplay: value });
                 }}
               >
-                <SelectTrigger size="sm" className="w-full min-w-0" aria-label="Effort display">
-                  <SelectValue>{EFFORT_DISPLAY_LABELS[settings.effortDisplay]}</SelectValue>
+                <SelectTrigger
+                  size="sm"
+                  className="w-full min-w-0"
+                  aria-label={uiText("Effort display")}
+                >
+                  <SelectValue>
+                    {translateUiLabels(EFFORT_DISPLAY_LABELS, uiText)[settings.effortDisplay]}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectPopup align="end" alignItemWithTrigger={false}>
-                  <SelectItem value="label">Word (default)</SelectItem>
-                  <SelectItem value="bars">Bars</SelectItem>
+                  <SelectItem value="label">{uiText("Word (default)")}</SelectItem>
+                  <SelectItem value="bars">{uiText("Bars")}</SelectItem>
                 </SelectPopup>
               </Select>
             </div>
@@ -325,11 +340,13 @@ export function AppearanceSettingsPanel() {
         />
         <SettingsRow
           {...searchableSetting("math-rendering")}
-          description="Typeset LaTeX math, such as $x^2$ or \[x^2\], in messages and Markdown previews. The composer keeps TeX source editable."
+          description={uiText(
+            "Typeset LaTeX math, such as $x^2$ or \\[x^2\\], in messages and Markdown previews. The composer keeps TeX source editable.",
+          )}
           resetAction={
             settings.mathRenderingEnabled !== DEFAULT_UNIFIED_SETTINGS.mathRenderingEnabled ? (
               <SettingResetButton
-                label="math rendering"
+                label={uiText("math rendering")}
                 onClick={() =>
                   updateSettings({
                     mathRenderingEnabled: DEFAULT_UNIFIED_SETTINGS.mathRenderingEnabled,
@@ -344,7 +361,7 @@ export function AppearanceSettingsPanel() {
               onCheckedChange={(checked) =>
                 updateSettings({ mathRenderingEnabled: Boolean(checked) })
               }
-              aria-label="Render math"
+              aria-label={uiText("Render math")}
             />
           }
         />
@@ -359,7 +376,7 @@ export function AppearanceSettingsPanel() {
         >
           <SettingsRow
             {...searchableSetting("panel-animations")}
-            description="Set how fast panels open and close."
+            description={uiText("Set how fast panels open and close.")}
             control={
               <div className="grid w-full grid-cols-[5rem_minmax(0,1fr)] items-center gap-3 sm:w-auto sm:grid-cols-[7rem_13rem] sm:gap-4">
                 <PanelAnimationsPreview durationMs={settings.panelAnimationDurationMs} />
@@ -368,10 +385,11 @@ export function AppearanceSettingsPanel() {
                     className="min-w-16 rounded-md bg-muted px-2 py-1 text-center font-mono text-xs font-medium tabular-nums text-foreground"
                     htmlFor="panel-animation-duration"
                   >
-                    {settings.panelAnimationDurationMs} ms
+                    {settings.panelAnimationDurationMs}
+                    {uiText(" ms")}
                   </output>
                   <input
-                    aria-label="Panel animation duration"
+                    aria-label={uiText("Panel animation duration")}
                     className="settings-slider min-w-0 flex-1"
                     id="panel-animation-duration"
                     max={MAX_PANEL_ANIMATION_DURATION_MS}
@@ -398,7 +416,7 @@ export function AppearanceSettingsPanel() {
               settings.panelAnimationDurationMs !==
               DEFAULT_UNIFIED_SETTINGS.panelAnimationDurationMs ? (
                 <SettingResetButton
-                  label="panel animations"
+                  label={uiText("panel animations")}
                   onClick={() =>
                     updateSettings({
                       panelAnimationDurationMs: DEFAULT_UNIFIED_SETTINGS.panelAnimationDurationMs,
@@ -414,7 +432,7 @@ export function AppearanceSettingsPanel() {
             resetAction={
               settings.environmentIdentificationMode !== DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE ? (
                 <SettingResetButton
-                  label="environment identification"
+                  label={uiText("environment identification")}
                   onClick={() =>
                     updateSettings({
                       environmentIdentificationMode: DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE,
@@ -436,7 +454,7 @@ export function AppearanceSettingsPanel() {
                 <SelectTrigger
                   size="sm"
                   className="w-full sm:w-40"
-                  aria-label="Environment identification"
+                  aria-label={uiText("Environment identification")}
                 >
                   <SelectValue>{environmentIdentificationLabel}</SelectValue>
                 </SelectTrigger>
@@ -452,12 +470,14 @@ export function AppearanceSettingsPanel() {
           />
           <SettingsRow
             {...searchableSetting("composer-context")}
-            description="Keep branch and worktree controls below the composer after a thread starts."
+            description={uiText(
+              "Keep branch and worktree controls below the composer after a thread starts.",
+            )}
             resetAction={
               settings.persistComposerContextStrip !==
               DEFAULT_UNIFIED_SETTINGS.persistComposerContextStrip ? (
                 <SettingResetButton
-                  label="composer context"
+                  label={uiText("composer context")}
                   onClick={() =>
                     updateSettings({
                       persistComposerContextStrip:
@@ -473,7 +493,7 @@ export function AppearanceSettingsPanel() {
                 onCheckedChange={(checked) =>
                   updateSettings({ persistComposerContextStrip: Boolean(checked) })
                 }
-                aria-label="Keep composer context visible in active threads"
+                aria-label={uiText("Keep composer context visible in active threads")}
               />
             }
           />

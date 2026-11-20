@@ -1,3 +1,4 @@
+import { readUiTranslator } from "../../../i18n/uiText";
 // Adapted from opencode (MIT). Copyright (c) 2025 opencode. See LICENSE.opencode.
 import {
   initWasm,
@@ -69,41 +70,44 @@ type WorkerState = { deck: Deck | undefined };
 
 const state: WorkerState = { deck: undefined };
 
-serveWorker<SlideMethods>({
-  open: async (input) => {
-    if (state.deck) throw new Error("The worker already holds a deck");
+serveWorker<SlideMethods>(
+  {
+    open: async (input) => {
+      if (state.deck) throw new Error("The worker already holds a deck");
 
-    await initWasm();
+      await initWasm();
 
-    const bytes = new Uint8Array(input.bytes);
-    const handle = openPresentation(bytes);
-    const snapshot = handle.snapshot();
-    const text = deckText(bytes, snapshot);
-    const fonts = slideFonts(handle, workerFonts());
+      const bytes = new Uint8Array(input.bytes);
+      const handle = openPresentation(bytes);
+      const snapshot = handle.snapshot();
+      const text = deckText(bytes, snapshot);
+      const fonts = slideFonts(handle, workerFonts());
 
-    await fonts.load(text);
+      await fonts.load(text);
 
-    state.deck = createDeck(handle, fonts.layout);
+      state.deck = createDeck(handle, fonts.layout);
 
-    const size = {
-      width: snapshot.widthEmu / emuPerPixel,
-      height: snapshot.heightEmu / emuPerPixel,
-    };
+      const size = {
+        width: snapshot.widthEmu / emuPerPixel,
+        height: snapshot.heightEmu / emuPerPixel,
+      };
 
-    return snapshot.slides.map((slide, index): SlideSummary => ({
-      ...size,
-      hidden: text.hidden[index] ?? false,
-      notes: slide.notes?.trim() || undefined,
-    }));
+      return snapshot.slides.map((slide, index): SlideSummary => ({
+        ...size,
+        hidden: text.hidden[index] ?? false,
+        notes: slide.notes?.trim() || undefined,
+      }));
+    },
+    paint: async (input, signal) => {
+      const deck = required();
+      const painted = await deck.paint(input.index, input.density, signal).finally(deck.trim);
+
+      return painted.kind === "painted" ? new Transfer(painted, [painted.bitmap]) : painted;
+    },
+    vectors: (input) => required().vectors(input),
   },
-  paint: async (input, signal) => {
-    const deck = required();
-    const painted = await deck.paint(input.index, input.density, signal).finally(deck.trim);
-
-    return painted.kind === "painted" ? new Transfer(painted, [painted.bitmap]) : painted;
-  },
-  vectors: (input) => required().vectors(input),
-});
+  readUiTranslator(),
+);
 
 function required() {
   if (!state.deck) throw new Error("The worker holds no deck");

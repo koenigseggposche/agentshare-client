@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import {
   DEFAULT_SERVER_SETTINGS,
   PROJECT_FILE_BACKED_SETTINGS,
@@ -44,18 +47,22 @@ const BACKGROUND_ACTIVITY_PROFILE_LABELS: Record<string, string> = {
   custom: "Advanced",
 };
 
-function formatValue(key: keyof ServerSettings, value: unknown): string {
+function formatValue(
+  key: keyof ServerSettings,
+  value: unknown,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
   if (value === null || value === undefined) {
     return key === "pullRequestMergeMethod"
-      ? "Last selected"
+      ? uiText("Last selected")
       : key === "sidebarAutoSettleAfterDays"
         ? "Never"
         : key === "defaultModelSelection"
           ? "Automatic"
           : key === "sourceControlWriterModelSelection"
-            ? "Text generation model"
+            ? uiText("Text generation model")
             : key === "reviewGuideModelSelection"
-              ? "Source control writer model"
+              ? uiText("Source control writer model")
               : key === "defaultThreadEnvMode" || key === "worktreeSubmodules"
                 ? "Inherit"
                 : "Not set";
@@ -68,7 +75,7 @@ function formatValue(key: keyof ServerSettings, value: unknown): string {
   }
   if (typeof value === "string") {
     if (key === "defaultThreadEnvMode" && (value === "local" || value === "worktree")) {
-      return resolveEnvModeLabel(value);
+      return resolveEnvModeLabel(value, uiText);
     }
     if (key === "worktreeSubmodules" && value in WORKTREE_SUBMODULES_LABELS) {
       return WORKTREE_SUBMODULES_LABELS[value as WorktreeSubmodules];
@@ -101,6 +108,7 @@ export function settingInheritanceLayers(
   target: ScopedSettingsTarget,
   environmentSettings: ServerSettings,
   key: keyof ServerSettings,
+  uiText: UiTranslator = uiTranslators.en,
 ): readonly InheritanceLayer[] {
   const environmentValue = environmentSettings[key];
   const source = isProjectScopedSettingKey(key) ? target.sources[key] : "environment";
@@ -110,8 +118,8 @@ export function settingInheritanceLayers(
   if (target.projectId !== null && isProjectScopedSettingKey(key)) {
     layers.push({
       key: "project",
-      label: "Project",
-      value: source === "project" ? formatValue(key, target.settings[key]) : "Inherits",
+      label: uiText("Project"),
+      value: source === "project" ? formatValue(key, target.settings[key], uiText) : "Inherits",
       effective: source === "project",
       set: source === "project",
     });
@@ -119,15 +127,15 @@ export function settingInheritanceLayers(
   layers.push({
     key: "environment",
     label: target.label,
-    value: environmentSet ? formatValue(key, environmentValue) : "Inherits",
+    value: environmentSet ? formatValue(key, environmentValue, uiText) : "Inherits",
     effective: source === "environment" && environmentSet,
     set: environmentSet,
   });
   if (fileBacked && target.projectId !== null) {
     layers.push({
       key: "t3.json",
-      label: "t3.json",
-      value: source === "t3.json" ? formatValue(key, target.settings[key]) : "Inherits",
+      label: uiText("t3.json"),
+      value: source === "t3.json" ? formatValue(key, target.settings[key], uiText) : "Inherits",
       effective: source === "t3.json",
       set: source === "t3.json",
     });
@@ -138,8 +146,8 @@ export function settingInheritanceLayers(
     : DEFAULT_SERVER_SETTINGS[key];
   layers.push({
     key: "built-in",
-    label: "Default",
-    value: formatValue(key, builtIn),
+    label: uiText("Default"),
+    value: formatValue(key, builtIn, uiText),
     effective: source === "environment" && !environmentSet,
     set: true,
   });
@@ -184,6 +192,7 @@ export function SettingInheritance({
   overridingProjects?: readonly SettingOverridingProject[];
   onClearOverrides?: (entries: readonly ProjectOverrideEntry[]) => void;
 }) {
+  const uiText = useUiText();
   const scopeContext = useOptionalSettingsScope();
   const key = keys[0];
   if (!key || targets.length === 0) return null;
@@ -204,7 +213,7 @@ export function SettingInheritance({
     const secondary = [labels.secondary, path?.split(/[\\/]/).filter(Boolean).slice(-2).join("/")]
       .filter(Boolean)
       .join(" · ");
-    const layers = settingInheritanceLayers(target, environment.serverConfig.settings, key);
+    const layers = settingInheritanceLayers(target, environment.serverConfig.settings, key, uiText);
     const winningLayer = layers.find((layer) => layer.effective);
     return [
       {
@@ -252,7 +261,7 @@ export function SettingInheritance({
                 <Button
                   size="icon-micro"
                   variant="ghost-muted"
-                  aria-label={`${overrideSummary}. Show where this value comes from`}
+                  aria-label={uiText("{0}. Show where this value comes from", [overrideSummary])}
                 />
               }
             />
@@ -290,7 +299,7 @@ export function SettingInheritance({
                         layer.effective ? "font-medium text-foreground" : "text-muted-foreground",
                       )}
                     >
-                      {layer.key === "environment" ? "Environment" : layer.label}
+                      {layer.key === "environment" ? uiText("Environment") : layer.label}
                     </span>
                     <span
                       className={cn(
@@ -343,7 +352,7 @@ export function SettingInheritance({
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {winningLayer?.key === "environment"
-                              ? "Environment"
+                              ? uiText("Environment")
                               : winningLayer?.label}
                           </span>
                           <ChevronRightIcon
@@ -377,7 +386,7 @@ export function SettingInheritance({
                     {chain}
                     {hasMultipleEnvironments ? (
                       <p className="px-2 pt-1.5 text-xs text-muted-foreground">
-                        Same on all machines
+                        {uiText("Same on all machines")}
                       </p>
                     ) : null}
                   </>
@@ -396,14 +405,15 @@ export function SettingInheritance({
                             aria-hidden
                             className="size-3 [[data-panel-open]_&]:rotate-90"
                           />
-                          Overridden by
+                          {uiText("Overridden by")}
                         </CollapsibleTrigger>
                       ) : (
-                        <span>Overridden by</span>
+                        <span>{uiText("Overridden by")}</span>
                       )}
                       {onClearOverrides ? (
                         <InlineButton onClick={() => onClearOverrides(overriding)}>
-                          Reset {overriding.length === 1 ? "it" : "all"}
+                          {uiText("Reset ")}
+                          {overriding.length === 1 ? uiText("it") : uiText("all")}
                         </InlineButton>
                       ) : null}
                     </div>
@@ -439,6 +449,7 @@ export function SettingInheritance({
                                     (member) =>
                                       member.target.environmentId === project.environmentId,
                                   )?.overrides[project.projectId]?.[key],
+                                  uiText,
                                 )
                               : null}
                           </span>

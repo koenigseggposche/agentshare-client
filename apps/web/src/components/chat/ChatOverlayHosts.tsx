@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type {
   DeviceServiceState,
   EnvironmentId,
@@ -143,6 +144,7 @@ export function BranchRestoreConfirmHost(props: {
   readonly canWriteSourceControl: boolean;
   readonly onConfirm: () => void;
 }) {
+  const uiText = useUiText();
   const open = useThreadOverlay(branchRestoreConfirmAtom, props.threadKey) !== null;
   return (
     <AlertDialog
@@ -154,15 +156,19 @@ export function BranchRestoreConfirmHost(props: {
       <AlertDialogPopup>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Switch to <code className="font-medium">{props.threadBranch}</code>?
+            {uiText("Switch to ")}
+            <code className="font-medium">{props.threadBranch}</code>?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            You have uncommitted changes. They'll carry over to the other branch, or block the
-            switch if they conflict.
+            {uiText(
+              "You have uncommitted changes. They'll carry over to the other branch, or block the switch if they conflict.",
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+          <AlertDialogClose render={<Button variant="outline" />}>
+            {uiText("Cancel")}
+          </AlertDialogClose>
           <Button
             variant="default"
             disabled={!props.canWriteSourceControl}
@@ -171,7 +177,7 @@ export function BranchRestoreConfirmHost(props: {
               props.onConfirm();
             }}
           >
-            Switch branch
+            {uiText("Switch branch")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogPopup>
@@ -194,6 +200,7 @@ export function RevertConfirmHost(props: {
   readonly threadKey: string;
   readonly onConfirm: (turnCount: number, messageId: MessageId, restoreFiles: boolean) => void;
 }) {
+  const uiText = useUiText();
   const pending = useThreadOverlay(revertConfirmAtom, props.threadKey);
   const confirm = (restoreFiles: boolean) => {
     if (pending === null) return;
@@ -209,18 +216,21 @@ export function RevertConfirmHost(props: {
     >
       <AlertDialogPopup>
         <AlertDialogHeader>
-          <AlertDialogTitle>Edit from here?</AlertDialogTitle>
+          <AlertDialogTitle>{uiText("Edit from here?")}</AlertDialogTitle>
           <AlertDialogDescription>
-            Rewind chat to before this message. Your prompt and attachments return to the composer.
-            “Revert files too” also undoes your own edits.
+            {uiText(
+              "Rewind chat to before this message. Your prompt and attachments return to the composer. “Revert files too” also undoes your own edits.",
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+          <AlertDialogClose render={<Button variant="outline" />}>
+            {uiText("Cancel")}
+          </AlertDialogClose>
           <Button variant="destructive-outline" onClick={() => confirm(true)}>
-            Revert files too
+            {uiText("Revert files too")}
           </Button>
-          <Button onClick={() => confirm(false)}>Revert and keep changes</Button>
+          <Button onClick={() => confirm(false)}>{uiText("Revert and keep changes")}</Button>
         </AlertDialogFooter>
       </AlertDialogPopup>
     </AlertDialog>

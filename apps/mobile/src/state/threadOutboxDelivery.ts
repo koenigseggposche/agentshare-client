@@ -1,3 +1,6 @@
+import { readUiText } from "../i18n/uiText";
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import * as Dialog from "../components/ui/Dialog";
 import {
@@ -654,7 +657,7 @@ function reportCommandFailure(
   });
   return {
     action,
-    message: error instanceof Error ? error.message : "The message could not be sent.",
+    message: error instanceof Error ? error.message : readUiText("The message could not be sent."),
   };
 }
 
@@ -670,7 +673,7 @@ interface ThreadOutboxRetry {
  * backoff expires. `dispatchingQueuedMessageIdAtom` is the single in-flight slot; clearing
  * it re-runs the drain for the next message.
  */
-export function createThreadOutboxDelivery(): {
+export function createThreadOutboxDelivery(uiText: UiTranslator = uiTranslators.en): {
   readonly drain: () => void;
   readonly dispose: () => void;
 } {
@@ -780,6 +783,7 @@ export function createThreadOutboxDelivery(): {
         serverConfig,
         settings.modelSelection,
         thread.projectId,
+        uiText,
       );
       return restoreQueuedMessage(queuedMessage, `${title}. ${detail}`);
     }
@@ -865,6 +869,7 @@ export function createThreadOutboxDelivery(): {
         currentConfig,
         settings.modelSelection,
         thread.projectId,
+        uiText,
       );
       return restoreQueuedMessage(persistedMessage, `${title}. ${detail}`);
     }
@@ -955,6 +960,7 @@ export function createThreadOutboxDelivery(): {
         serverConfig,
         settings.modelSelection,
         creation.projectId,
+        uiText,
       );
       return restoreQueuedMessage(queuedMessage, `${title}. ${detail}`);
     }
@@ -1003,6 +1009,7 @@ export function createThreadOutboxDelivery(): {
         currentConfig,
         settings.modelSelection,
         creation.projectId,
+        uiText,
       );
       return restoreQueuedMessage(persistedMessage, `${title}. ${detail}`);
     }
@@ -1391,21 +1398,23 @@ function loadThreadOutbox(isActive: () => boolean): void {
   void threadOutboxManager.load().then((loaded) => {
     if (loaded || !isActive()) return;
     Dialog.alert(
-      "Some queued messages could not be loaded",
-      "Unreadable records and attachment files are still saved. Other messages can still be sent.",
+      readUiText("Some queued messages could not be loaded"),
+      readUiText(
+        "Unreadable records and attachment files are still saved. Other messages can still be sent.",
+      ),
       [
-        { text: "Dismiss", style: "cancel" },
-        { text: "Retry", onPress: () => loadThreadOutbox(isActive) },
+        { text: readUiText("Dismiss"), style: "cancel" },
+        { text: readUiText("Retry"), onPress: () => loadThreadOutbox(isActive) },
       ],
     );
   });
 }
 
 /** App-lifetime: loads the persisted outbox and delivers queued messages. */
-export function installThreadOutboxDelivery(): () => void {
+export function installThreadOutboxDelivery(uiText: UiTranslator = uiTranslators.en): () => void {
   let active = true;
   loadThreadOutbox(() => active);
-  const delivery = createThreadOutboxDelivery();
+  const delivery = createThreadOutboxDelivery(uiText);
   return () => {
     active = false;
     delivery.dispose();

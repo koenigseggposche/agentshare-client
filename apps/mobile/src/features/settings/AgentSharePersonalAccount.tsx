@@ -51,7 +51,13 @@ const commandPersonalWallet = Effect.fn("AgentShareMobile.commandPersonalWallet"
   return yield* (yield* WalletClient.WalletClient).command(input);
 });
 
-export function AgentSharePersonalAccount({ language }: { language: "zh" | "en" }) {
+export function AgentSharePersonalAccount({
+  language,
+  section,
+}: {
+  language: "zh" | "en";
+  section: "account" | "wallet";
+}) {
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const [snapshot, setSnapshot] = useState<DeviceLogin.DeviceLoginState>();
   const [error, setError] = useState<string | null>(null);
@@ -108,104 +114,107 @@ export function AgentSharePersonalAccount({ language }: { language: "zh" | "en" 
 
   return (
     <>
-      <SettingsSection title={t("我的 AgentShare 账号", "My AgentShare account")}>
-        <Text className="px-5 py-2" textRole="body">
-          {t(
-            "此设备独立登录，用于查看个人余额和账单。",
-            "Sign in on this device to view your balances and records.",
-          )}
-        </Text>
-        <Text className="px-5 py-2" textRole="footnote">
-          {snapshot?.consoleUrl || accountConsoleUrl}
-        </Text>
-        {error ? (
-          <Text className="px-5 py-2" textRole="body" accessibilityRole="alert">
-            {error === "secure-storage-unavailable"
-              ? t(
-                  "无法访问此设备的安全凭据存储，请检查设备解锁状态或系统钥匙串。",
-                  "Secure credential storage is unavailable. Check that the device is unlocked and its system keychain is accessible.",
-                )
-              : error === "invalid-response"
-                ? t(
-                    "账号服务响应无法识别，请核对服务地址和客户端版本。",
-                    "The account response could not be read. Check the service address and client version.",
-                  )
-                : error === "unavailable"
-                  ? t(
-                      "无法连接账号服务，请检查网络后刷新。",
-                      "The account service could not be reached. Check your connection and refresh.",
-                    )
-                  : error === "sign-in-required"
-                    ? t("登录已失效，请重新登录。", "Your sign-in has expired. Sign in again.")
-                    : error === "account-changed"
-                      ? t(
-                          "此设备保存的登录与当前账号服务不匹配。请核对上方地址，退出此设备账号后重新登录。",
-                          "The saved sign-in does not match this account service. Check the address above, sign out on this device, then sign in again.",
-                        )
-                      : error === "rejected"
-                        ? t(
-                            "账号服务拒绝了请求。请核对上方地址后刷新。",
-                            "The account service rejected the request. Check the address above and refresh.",
-                          )
-                        : t(
-                            "未能确认操作结果。请刷新检查；若退出时断网，可在控制台设备列表撤销此设备。",
-                            "The outcome could not be confirmed. Refresh to check. If sign-out lost connectivity, revoke this device in the Console device list.",
-                          )}
+      {section === "account" || snapshot?.status !== "signed-in" ? (
+        <SettingsSection title={t("我的 AgentShare 账号", "My AgentShare account")}>
+          <Text className="px-5 py-2" textRole="body">
+            {t(
+              "此设备独立登录，用于查看个人余额和账单。",
+              "Sign in on this device to view your balances and records.",
+            )}
           </Text>
-        ) : null}
-        <ListActionRow
-          label={t("刷新个人账号", "Refresh my account")}
-          disabled={busy}
-          onPress={() => void run("state")}
-        />
-        {error ? (
-          <ListActionRow
-            label={t("退出此设备账号", "Sign out on this device")}
-            disabled={busy}
-            onPress={() => void run("signOut")}
-          />
-        ) : null}
-        {snapshot?.status === "signed-in" ? (
-          <>
-            <Text className="px-5 py-2" textRole="body">
-              {t("此设备已登录", "This device is signed in")}
+          <Text className="px-5 py-2" textRole="footnote">
+            {snapshot?.consoleUrl || accountConsoleUrl}
+          </Text>
+          {error ? (
+            <Text className="px-5 py-2" textRole="body" accessibilityRole="alert">
+              {error === "secure-storage-unavailable"
+                ? t(
+                    "无法访问此设备的安全凭据存储，请检查设备解锁状态或系统钥匙串。",
+                    "Secure credential storage is unavailable. Check that the device is unlocked and its system keychain is accessible.",
+                  )
+                : error === "invalid-response"
+                  ? t(
+                      "账号服务响应无法识别，请核对服务地址和客户端版本。",
+                      "The account response could not be read. Check the service address and client version.",
+                    )
+                  : error === "unavailable"
+                    ? t(
+                        "无法连接账号服务，请检查网络后刷新。",
+                        "The account service could not be reached. Check your connection and refresh.",
+                      )
+                    : error === "sign-in-required"
+                      ? t("登录已失效，请重新登录。", "Your sign-in has expired. Sign in again.")
+                      : error === "account-changed"
+                        ? t(
+                            "此设备保存的登录与当前账号服务不匹配。请核对上方地址，退出此设备账号后重新登录。",
+                            "The saved sign-in does not match this account service. Check the address above, sign out on this device, then sign in again.",
+                          )
+                        : error === "rejected"
+                          ? t(
+                              "账号服务拒绝了请求。请核对上方地址后刷新。",
+                              "The account service rejected the request. Check the address above and refresh.",
+                            )
+                          : t(
+                              "未能确认操作结果。请刷新检查；若退出时断网，可在控制台设备列表撤销此设备。",
+                              "The outcome could not be confirmed. Refresh to check. If sign-out lost connectivity, revoke this device in the Console device list.",
+                            )}
             </Text>
+          ) : null}
+          <ListActionRow
+            label={t("刷新个人账号", "Refresh my account")}
+            disabled={busy}
+            onPress={() => void run("state")}
+          />
+          {error ? (
             <ListActionRow
               label={t("退出此设备账号", "Sign out on this device")}
               disabled={busy}
               onPress={() => void run("signOut")}
             />
-          </>
-        ) : snapshot?.status === "pending" ? (
-          <>
-            <Text selectable className="px-5 py-2" textRole="body">
-              {t("核对设备码：", "Verify the device code:")} {snapshot.userCode}
-            </Text>
+          ) : null}
+          {snapshot?.status === "signed-in" ? (
+            <>
+              <Text className="px-5 py-2" textRole="body">
+                {t("此设备已登录", "This device is signed in")}
+              </Text>
+              <ListActionRow
+                label={t("退出此设备账号", "Sign out on this device")}
+                disabled={busy}
+                onPress={() => void run("signOut")}
+              />
+            </>
+          ) : snapshot?.status === "pending" ? (
+            <>
+              <Text selectable className="px-5 py-2" textRole="body">
+                {t("核对设备码：", "Verify the device code:")} {snapshot.userCode}
+              </Text>
+              <ListActionRow
+                label={t("打开浏览器登录并确认", "Sign in and confirm in browser")}
+                onPress={() => void Linking.openURL(snapshot.verificationUrl)}
+              />
+              <ListActionRow
+                label={t("检查登录结果", "Check sign-in")}
+                disabled={busy}
+                onPress={() => void run("check")}
+              />
+              <ListActionRow
+                label={t("取消此设备登录", "Cancel device sign-in")}
+                disabled={busy}
+                onPress={() => void run("cancel")}
+              />
+            </>
+          ) : (
             <ListActionRow
-              label={t("打开浏览器登录并确认", "Sign in and confirm in browser")}
-              onPress={() => void Linking.openURL(snapshot.verificationUrl)}
-            />
-            <ListActionRow
-              label={t("检查登录结果", "Check sign-in")}
+              label={t("登录我的账号", "Sign in to my account")}
               disabled={busy}
-              onPress={() => void run("check")}
+              onPress={() => void run("start")}
             />
-            <ListActionRow
-              label={t("取消此设备登录", "Cancel device sign-in")}
-              disabled={busy}
-              onPress={() => void run("cancel")}
-            />
-          </>
-        ) : (
-          <ListActionRow
-            label={t("登录我的账号", "Sign in to my account")}
-            disabled={busy}
-            onPress={() => void run("start")}
-          />
-        )}
-      </SettingsSection>
+          )}
+        </SettingsSection>
+      ) : null}
       {!error && snapshot?.status === "signed-in" ? (
         <PersonalWallet
+          mode={section === "account" ? "devices" : "wallet"}
           key={`${snapshot.identity.owner}:${snapshot.identity.deviceId}`}
           owner={snapshot.identity.owner}
           language={language}
@@ -220,13 +229,15 @@ function PersonalWallet({
   owner,
   language,
   onAccountChanged,
+  mode,
 }: {
   owner: string;
   language: "zh" | "en";
   onAccountChanged: () => void;
+  mode: "wallet" | "devices";
 }) {
   const [selection, setSelection] = useState<AgentShareWalletReadInput>({
-    action: "overview",
+    action: mode === "devices" ? "devices" : "overview",
     owner,
   });
   const [revision, setRevision] = useState(0);
@@ -269,6 +280,7 @@ function PersonalWallet({
   const displayed = result?.input === selection && !result.error ? result.value : undefined;
   return (
     <AgentShareWalletView
+      mode={mode}
       funds={
         displayed?.action === "overview" ? (
           <AgentSharePersonalFunds

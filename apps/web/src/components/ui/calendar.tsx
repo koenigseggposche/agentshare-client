@@ -1,3 +1,5 @@
+import { useUiText } from "../../i18n/uiText";
+import { enUS, zhCN } from "@daypicker/react/locale";
 import { DayPicker } from "@daypicker/react";
 import { ChevronLeftIcon, ChevronRightIcon, ChevronsUpDownIcon } from "lucide-react";
 import type * as React from "react";
@@ -47,6 +49,7 @@ export function Calendar({
   mode = "single",
   ...props
 }: React.ComponentProps<typeof DayPicker>): React.ReactElement {
+  const uiText = useUiText();
   const defaultClassNames = {
     button_next: buttonClassNames,
     button_previous: buttonClassNames,
@@ -95,11 +98,12 @@ export function Calendar({
 
   const dayPickerProps = {
     className: cn("w-fit [--cell-size:--spacing(10)] sm:[--cell-size:--spacing(9)]", className),
+    locale: uiText.language === "zh" ? zhCN : enUS,
     classNames: mergedClassNames,
     components: mergedComponents,
     "data-slot": "calendar",
     formatters: {
-      formatMonthDropdown: (date: Date) => date.toLocaleString("default", { month: "short" }),
+      formatMonthDropdown: (date: Date) => date.toLocaleString(uiText.language, { month: "short" }),
     } as React.ComponentProps<typeof DayPicker>["formatters"],
     mode,
     showOutsideDays,

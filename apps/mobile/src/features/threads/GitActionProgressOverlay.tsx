@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { tryOpenExternalUrl } from "../../lib/openExternalUrl";
 import { HeaderHeightContext } from "@react-navigation/elements";
 import { useContext } from "react";
@@ -15,6 +16,7 @@ export function GitActionProgressOverlay(props: {
   readonly onDismiss: () => void;
   readonly onOpenPullRequest?: (url: string) => Promise<boolean>;
 }) {
+  const uiText = useUiText();
   const { progress, onDismiss } = props;
   const openPullRequest = props.onOpenPullRequest;
   const insets = useSafeAreaInsets();
@@ -49,7 +51,7 @@ export function GitActionProgressOverlay(props: {
     >
       <Toast
         singleLine
-        message={progress.label ?? "Source control"}
+        message={progress.label ?? uiText("Source control")}
         description={progress.description ?? undefined}
         tone={
           progress.phase === "error"
@@ -59,7 +61,7 @@ export function GitActionProgressOverlay(props: {
               : "default"
         }
         busy={progress.phase === "running"}
-        action={progress.prUrl ? { label: "View", onPress: handlePress } : undefined}
+        action={progress.prUrl ? { label: uiText("View"), onPress: handlePress } : undefined}
       />
     </Animated.View>
   );

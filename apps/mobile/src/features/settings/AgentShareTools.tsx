@@ -1,3 +1,4 @@
+import { SettingsDisclosure } from "./components/SettingsDisclosure";
 import { uuidv4 } from "../../lib/uuid";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -37,7 +38,7 @@ export function AgentShareTools({
   language: "zh" | "en";
 }) {
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
-  const [open, setOpen] = useState(false);
+  const open = true;
   const query = useEnvironmentQuery(
     open ? agentShareEnvironment.tools({ environmentId, input: { owner } }) : null,
   );
@@ -65,7 +66,7 @@ export function AgentShareTools({
   const command = useAtomCommand(agentShareEnvironment.command, { reportFailure: false });
   const allowed = useAtomValue(agentShareEnvironment.command.permissionAtom(environmentId));
   const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ zh: string; en: string } | null>(null);
   const run = async (service: ToolName, selection: AgentShareToolSelection) => {
     setPending(true);
     setMessage(null);
@@ -76,11 +77,14 @@ export function AgentShareTools({
     query.refresh();
     setMessage(
       result?._tag === "Success"
-        ? t("选择已提交，请核对当前版本。", "Selection submitted. Check the current version.")
-        : t(
-            "未能确认切换结果，请刷新状态后检查。",
-            "The outcome could not be confirmed. Refresh and check the selection.",
-          ),
+        ? {
+            zh: "选择已提交，请核对当前版本。",
+            en: "Selection submitted. Check the current version.",
+          }
+        : {
+            zh: "未能确认切换结果，请刷新状态后检查。",
+            en: "The outcome could not be confirmed. Refresh and check the selection.",
+          },
     );
     setPending(false);
   };
@@ -97,19 +101,19 @@ export function AgentShareTools({
     jobs.refresh();
     setMessage(
       outcome === "accepted"
-        ? t(
-            "操作已接受，请查看安装记录。安装后需手动选择版本。",
-            "Accepted. Check the installation record, then select the version explicitly.",
-          )
+        ? {
+            zh: "操作已接受，请查看安装记录。安装后需手动选择版本。",
+            en: "Accepted. Check the installation record, then select the version explicitly.",
+          }
         : outcome === "rejected"
-          ? t(
-              "请求未被接受，请检查执行电脑、路径和版本。",
-              "The request was rejected. Check the host, path and version.",
-            )
-          : t(
-              "结果暂时无法确认，请刷新记录；重发同一请求不会重复安装。",
-              "The outcome is unknown. Refresh the records; resending the same request will not repeat the installation.",
-            ),
+          ? {
+              zh: "请求未被接受，请检查执行电脑、路径和版本。",
+              en: "The request was rejected. Check the host, path and version.",
+            }
+          : {
+              zh: "结果暂时无法确认，请刷新记录；重发同一请求不会重复安装。",
+              en: "The outcome is unknown. Refresh the records; resending the same request will not repeat the installation.",
+            },
     );
     setPending(false);
   };
@@ -130,9 +134,12 @@ export function AgentShareTools({
         )}
       </Text>
       <ListActionRow
-        label={open ? t("刷新工具", "Refresh tools") : t("管理编程工具", "Manage coding tools")}
+        label={t("刷新工具", "Refresh tools")}
         disabled={pending || query.isPending}
-        onPress={() => (open ? query.refresh() : setOpen(true))}
+        onPress={() => {
+          query.refresh();
+          jobs.refresh();
+        }}
       />
       {open && !supported ? (
         <Text className="px-5 py-3">
@@ -152,7 +159,7 @@ export function AgentShareTools({
       ) : null}
       {message ? (
         <Text className="px-5 py-3" accessibilityLiveRegion="polite">
-          {message}
+          {message[language]}
         </Text>
       ) : null}
       {open && operationsSupported ? (
@@ -282,99 +289,109 @@ function ToolCard({
           ? status.version || t("版本读取失败", "Version unavailable")
           : t("未安装", "Not installed")}
       </Text>
-      {status.path ? (
-        <Text selectable className="px-5 pb-3" textRole="footnote">
-          {status.path}
-        </Text>
-      ) : null}
-      {status.version_error ? (
-        <Text className="px-5 pb-3">
-          {t(
-            "当前程序未通过版本检查，请选择可用版本。",
-            "The current executable failed its version check. Select a working version.",
-          )}
-        </Text>
-      ) : null}
-      {status.versions.map((version) => {
-        const active =
-          status.selection.source === "managed" && status.selection.version === version;
-        return (
-          <ListActionRow
-            key={version}
-            label={`${name} ${version}${active ? t(" · 当前", " · Current") : ""}`}
-            disabled={blocked || active}
-            onPress={() => void run(service, { owner, source: "managed", version })}
-          />
-        );
-      })}
-      {status.versions.length === 0 ? (
-        <Text className="px-5 pb-3">
-          {t("尚未安装独立版本。", "No managed versions are installed.")}
-        </Text>
-      ) : null}
-      <View className="gap-2 px-5 py-3">
-        <Text textRole="footnote">
-          {t(
-            `${name} 系统工具路径（执行电脑上的绝对路径，可留空自动查找）`,
-            `${name} system executable (absolute host path; leave empty to detect)`,
-          )}
-        </Text>
-        <AppTextInput
-          accessibilityLabel={t(`${name} 系统工具路径`, `${name} system executable`)}
-          value={systemPath}
-          onChangeText={setSystemPath}
-          editable={!blocked}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-      </View>
       <ListActionRow
-        label={t(`使用系统 ${name}`, `Use system ${name}`)}
-        disabled={blocked}
-        onPress={() =>
-          void run(service, {
-            owner,
-            source: "system",
-            ...(systemPath.trim() ? { path: systemPath.trim() } : {}),
-          })
-        }
-      />
-      <View className="gap-2 px-5 py-3">
-        <Text textRole="footnote">
-          {t("官方版本（留空获取最新版本）", "Official version (empty for latest)")}
-        </Text>
-        <AppTextInput
-          accessibilityLabel={t(`${name} 安装版本`, `${name} installation version`)}
-          value={version}
-          editable={!installBlocked}
-          onChangeText={setVersion}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-      </View>
-      <ListActionRow
-        label={t(`安装 ${name} 官方版本`, `Install official ${name}`)}
+        label={t(`安装 ${name} 最新版本`, `Install latest ${name}`)}
         disabled={installBlocked}
-        onPress={() => install("install", version.trim())}
+        onPress={() => install("install", "")}
       />
-      <View className="gap-2 px-5 py-3">
-        <Text textRole="footnote">
-          {t("离线包目录（执行电脑上的绝对路径）", "Offline bundle directory (absolute host path)")}
-        </Text>
-        <AppTextInput
-          accessibilityLabel={t(`${name} 离线包目录`, `${name} offline bundle directory`)}
-          value={bundle}
-          editable={!installBlocked}
-          onChangeText={setBundle}
-          autoCapitalize="none"
-          autoCorrect={false}
+      <SettingsDisclosure title={t("版本与高级设置", "Versions and advanced settings")}>
+        {status.path ? (
+          <Text selectable className="px-5 pb-3" textRole="footnote">
+            {status.path}
+          </Text>
+        ) : null}
+        {status.version_error ? (
+          <Text className="px-5 pb-3">
+            {t(
+              "当前程序未通过版本检查，请选择可用版本。",
+              "The current executable failed its version check. Select a working version.",
+            )}
+          </Text>
+        ) : null}
+        {status.versions.map((version) => {
+          const active =
+            status.selection.source === "managed" && status.selection.version === version;
+          return (
+            <ListActionRow
+              key={version}
+              label={`${name} ${version}${active ? t(" · 当前", " · Current") : ""}`}
+              disabled={blocked || active}
+              onPress={() => void run(service, { owner, source: "managed", version })}
+            />
+          );
+        })}
+        {status.versions.length === 0 ? (
+          <Text className="px-5 pb-3">
+            {t("尚未安装独立版本。", "No managed versions are installed.")}
+          </Text>
+        ) : null}
+        <View className="gap-2 px-5 py-3">
+          <Text textRole="footnote">
+            {t(
+              `${name} 系统工具路径（执行电脑上的绝对路径，可留空自动查找）`,
+              `${name} system executable (absolute host path; leave empty to detect)`,
+            )}
+          </Text>
+          <AppTextInput
+            accessibilityLabel={t(`${name} 系统工具路径`, `${name} system executable`)}
+            value={systemPath}
+            onChangeText={setSystemPath}
+            editable={!blocked}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+        <ListActionRow
+          label={t(`使用系统 ${name}`, `Use system ${name}`)}
+          disabled={blocked}
+          onPress={() =>
+            void run(service, {
+              owner,
+              source: "system",
+              ...(systemPath.trim() ? { path: systemPath.trim() } : {}),
+            })
+          }
         />
-      </View>
-      <ListActionRow
-        label={t(`从离线包安装 ${name}`, `Install ${name} from offline bundle`)}
-        disabled={installBlocked || !bundle.trim()}
-        onPress={() => install("offline", bundle.trim())}
-      />
+        <View className="gap-2 px-5 py-3">
+          <Text textRole="footnote">
+            {t("官方版本（留空获取最新版本）", "Official version (empty for latest)")}
+          </Text>
+          <AppTextInput
+            accessibilityLabel={t(`${name} 安装版本`, `${name} installation version`)}
+            value={version}
+            editable={!installBlocked}
+            onChangeText={setVersion}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+        <ListActionRow
+          label={t(`安装 ${name} 官方版本`, `Install official ${name}`)}
+          disabled={installBlocked}
+          onPress={() => install("install", version.trim())}
+        />
+        <View className="gap-2 px-5 py-3">
+          <Text textRole="footnote">
+            {t(
+              "离线包目录（执行电脑上的绝对路径）",
+              "Offline bundle directory (absolute host path)",
+            )}
+          </Text>
+          <AppTextInput
+            accessibilityLabel={t(`${name} 离线包目录`, `${name} offline bundle directory`)}
+            value={bundle}
+            editable={!installBlocked}
+            onChangeText={setBundle}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+        <ListActionRow
+          label={t(`从离线包安装 ${name}`, `Install ${name} from offline bundle`)}
+          disabled={installBlocked || !bundle.trim()}
+          onPress={() => install("offline", bundle.trim())}
+        />
+      </SettingsDisclosure>
     </>
   );
 }

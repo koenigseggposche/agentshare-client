@@ -64,6 +64,16 @@ describe("searchSettings", () => {
     expect(searchSettings("sharing", ITEMS).map((item) => item.id)).toEqual(["network-access"]);
     expect(searchSettings("claude", ITEMS).map((item) => item.id)).toEqual(["providers"]);
     expect(searchSettings("long lines", ITEMS).map((item) => item.id)).toEqual(["word-wrap"]);
+    for (const [query, to] of [
+      ["设备授权", "/settings/account"],
+      ["钱包", "/settings/wallet"],
+      ["本地模型", "/settings/local-models"],
+      ["模型分享", "/settings/model-sharing"],
+      ["编程工具", "/settings/coding-tools"],
+      ["界面语言", "/settings/general"],
+    ])
+      expect(searchSettings(query!)[0]?.to).toBe(to);
+
     for (const query of ["fallback", "fallback agent", "fallback model"]) {
       expect(searchSettings(query)[0]).toMatchObject({
         id: "fallback-model",

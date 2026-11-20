@@ -1,3 +1,4 @@
+import { useUiText } from "../../../i18n/uiText";
 import type { PullRequestReviewGuideStop } from "@t3tools/contracts";
 import { CheckIcon } from "lucide-react";
 
@@ -17,6 +18,7 @@ export function GuideRail({
   seen: ReadonlySet<number>;
   onSelect: (position: number) => void;
 }) {
+  const uiText = useUiText();
   const reviewed = seen.size;
   const renderStop = (stop: PullRequestReviewGuideStop, index: number) => (
     <li key={index}>
@@ -29,7 +31,7 @@ export function GuideRail({
           <>
             {stop.attention !== null ? (
               <Badge size="sm" variant="warning">
-                Look closely
+                {uiText("Look closely")}
               </Badge>
             ) : null}
             <span>{stopSubline(stop)}</span>
@@ -40,9 +42,12 @@ export function GuideRail({
   );
 
   return (
-    <nav aria-label="Review tour" className="flex min-h-0 flex-col gap-4">
+    <nav aria-label={uiText("Review tour")} className="flex min-h-0 flex-col gap-4">
       <p className="text-xs text-muted-foreground tabular-nums @max-[56rem]/guide:hidden">
-        {reviewed} of {stops.length} read
+        {reviewed}
+        {uiText(" of ")}
+        {stops.length}
+        {uiText(" read")}
       </p>
       <div className="flex flex-col gap-4">
         <ol className="flex flex-col gap-0.5">{stops.map(renderStop)}</ol>
@@ -88,6 +93,7 @@ function RailRow({
 }
 
 function StopBullet({ number, seen }: { number: number; seen: boolean }) {
+  const uiText = useUiText();
   return (
     <span
       className={cn(
@@ -95,7 +101,11 @@ function StopBullet({ number, seen }: { number: number; seen: boolean }) {
         seen ? "border-success/40 text-success-foreground" : "border-border text-muted-foreground",
       )}
     >
-      {seen ? <CheckIcon aria-label={`Stop ${number}, read`} className="size-3" /> : number}
+      {seen ? (
+        <CheckIcon aria-label={uiText("Stop {0}, read", [number])} className="size-3" />
+      ) : (
+        number
+      )}
     </span>
   );
 }

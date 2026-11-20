@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   createElement,
   useCallback,
@@ -275,6 +276,7 @@ function getExpoViewConfig(moduleName: string) {
 }
 
 function NativeReviewDiffView(props: NativeReviewDiffViewProps) {
+  const uiText = useUiText();
   const [failedRowsJson, setFailedRowsJson] = useState<string | null>(null);
   const onRowsFailure = useCallback(() => setFailedRowsJson(props.rowsJson), [props.rowsJson]);
   if (failedRowsJson !== null && failedRowsJson !== props.rowsJson) setFailedRowsJson(null);
@@ -293,7 +295,7 @@ function NativeReviewDiffView(props: NativeReviewDiffViewProps) {
         ],
       },
       createElement(EmptyState, {
-        title: "Could not display diff",
+        title: uiText("Could not display diff"),
         detail: "Try loading the diff view again.",
         variant: "plain",
         actionLabel: "Retry diff",

@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { useAtomValue } from "@effect/atom-react";
 import { serverUpdateStateAtom } from "@t3tools/client-runtime/state/server";
 import { EnvironmentId } from "@t3tools/contracts";
@@ -246,7 +248,10 @@ export function showUpdateEverythingResult(result: UpdateEverythingResult): void
   );
 }
 
-function followHandedOffServers(servers: ReadonlyArray<HandedOffServer>): void {
+function followHandedOffServers(
+  servers: ReadonlyArray<HandedOffServer>,
+  uiText: UiTranslator = uiTranslators.en,
+): void {
   if (servers.length === 0) return;
   setUpdateEverythingRun(() => ({
     localVersion: null,
@@ -311,7 +316,8 @@ function followHandedOffServers(servers: ReadonlyArray<HandedOffServer>): void {
       (config) => {
         if (
           config !== null &&
-          resolveVersionMismatch(config.environment.serverVersion, server.targetVersion) === null
+          resolveVersionMismatch(config.environment.serverVersion, server.targetVersion, uiText) ===
+            null
         ) {
           settle(null);
         }
@@ -322,12 +328,14 @@ function followHandedOffServers(servers: ReadonlyArray<HandedOffServer>): void {
 }
 
 /** Reports, once per launch, how the update run that restarted the app ended. */
-export function startDesktopUpdateLaunchNotice(): () => void {
+export function startDesktopUpdateLaunchNotice(
+  uiText: UiTranslator = uiTranslators.en,
+): () => void {
   const saved = takeSavedUpdateEverythingResult();
   if (saved) {
     const handedOff = saved.handedOff ?? [];
     showUpdateEverythingResult({ ...saved, restarting: handedOff.map((server) => server.label) });
-    followHandedOffServers(handedOff);
+    followHandedOffServers(handedOff, uiText);
   }
 
   let notifiedNotAppliedVersion: string | null = null;
@@ -341,8 +349,11 @@ export function startDesktopUpdateLaunchNotice(): () => void {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Update did not apply",
-          description: `T3 Code is still on ${APP_VERSION}. Install ${notAppliedVersion} again from the update button.`,
+          title: uiText("Update did not apply"),
+          description: uiText(
+            "T3 Code is still on {0}. Install {1} again from the update button.",
+            [APP_VERSION, notAppliedVersion],
+          ),
         }),
       );
     },

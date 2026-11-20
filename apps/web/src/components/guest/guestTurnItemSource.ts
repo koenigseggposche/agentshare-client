@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import {
   applyCommandOutputFrame,
   EMPTY_COMMAND_OUTPUT,
@@ -50,7 +51,7 @@ const guestItemDetailAtom = Atom.family((key: string) => {
   return Atom.make(
     Effect.tryPromise({
       try: () => fetchGuestItemDetail(shareId, itemId),
-      catch: () => new GuestItemReadError({ message: "Could not load this item." }),
+      catch: () => new GuestItemReadError({ message: readUiText("Could not load this item.") }),
     }),
   );
 });
@@ -76,7 +77,9 @@ const guestCommandOutputAtom = Atom.family((key: string) => {
           if (source.readyState === EventSource.CLOSED) {
             Queue.failCauseUnsafe(
               queue,
-              Cause.fail(new GuestItemReadError({ message: "Output is no longer available." })),
+              Cause.fail(
+                new GuestItemReadError({ message: readUiText("Output is no longer available.") }),
+              ),
             );
           }
         });

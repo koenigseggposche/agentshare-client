@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { EnvironmentId } from "@t3tools/contracts";
 import { splitFilePathPosition } from "@t3tools/shared/fileLinks";
 
@@ -29,20 +31,28 @@ export function hasMarkdownFilePrimaryAction(input: {
   );
 }
 
-export function markdownFileCopyMenuItems({
-  targetPath,
-  workspaceRelativePath,
-}: Pick<MarkdownFileLinkMeta, "targetPath" | "workspaceRelativePath">) {
+export function markdownFileCopyMenuItems(
+  {
+    targetPath,
+    workspaceRelativePath,
+  }: Pick<MarkdownFileLinkMeta, "targetPath" | "workspaceRelativePath">,
+  uiText: UiTranslator = uiTranslators.en,
+) {
   const items = [
-    { id: "copy-full", label: "Copy full path", value: targetPath, title: "Full path" },
+    {
+      id: "copy-full",
+      label: uiText("Copy full path"),
+      value: targetPath,
+      title: uiText("Full path"),
+    },
   ];
   if (workspaceRelativePath !== null) {
     const position = targetPath.slice(splitFilePathPosition(targetPath).path.length);
     items.unshift({
       id: "copy-relative",
-      label: "Copy relative path",
+      label: uiText("Copy relative path"),
       value: `${workspaceRelativePath}${position}`,
-      title: "Relative path",
+      title: uiText("Relative path"),
     });
   }
   return items;

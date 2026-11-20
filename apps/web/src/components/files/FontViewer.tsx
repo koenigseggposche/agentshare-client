@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useEffect, useState } from "react";
 
 import { useTheme } from "~/hooks/useTheme";
@@ -39,6 +40,7 @@ async function readFont(src: string, signal: AbortSignal) {
 }
 
 export default function FontViewer(props: { readonly src: string; readonly name: string }) {
+  const uiText = useUiText();
   const { resolvedTheme } = useTheme();
   const [data, setData] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,9 +71,10 @@ export default function FontViewer(props: { readonly src: string; readonly name:
         role="alert"
         className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 px-6 text-center"
       >
-        <p className="text-sm font-medium">No preview for this file</p>
+        <p className="text-sm font-medium">{uiText("No preview for this file")}</p>
         <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
-          {error} Save it to open in another app.
+          {error}
+          {uiText(" Save it to open in another app.")}
         </p>
       </div>
     );

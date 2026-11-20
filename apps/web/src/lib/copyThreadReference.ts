@@ -1,3 +1,4 @@
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
 import type { ThreadReferenceCopyTarget } from "@t3tools/client-runtime/thread-reference";
 import {
   COMPOSER_CONTEXT_CLIPBOARD_MIME,
@@ -7,7 +8,10 @@ import {
 import { stackedThreadToast, toastManager } from "../components/ui/toast";
 import { writeTextToClipboard } from "../hooks/useCopyToClipboard";
 
-export async function copyThreadReference(target: ThreadReferenceCopyTarget): Promise<void> {
+export async function copyThreadReference(
+  target: ThreadReferenceCopyTarget,
+  uiText: UiTranslator = uiTranslators.en,
+): Promise<void> {
   const fragment = target.fragment ? encodeComposerContextFragment(target.fragment) : null;
   try {
     const didCopy = await writeTextToClipboard(
@@ -27,7 +31,7 @@ export async function copyThreadReference(target: ThreadReferenceCopyTarget): Pr
       stackedThreadToast({
         type: "error",
         title: target.failureTitle,
-        description: error instanceof Error ? error.message : "An error occurred.",
+        description: error instanceof Error ? error.message : uiText("An error occurred."),
       }),
     );
   }

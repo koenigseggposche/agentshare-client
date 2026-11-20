@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import { nativeAppLinkOrigin } from "../../lib/appLinkOrigin";
 import * as Dialog from "../../components/ui/Dialog";
 import { buildNewThreadLink, type LinkedPrompt } from "@t3tools/shared/promptLinks";
@@ -11,7 +12,7 @@ import {
 import { linkedThreadDraftAction } from "./prompt-link-model";
 
 export function showPromptLinkNotice(notice: string): void {
-  Dialog.alert("Prompt from a link", notice);
+  Dialog.alert(readUiText("Prompt from a link"), notice);
 }
 
 export async function applyLinkedPromptToThreadDraft(
@@ -22,7 +23,10 @@ export async function applyLinkedPromptToThreadDraft(
   try {
     await waitForComposerDraftsLoaded();
   } catch {
-    Dialog.alert("Could not open link", "Drafts could not be loaded, so the prompt was not added.");
+    Dialog.alert(
+      readUiText("Could not open link"),
+      readUiText("Drafts could not be loaded, so the prompt was not added."),
+    );
     return;
   }
   const action = linkedThreadDraftAction(getComposerDraftSnapshot(draftKey).text, prompt.text);
@@ -31,9 +35,9 @@ export async function applyLinkedPromptToThreadDraft(
     showPromptLinkNotice(notice);
     return;
   }
-  Dialog.alert("Linked prompt ready. Replace draft?", notice, [
-    { text: "Keep mine", style: "cancel" },
-    { text: "Replace", onPress: () => setComposerDraftText(draftKey, prompt.text) },
+  Dialog.alert(readUiText("Linked prompt ready. Replace draft?"), notice, [
+    { text: readUiText("Keep mine"), style: "cancel" },
+    { text: readUiText("Replace"), onPress: () => setComposerDraftText(draftKey, prompt.text) },
   ]);
 }
 
@@ -43,6 +47,6 @@ export async function copyPromptLink(prompt: string): Promise<void> {
       target: "prompt link",
     }))
   ) {
-    Dialog.alert("Could not copy", "Try again.");
+    Dialog.alert(readUiText("Could not copy"), readUiText("Try again."));
   }
 }

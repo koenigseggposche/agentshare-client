@@ -1,3 +1,5 @@
+import { useUiText } from "../../i18n/uiText";
+
 import { memo, useRef } from "react";
 import { Check, Copy } from "lucide";
 import { Button } from "../ui/button";
@@ -28,10 +30,11 @@ export const MessageCopyButton = memo(function MessageCopyButton({
   variant?: "outline" | "ghost";
   className?: string;
 }) {
+  const uiText = useUiText();
   const ref = useRef<HTMLButtonElement>(null);
   const { copyToClipboard, isCopied } = useCopyToClipboard<void>({
-    onCopy: () => showAnchoredCopySuccessToast(ref),
-    onError: (error: Error) => showAnchoredCopyErrorToast(ref, error),
+    onCopy: () => showAnchoredCopySuccessToast(ref, uiText),
+    onError: (error: Error) => showAnchoredCopyErrorToast(ref, error, uiText),
     timeout: ANCHORED_COPY_TOAST_TIMEOUT_MS,
     ...(extraFlavors ? { extraFlavors } : {}),
   });

@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import type { DesktopPreviewColorScheme } from "@t3tools/contracts";
 import { Minus, MoreVertical, Plus as PlusIcon, RotateCcw } from "lucide-react";
 
@@ -51,20 +53,30 @@ interface Props {
   move?: { readonly label: string; readonly onMove: () => void };
 }
 
-const MenuTriggerButton = () => (
-  <Tooltip>
-    <TooltipTrigger
-      render={
-        <MenuTrigger
-          render={<Button variant="ghost" size="icon-xs" type="button" aria-label="Preview menu" />}
-        />
-      }
-    >
-      <MoreVertical />
-    </TooltipTrigger>
-    <TooltipPopup>More</TooltipPopup>
-  </Tooltip>
-);
+const MenuTriggerButton = () => {
+  const uiText = useUiText();
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <MenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                type="button"
+                aria-label={uiText("Preview menu")}
+              />
+            }
+          />
+        }
+      >
+        <MoreVertical />
+      </TooltipTrigger>
+      <TooltipPopup>{uiText("More")}</TooltipPopup>
+    </Tooltip>
+  );
+};
 
 export function PreviewMoreMenu({
   enabled,
@@ -77,6 +89,7 @@ export function PreviewMoreMenu({
   profileName,
   move,
 }: Props) {
+  const uiText = useUiText();
   const zoomLabel = `${Math.round(zoomFactor * 100)}%`;
   const disabled = !enabled;
   return (
@@ -84,32 +97,32 @@ export function PreviewMoreMenu({
       <MenuTriggerButton />
       <MenuPopup align="end" sideOffset={6}>
         <MenuItem onClick={actions.hardReload} disabled={disabled}>
-          Hard reload
+          {uiText("Hard reload")}
         </MenuItem>
         {actions.openDevTools ? (
           <MenuItem onClick={actions.openDevTools} disabled={disabled}>
-            Open DevTools
+            {uiText("Open DevTools")}
           </MenuItem>
         ) : null}
         {actions.toggleNativePictureInPicture ? (
           <MenuItem onClick={actions.toggleNativePictureInPicture} disabled={disabled}>
             {nativePictureInPicture
-              ? "Close separate preview window"
-              : "Open separate preview window"}
+              ? uiText("Close separate preview window")
+              : uiText("Open separate preview window")}
           </MenuItem>
         ) : null}
         {move ? <MenuItem onClick={move.onMove}>{move.label}</MenuItem> : null}
         <MenuItem onClick={onToggleDeviceToolbar} disabled={disabled}>
-          {deviceToolbarVisible ? "Hide device toolbar" : "Show device toolbar"}
+          {deviceToolbarVisible ? uiText("Hide device toolbar") : uiText("Show device toolbar")}
         </MenuItem>
         <MenuSub>
-          <MenuSubTrigger disabled={disabled}>Appearance</MenuSubTrigger>
+          <MenuSubTrigger disabled={disabled}>{uiText("Appearance")}</MenuSubTrigger>
           <MenuSubPopup>
             <MenuRadioGroup
               value={colorScheme}
               onValueChange={(value) => actions.setColorScheme(value as DesktopPreviewColorScheme)}
             >
-              {COLOR_SCHEME_OPTIONS.map((option) => (
+              {translateUiLabels(COLOR_SCHEME_OPTIONS, uiText).map((option) => (
                 <MenuRadioItem key={option.value} value={option.value}>
                   {option.label}
                 </MenuRadioItem>
@@ -124,14 +137,14 @@ export function PreviewMoreMenu({
           className="justify-between"
           disabled={disabled}
         >
-          <span>Zoom</span>
+          <span>{uiText("Zoom")}</span>
           <span className="flex items-center gap-1">
             <Button
               variant="outline"
               size="icon-xs"
               type="button"
               onClick={actions.zoomOut}
-              aria-label="Zoom out"
+              aria-label={uiText("Zoom out")}
               disabled={disabled}
             >
               <Minus />
@@ -144,7 +157,7 @@ export function PreviewMoreMenu({
               size="icon-xs"
               type="button"
               onClick={actions.zoomIn}
-              aria-label="Zoom in"
+              aria-label={uiText("Zoom in")}
               disabled={disabled}
             >
               <PlusIcon />
@@ -154,7 +167,7 @@ export function PreviewMoreMenu({
               size="icon-xs"
               type="button"
               onClick={actions.resetZoom}
-              aria-label="Reset zoom"
+              aria-label={uiText("Reset zoom")}
               disabled={disabled}
             >
               <RotateCcw />
@@ -165,11 +178,14 @@ export function PreviewMoreMenu({
         <MenuGroup>
           {profileName ? (
             <MenuGroupLabel className="max-w-64">
-              <span className="block truncate">Profile: {profileName}</span>
+              <span className="block truncate">
+                {uiText("Profile: ")}
+                {profileName}
+              </span>
             </MenuGroupLabel>
           ) : null}
-          <MenuItem onClick={actions.clearCookies}>Clear cookies</MenuItem>
-          <MenuItem onClick={actions.clearCache}>Clear cache</MenuItem>
+          <MenuItem onClick={actions.clearCookies}>{uiText("Clear cookies")}</MenuItem>
+          <MenuItem onClick={actions.clearCache}>{uiText("Clear cache")}</MenuItem>
         </MenuGroup>
       </MenuPopup>
     </Menu>

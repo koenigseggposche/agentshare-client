@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   type EnvironmentId,
   type ProviderInstanceId,
@@ -104,9 +105,10 @@ export const ProviderStatusBanner = memo(function ProviderStatusBanner({
   onOpenProviderSetup?: (instanceId: ProviderInstanceId) => void;
   status: ServerProvider | null;
 }) {
+  const uiText = useUiText();
   const canRefresh = useAtomValue(serverEnvironment.refreshProviders.permissionAtom(environmentId));
   const refreshProviders = useAtomCommand(serverEnvironment.refreshProviders, {
-    label: "Refresh provider status",
+    label: uiText("Refresh provider status"),
   });
   const refreshingRef = useRef(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -160,25 +162,25 @@ export const ProviderStatusBanner = memo(function ProviderStatusBanner({
             <div className="flex flex-wrap items-center justify-end gap-3">
               {onOpenProviderSetup && hasProviderSetup(status) ? (
                 <InlineButton onClick={() => onOpenProviderSetup(status.instanceId)}>
-                  Open provider setup
+                  {uiText("Open provider setup")}
                 </InlineButton>
               ) : null}
               <Button
-                aria-label={`Refresh ${providerName} provider status`}
+                aria-label={uiText("Refresh {0} provider status", [providerName])}
                 disabled={!canRefresh || isRefreshing}
                 onClick={() => void refresh()}
                 size="xs"
                 variant="outline"
               >
                 <RefreshIcon />
-                {isRefreshing ? "Refreshing..." : "Refresh"}
+                {isRefreshing ? uiText("Refreshing...") : uiText("Refresh")}
               </Button>
             </div>
           </div>
         </AlertDescription>
         <AlertAction>
           <Button
-            aria-label={`Dismiss ${providerName} provider ${status.status}`}
+            aria-label={uiText("Dismiss {0} provider {1}", [providerName, status.status])}
             onClick={onDismiss}
             size="icon-xs"
             variant="ghost-muted"

@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import { linkRequestFailureMessage } from "@t3tools/client-runtime/link-request";
 import {
@@ -58,6 +60,7 @@ export function LinkedEnvironmentsSettings({
   readonly environmentLabel: string | null;
   readonly isSearchTarget: boolean;
 }) {
+  const uiText = useUiText();
   const links = useEnvironmentQuery(peerLinkEnvironment.list({ environmentId, input: {} }));
   const canLink = useAtomValue(peerLinkEnvironment.link.permissionAtom(environmentId));
   const search = searchableSetting("linked-environments");
@@ -68,13 +71,18 @@ export function LinkedEnvironmentsSettings({
       headerAction={canLink ? <LinkEnvironmentAction environmentId={environmentId} /> : null}
     >
       {links.error ? (
-        <SettingsRow title="Could not load linked environments" description={links.error} />
+        <SettingsRow
+          title={uiText("Could not load linked environments")}
+          description={links.error}
+        />
       ) : !links.data ? (
-        <SettingsRow title="Loading linked environments…" role="status" />
+        <SettingsRow title={uiText("Loading linked environments…")} role="status" />
       ) : links.data.links.length === 0 ? (
         <SettingsRow
-          title="No linked environments"
-          description="Link another machine running T3 Code, such as a VPS, so agents here can launch and drive threads there."
+          title={uiText("No linked environments")}
+          description={uiText(
+            "Link another machine running T3 Code, such as a VPS, so agents here can launch and drive threads there.",
+          )}
         />
       ) : (
         links.data.links.map((link) => (
@@ -96,9 +104,12 @@ function LinkedEnvironmentRow({
   readonly environmentId: EnvironmentId;
   readonly link: PeerLinkSummary;
 }) {
+  const uiText = useUiText();
   const nowMinute = useNowMinute();
   const health = peerLinkHealth(link, DateTime.makeUnsafe(nowMinute));
-  const unlink = useAtomCommand(peerLinkEnvironment.unlink, { label: "unlink environment" });
+  const unlink = useAtomCommand(peerLinkEnvironment.unlink, {
+    label: uiText("unlink environment"),
+  });
   const canUnlink = useAtomValue(peerLinkEnvironment.unlink.permissionAtom(environmentId));
   const [busy, setBusy] = useState(false);
   const forget = async () => {
@@ -145,7 +156,7 @@ function LinkedEnvironmentRow({
             <h3 className="text-sm font-medium text-foreground">{link.label}</h3>
           </div>
           <p className="text-xs text-muted-foreground">
-            {accessConfig[link.access].label} · {status}
+            {translateUiLabels(accessConfig, uiText)[link.access].label} · {status}
           </p>
           <p className="truncate text-xs text-muted-foreground/80">{link.urls.join(", ")}</p>
         </div>
@@ -157,7 +168,7 @@ function LinkedEnvironmentRow({
               disabled={busy}
               onClick={() => void forget()}
             >
-              {busy ? "Forgetting…" : "Forget"}
+              {busy ? uiText("Forgetting…") : uiText("Forget")}
             </Button>
           </div>
         ) : null}
@@ -167,6 +178,7 @@ function LinkedEnvironmentRow({
 }
 
 function LinkEnvironmentAction({ environmentId }: { readonly environmentId: EnvironmentId }) {
+  const uiText = useUiText();
   const [open, setOpen] = useState(false);
   const machines = useLinkableMachines(environmentId, open);
   // Null until the user picks; with no other machines known, only an address is left.
@@ -180,7 +192,7 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
   // Enter then a click can both run before a re-render; this guard is synchronous.
   const inFlight = useRef(false);
   const formId = useId();
-  const link = useAtomCommand(peerLinkEnvironment.link, { label: "link environment" });
+  const link = useAtomCommand(peerLinkEnvironment.link, { label: uiText("link environment") });
   const selected = choice ?? (machines.length === 0 ? ANOTHER_ADDRESS : null);
   const machine = machines.find((candidate) => candidate.environmentId === selected) ?? null;
   // This client can mint a code there when it is connected to that
@@ -240,7 +252,7 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
     setBusy(false);
     if (result === null) return;
     if (result._tag === "Success") {
-      toastManager.add({ type: "success", title: `Linked ${result.value.label}` });
+      toastManager.add({ type: "success", title: uiText("Linked {0}", [result.value.label]) });
       handleOpenChange(false);
     } else if (!isAtomCommandInterrupted(result)) {
       failureToast("Could not link the environment", String(squashAtomCommandFailure(result)));
@@ -258,16 +270,17 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
         render={
           <Button size="xs" variant="default">
             <PlusIcon className="size-3" />
-            Link
+            {uiText("Link")}
           </Button>
         }
       />
       <DialogPopup className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Link an environment</DialogTitle>
+          <DialogTitle>{uiText("Link an environment")}</DialogTitle>
           <DialogDescription>
-            Agents here can then launch, message and wait on threads there. It appears in that
-            environment's Connections, where it can be revoked.
+            {uiText(
+              "Agents here can then launch, message and wait on threads there. It appears in that environment's Connections, where it can be revoked.",
+            )}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel>
@@ -290,12 +303,14 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
             ) : null}
             {machine?.linked ? (
               <p className="text-xs text-muted-foreground">
-                Already linked. Linking again renews it with the access you pick.
+                {uiText("Already linked. Linking again renews it with the access you pick.")}
               </p>
             ) : null}
             {needsAddress ? (
               <label className="block space-y-1.5">
-                <span className="block text-xs font-medium text-foreground">Address</span>
+                <span className="block text-xs font-medium text-foreground">
+                  {uiText("Address")}
+                </span>
                 <Input
                   value={address}
                   onChange={(event) => {
@@ -311,22 +326,27 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
                 />
                 {machine !== null ? (
                   <span className="block text-xs text-muted-foreground">
-                    This app has no address for {machine.label} that another machine can reach.
-                    Enter its https or Tailscale address.
+                    {uiText("This app has no address for ")}
+                    {machine.label}
+                    {uiText(
+                      " that another machine can reach. Enter its https or Tailscale address.",
+                    )}
                   </span>
                 ) : null}
               </label>
             ) : null}
             {selected === null || canMint ? null : (
               <label className="block space-y-1.5">
-                <span className="block text-xs font-medium text-foreground">Pairing code</span>
+                <span className="block text-xs font-medium text-foreground">
+                  {uiText("Pairing code")}
+                </span>
                 <Input
                   value={pairingCode}
                   onChange={(event) => setPairingCode(event.target.value)}
                   placeholder={
                     machine === null
-                      ? "From that computer’s Sharing & access settings"
-                      : "Paste the code"
+                      ? uiText("From that computer’s Sharing & access settings")
+                      : uiText("Paste the code")
                   }
                   disabled={busy}
                   autoComplete="one-time-code"
@@ -335,8 +355,11 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
                 />
                 {machine !== null ? (
                   <span className="block text-xs text-muted-foreground">
-                    Create a link on {machine.label}: Settings → Sharing & access → Create link,
-                    then paste its code here.
+                    {uiText("Create a link on ")}
+                    {machine.label}
+                    {uiText(
+                      ": Settings → Sharing & access → Create link, then paste its code here.",
+                    )}
                   </span>
                 ) : null}
               </label>
@@ -346,10 +369,10 @@ function LinkEnvironmentAction({ environmentId }: { readonly environmentId: Envi
         </DialogPanel>
         <DialogFooter variant="bare">
           <DialogClose disabled={busy} render={<Button variant="outline" type="button" />}>
-            Cancel
+            {uiText("Cancel")}
           </DialogClose>
           <Button form={formId} type="submit" disabled={busy || !ready}>
-            {busy ? "Linking…" : "Link"}
+            {busy ? uiText("Linking…") : uiText("Link")}
           </Button>
         </DialogFooter>
       </DialogPopup>

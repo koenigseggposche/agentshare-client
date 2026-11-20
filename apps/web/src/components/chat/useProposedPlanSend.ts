@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   AuthOrchestrationOperateScope,
   type EnvironmentId,
@@ -244,6 +245,7 @@ interface ImplementPlanInNewThreadInput extends PlanSendBase {
  * thread is deleted again if it cannot be started or opened.
  */
 export function useImplementPlanInNewThread(input: ImplementPlanInNewThreadInput) {
+  const uiText = useUiText();
   const {
     environmentId,
     routeThreadKey,
@@ -382,11 +384,11 @@ export function useImplementPlanInNewThread(input: ImplementPlanInNewThreadInput
         toastManager.add(
           stackedThreadToast({
             type: "error",
-            title: "Could not start implementation thread",
+            title: uiText("Could not start implementation thread"),
             description:
               error instanceof Error
                 ? error.message
-                : "An error occurred while creating the new thread.",
+                : uiText("An error occurred while creating the new thread."),
           }),
         );
       }

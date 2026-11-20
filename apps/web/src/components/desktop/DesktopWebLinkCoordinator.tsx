@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import {
   isAtomCommandInterrupted,
@@ -79,6 +80,7 @@ function threadShowingBrowser(
 }
 
 export function DesktopWebLinkCoordinator() {
+  const uiText = useUiText();
   const router = useRouter();
   const primaryEnvironment = usePrimaryEnvironment();
   const openPullRequestsInApp = useClientSettings((settings) => settings.pullRequestLinksOpenInApp);
@@ -90,7 +92,9 @@ export function DesktopWebLinkCoordinator() {
     reportFailure: false,
     refresh: true,
   });
-  const connectPairingEnvironment = useAtomCommand(connectPairing, { reportFailure: false });
+  const connectPairingEnvironment = useAtomCommand(connectPairing, {
+    reportFailure: false,
+  });
   const httpBaseUrl = useEnvironmentHttpBaseUrl(primaryEnvironment?.environmentId ?? null);
   const queueRef = useRef(Promise.resolve());
   const pairedUrlsRef = useRef(new Set<string>());
@@ -107,15 +111,15 @@ export function DesktopWebLinkCoordinator() {
 
   const reportFailure = (url: string, description = url) =>
     toastManager.add(
-      stackedThreadToast({ type: "error", title: "Could not open the link", description }),
+      stackedThreadToast({ type: "error", title: uiText("Could not open the link"), description }),
     );
 
   const reportPairingFailure = (error: unknown) =>
     toastManager.add(
       stackedThreadToast({
         type: "error",
-        title: "Could not add backend",
-        description: error instanceof Error ? error.message : "Failed to add backend.",
+        title: uiText("Could not add backend"),
+        description: error instanceof Error ? error.message : uiText("Failed to add backend."),
       }),
     );
 
@@ -141,8 +145,8 @@ export function DesktopWebLinkCoordinator() {
     pairedUrlsRef.current.add(pairingUrl);
     toastManager.add({
       type: "success",
-      title: "Backend added",
-      description: "The environment is saved and will reconnect on app startup.",
+      title: uiText("Backend added"),
+      description: uiText("The environment is saved and will reconnect on app startup."),
     });
   };
 
@@ -181,14 +185,17 @@ export function DesktopWebLinkCoordinator() {
     const result = isFile
       ? httpBaseUrl === null
         ? null
-        : await openFileInPreview({
-            threadRef,
-            filePath: decodeURIComponent(new URL(url).pathname),
-            workspaceRoot: undefined,
-            httpBaseUrl,
-            createAssetUrl,
-            openPreview,
-          })
+        : await openFileInPreview(
+            {
+              threadRef,
+              filePath: decodeURIComponent(new URL(url).pathname),
+              workspaceRoot: undefined,
+              httpBaseUrl,
+              createAssetUrl,
+              openPreview,
+            },
+            uiText,
+          )
       : await openUrlInPreview({ threadRef, url, openPreview });
     if (result === null) {
       reportFailure(url);

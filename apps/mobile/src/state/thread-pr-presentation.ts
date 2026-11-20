@@ -1,3 +1,4 @@
+import { readUiText } from "../i18n/uiText";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
 import type { ThreadPullRequestLink, VcsStatusResult } from "@t3tools/contracts";
 import {
@@ -90,9 +91,17 @@ export function presentThreadLinkedPullRequests(
     label,
     accessibilityLabel:
       badge.kind === "stack"
-        ? `${badge.layers} ${changeRequest.singular}s in stack, ${isDraft ? "draft" : (state ?? "status pending")}`
+        ? readUiText("{0} {1}s in stack, {2}", [
+            badge.layers,
+            changeRequest.singular,
+            isDraft ? "draft" : (state ?? "status pending"),
+          ])
         : linkedCount !== null
-          ? `${linkedCount} linked ${changeRequest.plural}, overall ${badge.state}`
+          ? readUiText("{0} linked {1}, overall {2}", [
+              linkedCount,
+              changeRequest.plural,
+              badge.state,
+            ])
           : `#${link.number} ${changeRequest.singular} ${state === null ? "status pending" : isDraft ? "draft" : state}`,
     textClassName:
       state === null || isDraft
@@ -122,8 +131,11 @@ export function resolveThreadPrSource(
 
 export function resolveThreadPrBadgeAction(pr: ThreadPrPresentation) {
   return pr.kind === "stack" || pr.others > 0
-    ? { kind: "list" as const, accessibilityLabel: `Show ${pr.accessibilityLabel}` }
-    : { kind: "open" as const, accessibilityLabel: `Open ${pr.accessibilityLabel}` };
+    ? { kind: "list" as const, accessibilityLabel: readUiText("Show {0}", [pr.accessibilityLabel]) }
+    : {
+        kind: "open" as const,
+        accessibilityLabel: readUiText("Open {0}", [pr.accessibilityLabel]),
+      };
 }
 
 /** Records `value` as the newest entry, evicting the least recently answered beyond `limit`. */

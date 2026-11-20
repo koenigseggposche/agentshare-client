@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { ArrowLeftIcon, ArrowRightIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { memo } from "react";
@@ -46,6 +47,7 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
 }: {
   isElectron: boolean;
 }) {
+  const uiText = useUiText();
   const stageLabel = useEnvironmentStageLabel();
   const environmentIdentificationMode = useEnvironmentIdentificationMode();
   const backdropVariant = resolveSidebarStageBackdropVariant(
@@ -69,7 +71,7 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
         <SidebarTrigger
           variant={backdropVariant ? "media-navigation" : "ghost"}
           className="relative top-auto translate-y-0"
-          aria-label="Toggle main sidebar"
+          aria-label={uiText("Toggle main sidebar")}
         />
       </div>
       <div className="relative z-10 flex h-8 min-w-0 flex-1 flex-wrap content-start items-center gap-x-2 overflow-hidden py-0.5">
@@ -164,9 +166,10 @@ function HistoryNavigationButton({
 }
 
 function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
+  const uiText = useUiText();
   return (
     <Link
-      aria-label="AgentShare home"
+      aria-label={uiText("AgentShare home")}
       className={cn(
         "relative z-10 ml-[var(--workspace-titlebar-content-left)] hidden h-7 w-fit min-w-0 shrink-0 items-center overflow-hidden rounded-md outline-hidden ring-ring focus-visible:ring-2 focus-visible:ring-inset md:flex",
         onBackdrop ? "text-white" : "text-foreground",
@@ -179,16 +182,17 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
 }
 
 function SidebarBrandMark({ onBackdrop }: { onBackdrop: boolean }) {
+  const uiText = useUiText();
   return (
     <span className="inline-flex min-w-0 items-baseline gap-1 text-sm font-medium tracking-tight">
-      <AgentShareMark aria-label="AgentShare" className="h-4 w-auto shrink-0" />
+      <AgentShareMark aria-label={uiText("AgentShare")} className="h-4 w-auto shrink-0" />
       <span
         className={cn(
           "truncate [text-box:trim-both_cap_alphabetic] supports-[text-box:trim-both_cap_alphabetic]:py-1",
           onBackdrop ? "text-white/70" : "text-muted-foreground",
         )}
       >
-        AgentShare
+        {uiText("AgentShare")}
       </span>
     </span>
   );

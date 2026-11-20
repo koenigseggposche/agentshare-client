@@ -1,3 +1,4 @@
+import { readUiTranslator } from "../settings/uiLanguage.ts";
 import * as Cause from "effect/Cause";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
@@ -138,8 +139,8 @@ const handleFatalStartupError = Effect.fn("desktop.startup.handleFatalStartupErr
   const wasQuitting = yield* Ref.getAndSet(state.quitting, true);
   if (!wasQuitting) {
     yield* electronDialog.showErrorBox(
-      "AgentShare Client failed to start",
-      `Stage: ${stage}\n${message}${detail}`,
+      readUiTranslator()("AgentShare Client failed to start"),
+      readUiTranslator()("Stage: {0}\n{1}{2}", [stage, message, detail]),
     );
   }
   yield* shutdown.request;

@@ -1,3 +1,5 @@
+import { useUiText } from "../../i18n/uiText";
+import { readUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import { visibleLinkedThreads } from "@t3tools/client-runtime/state/threads";
 import { AsyncResult } from "effect/reactivity";
@@ -54,6 +56,7 @@ export function usePullRequestThreads(
   pr: PullRequestDetail | null,
   filePath?: string,
 ) {
+  const uiText = useUiText();
   const target = pullRequestTarget(params);
   const config = useEnvironmentServerConfig(target.environmentId);
   const supported = threadPullRequestLinkMode(config?.environment.capabilities) === "multiple";
@@ -173,13 +176,19 @@ export function usePullRequestThreads(
       );
       previousPrompts.current.set(draftKey, pullRequestAgentPrompt(task, terminology));
       if (thread) openThread(thread);
-      else openThreadRoute({ draft: { draftId: draftKey, title: `Ask about #${pr.number}` } });
+      else
+        openThreadRoute({
+          draft: { draftId: draftKey, title: uiText("Ask about #{0}", [pr.number]) },
+        });
     });
     pending.current = false;
     setBusy(false);
     if (AsyncResult.isFailure(result)) {
       const cause = squashAtomCommandFailure(result);
-      Dialog.alert("Couldn't open a thread", cause instanceof Error ? cause.message : "Try again.");
+      Dialog.alert(
+        readUiText("Couldn't open a thread"),
+        cause instanceof Error ? cause.message : readUiText("Try again."),
+      );
     }
   };
   return {

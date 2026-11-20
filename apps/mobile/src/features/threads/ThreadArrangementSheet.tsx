@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { SheetHeader } from "../../components/ui/SheetHeader";
 import { appAtomRegistry } from "../../state/atom-registry";
 import { useAtomValue } from "@effect/atom-react";
@@ -103,6 +104,7 @@ function DragHandle(props: {
   canMoveUp: boolean;
   canMoveDown: boolean;
 }) {
+  const uiText = useUiText();
   const latest = useRef(props);
   /* oxlint-disable react/refs -- The pan gesture captures its callbacks once per `disabled` change; they read the latest handlers when native gesture events fire. */
   latest.current = props;
@@ -127,13 +129,15 @@ function DragHandle(props: {
         collapsable={false}
         accessible
         accessibilityRole="adjustable"
-        accessibilityLabel={`Reorder ${props.title}`}
-        accessibilityHint="Move up and Move down reorder within this section. Other actions move between sections."
+        accessibilityLabel={uiText("Reorder {0}", [props.title])}
+        accessibilityHint={uiText(
+          "Move up and Move down reorder within this section. Other actions move between sections.",
+        )}
         accessibilityState={{ disabled: props.disabled }}
         accessibilityActions={[
           ...props.sectionActions,
-          ...(props.canMoveUp ? [{ name: "decrement", label: "Move up" }] : []),
-          ...(props.canMoveDown ? [{ name: "increment", label: "Move down" }] : []),
+          ...(props.canMoveUp ? [{ name: "decrement", label: uiText("Move up") }] : []),
+          ...(props.canMoveDown ? [{ name: "increment", label: uiText("Move down") }] : []),
         ]}
         onAccessibilityAction={({ nativeEvent }) => {
           if (props.disabled) return;
@@ -163,6 +167,7 @@ function DragHandle(props: {
 }
 
 function ThreadArrangementSheet(props: { onClose: () => void }) {
+  const uiText = useUiText();
   const { appearance } = useAppearancePreferences();
   const { fontScale } = useWindowDimensions();
   const { rowHeight, headerHeight } = deriveThreadArrangementSizing({
@@ -394,12 +399,12 @@ function ThreadArrangementSheet(props: { onClose: () => void }) {
             <SafeAreaView style={{ flex: 1 }}>
               <SheetHeader
                 presentation="inline"
-                title="Arrange threads"
+                title={uiText("Arrange threads")}
                 onClose={props.onClose}
-                accessibilityLabel="Close arrange threads"
+                accessibilityLabel={uiText("Close arrange threads")}
               />
               <Text className="px-5 pb-3 text-sm text-foreground-muted">
-                Drag to reorder, pin, or settle. Changes save when you drop.
+                {uiText("Drag to reorder, pin, or settle. Changes save when you drop.")}
               </Text>
               <View
                 onLayout={(event) => {
@@ -529,10 +534,12 @@ function ThreadArrangementSheet(props: { onClose: () => void }) {
                           >
                             <Text className="text-sm text-foreground-muted">
                               {olderSettledShelf.loading
-                                ? "Loading"
+                                ? uiText("Loading")
                                 : olderSettledShelf.failed
-                                  ? "Could not load older threads. Retry"
-                                  : `Show more (${settledCount - visibleSettled.length} settled hidden)`}
+                                  ? uiText("Could not load older threads. Retry")
+                                  : uiText("Show more ({0} settled hidden)", [
+                                      settledCount - visibleSettled.length,
+                                    ])}
                             </Text>
                           </Pressable>
                         ) : (

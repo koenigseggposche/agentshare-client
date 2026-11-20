@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { Toolbar } from "./Toolbar";
 import { AppActivityIndicator } from "./AppActivityIndicator";
 import type { HeaderBarButtonMailSearchToolbarItem } from "react-native-screens";
@@ -41,6 +42,7 @@ function mailMenuItems(items: ReadonlyArray<AppBarMenuItem>): MailMenu["items"] 
 }
 
 export function AppBar(props: AppBarProps) {
+  const uiText = useUiText();
   const usesNativeWorkspaceColumns = useNativeWorkspaceColumnsSupported();
   const deviceType = useDeviceType();
   const headerId = useId();
@@ -97,19 +99,22 @@ export function AppBar(props: AppBarProps) {
             ? {
                 unstable_headerToolbarItems: compactSearch
                   ? () => [
-                      createNativeMailSearchToolbarItem({
-                        showsSearchDismissButton: true,
-                        placeholder: search.compactPlaceholder ?? search.placeholder,
-                        onSearchTextChange: search.onChangeText,
-                        searchTextChangeId: `${headerId}-search-text`,
-                        ...(menu
-                          ? {
-                              filterButtonId: `${headerId}-filter`,
-                              filterSystemImageName: iosIcon(menu.icon),
-                              filterMenu: { title: menu.title, items: mailMenuItems(menu.items) },
-                            }
-                          : undefined),
-                      }),
+                      createNativeMailSearchToolbarItem(
+                        {
+                          showsSearchDismissButton: true,
+                          placeholder: search.compactPlaceholder ?? search.placeholder,
+                          onSearchTextChange: search.onChangeText,
+                          searchTextChangeId: `${headerId}-search-text`,
+                          ...(menu
+                            ? {
+                                filterButtonId: `${headerId}-filter`,
+                                filterSystemImageName: iosIcon(menu.icon),
+                                filterMenu: { title: menu.title, items: mailMenuItems(menu.items) },
+                              }
+                            : undefined),
+                        },
+                        uiText,
+                      ),
                     ]
                   : () => [],
                 headerSearchBarOptions: compactSearch
@@ -176,7 +181,7 @@ export function AppBar(props: AppBarProps) {
           {props.trailing}
           {closeInspector ? (
             <ScreenHeaderButton
-              accessibilityLabel="Close inspector"
+              accessibilityLabel={uiText("Close inspector")}
               icon="xmark"
               onPress={closeInspector}
               separateBackground

@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { FilePreviewGallery, useFilePreviewGallery } from "./FilePreviewGallery";
 import { composerImageGallery } from "../lib/composerImageGallery";
 import { SymbolView } from "./ui/AppSymbol";
@@ -59,6 +60,7 @@ type ComposerAttachmentThumbnailProps = {
 };
 
 export function ComposerAttachmentThumbnail(props: ComposerAttachmentThumbnailProps) {
+  const uiText = useUiText();
   const upload = useComposerAttachmentUploadState(props.environmentId, props.attachment.id);
   return (
     <View style={{ width: props.size, height: props.size }}>
@@ -68,8 +70,11 @@ export function ComposerAttachmentThumbnail(props: ComposerAttachmentThumbnailPr
           accessibilityRole={upload.status === "failed" ? "button" : "text"}
           accessibilityLabel={
             upload.status === "failed"
-              ? `Retry uploading ${props.attachment.name}`
-              : `Uploading ${props.attachment.name}, ${Math.floor(upload.progress * 100)}%`
+              ? uiText("Retry uploading {0}", [props.attachment.name])
+              : uiText("Uploading {0}, {1}%", [
+                  props.attachment.name,
+                  Math.floor(upload.progress * 100),
+                ])
           }
           accessibilityHint={upload.status === "failed" ? upload.reason : undefined}
           disabled={upload.status !== "failed"}
@@ -87,7 +92,9 @@ export function ComposerAttachmentThumbnail(props: ComposerAttachmentThumbnailPr
           />
           {!props.compact ? (
             <Text className="text-2xs text-white">
-              {upload.status === "failed" ? "Retry" : `${Math.floor(upload.progress * 100)}%`}
+              {upload.status === "failed"
+                ? uiText("Retry")
+                : `${Math.floor(upload.progress * 100)}%`}
             </Text>
           ) : null}
         </Pressable>
@@ -130,6 +137,7 @@ function useComposerImagePreviewUri(attachment: DraftComposerImageAttachment): s
 function ComposerImageAttachment(
   props: ComposerAttachmentThumbnailProps & { readonly attachment: DraftComposerImageAttachment },
 ) {
+  const uiText = useUiText();
   const { attachment } = props;
   const withGallery = useFilePreviewGallery();
   const style = { width: props.size, height: props.size, borderRadius: props.borderRadius };
@@ -139,7 +147,7 @@ function ComposerImageAttachment(
     <PresentationSource identifier={sourceIdentifier}>
       <Pressable
         accessibilityRole="imagebutton"
-        accessibilityLabel={`Open ${attachment.name}`}
+        accessibilityLabel={uiText("Open {0}", [attachment.name])}
         disabled={!props.onPressPreview}
         onPress={() =>
           props.onPressPreview?.(
@@ -195,6 +203,7 @@ function ComposerAttachmentContent(props: ComposerAttachmentThumbnailProps) {
 function ComposerFileAttachment(
   props: ComposerAttachmentThumbnailProps & { readonly attachment: DraftComposerFileAttachment },
 ) {
+  const uiText = useUiText();
   const { attachment } = props;
   const style = { width: props.size, height: props.size, borderRadius: props.borderRadius };
   const canPreview = isPdfFile(attachment) && props.onPressPreview !== undefined;
@@ -205,7 +214,7 @@ function ComposerFileAttachment(
       <PresentationSource identifier={sourceIdentifier}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Open ${attachment.name}`}
+          accessibilityLabel={uiText("Open {0}", [attachment.name])}
           disabled={!canPreview && onPressDocument === undefined}
           onPress={() =>
             canPreview
@@ -270,6 +279,7 @@ function ComposerVideoAttachment(props: {
 }
 
 export function ComposerAttachmentStrip(props: ComposerAttachmentStripProps) {
+  const uiText = useUiText();
   const gallery = composerImageGallery(props.attachments);
   const size = props.imageSize ?? 72;
   const radius = props.imageBorderRadius ?? 16;
@@ -309,7 +319,7 @@ export function ComposerAttachmentStrip(props: ComposerAttachmentStripProps) {
               />
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Remove ${attachment.name}`}
+                accessibilityLabel={uiText("Remove {0}", [attachment.name])}
                 className="absolute h-[22px] w-[22px] items-center justify-center rounded-[11px] bg-black/55"
                 style={{
                   top: removeButtonPlacement === "gutter" ? 0 : 4,

@@ -16,7 +16,11 @@ import { commandLabel } from "./KeybindingsSettings.logic";
 import type { ResolvedSettingsScope } from "./settingsScope";
 
 export type SettingsPath =
-  | "/settings/agentshare"
+  | "/settings/account"
+  | "/settings/wallet"
+  | "/settings/local-models"
+  | "/settings/model-sharing"
+  | "/settings/coding-tools"
   | "/settings/projects"
   | "/settings/general"
   | "/settings/diagnostics"
@@ -87,7 +91,11 @@ export interface SettingsSearchAvailability {
 }
 
 export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
-  "/settings/agentshare": "AgentShare",
+  "/settings/account": "Account and security",
+  "/settings/wallet": "Wallet and records",
+  "/settings/local-models": "Local models",
+  "/settings/model-sharing": "Model sharing",
+  "/settings/coding-tools": "Coding tools",
   "/settings/diagnostics": "Diagnostics",
   "/settings/projects": "Projects",
   "/settings/general": "General",
@@ -96,7 +104,7 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/diffs": "Diffs & pull requests",
   "/settings/keybindings": "Keybindings",
   "/settings/snap-shot": "SnapShots",
-  "/settings/providers": "Providers",
+  "/settings/providers": "Model connections",
   "/settings/threads": "Threads",
   "/settings/browser": "Browser",
   "/settings/devices": "Devices",
@@ -117,10 +125,19 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   readonly heading: string | null;
   readonly paths: ReadonlyArray<SettingsPath>;
 }> = [
+  { heading: "Account", paths: ["/settings/account", "/settings/wallet"] },
+  {
+    heading: "Models and tools",
+    paths: [
+      "/settings/providers",
+      "/settings/local-models",
+      "/settings/model-sharing",
+      "/settings/coding-tools",
+    ],
+  },
   {
     heading: null,
     paths: [
-      "/settings/agentshare",
       "/settings/general",
       "/settings/appearance",
       "/settings/chat",
@@ -132,7 +149,6 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   {
     heading: "Agents",
     paths: [
-      "/settings/providers",
       "/settings/threads",
       "/settings/browser",
       "/settings/devices",
@@ -219,6 +235,39 @@ const SOURCE_CONTROL_HOST_TERMS = sourceControlClients.definitions
   .join(" ");
 
 export const SETTINGS_SEARCH_ITEMS = [
+  {
+    id: "account-security",
+    title: "Account and security",
+    to: "/settings/account",
+    searchTerms: ["账号 登录 安全 设备授权 account sign in security authorized devices"],
+  },
+  {
+    id: "wallet-records",
+    title: "Wallet and records",
+    to: "/settings/wallet",
+    searchTerms: [
+      "钱包 账单 余额 消费 收益 充值 提现 wallet billing balance earnings top up withdraw",
+    ],
+  },
+  {
+    id: "local-models",
+    title: "Local models",
+    to: "/settings/local-models",
+    searchTerms: ["本地模型 下载 模型库 离线 local model download library offline"],
+  },
+  {
+    id: "model-sharing",
+    title: "Model sharing",
+    to: "/settings/model-sharing",
+    searchTerms: ["模型分享 共享 暂停 并发 sharing pause concurrency community"],
+  },
+  {
+    id: "coding-tools",
+    title: "Coding tools",
+    to: "/settings/coding-tools",
+    searchTerms: ["编程工具 安装 版本 Codex Claude tools versions install"],
+  },
+
   {
     id: "storage-worktree-keep-when",
     targetId: "storage-worktrees",
@@ -808,7 +857,7 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "providers",
-    title: "Providers",
+    title: "Model connections",
     to: "/settings/providers",
     searchTerms: [
       "agents cli codex claude cursor grok fx kiro opencode antigravity google sign in sign out install subscription instances authentication api key models configuration binary path config directory codex_home shadow home endpoint arguments environment variables display name accent color custom favorite hidden auto compact native sessions import resume",
@@ -1072,6 +1121,13 @@ export const SETTINGS_SEARCH_ITEMS = [
     desktopOnly: true,
   },
   {
+    id: "interface-language",
+    title: "Interface language",
+    to: "/settings/general",
+    targetId: "interface-language",
+    searchTerms: ["界面语言 语言 中文 English language locale"],
+  },
+  {
     id: "client-startup",
     title: "Open client at sign-in",
     to: "/settings/connections",
@@ -1202,7 +1258,11 @@ export type SettingsSearchItemId = (typeof SETTINGS_SEARCH_ITEMS)[number]["id"];
 const SEARCH_ITEMS_BY_ID = new Map(SETTINGS_SEARCH_ITEMS.map((item) => [item.id, item] as const));
 
 const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScope | null>> = {
-  "/settings/agentshare": "environment",
+  "/settings/account": "environment",
+  "/settings/wallet": "environment",
+  "/settings/local-models": "environment",
+  "/settings/model-sharing": "environment",
+  "/settings/coding-tools": "environment",
   "/settings/diagnostics": "environment",
   "/settings/projects": "project",
   "/settings/general": null,

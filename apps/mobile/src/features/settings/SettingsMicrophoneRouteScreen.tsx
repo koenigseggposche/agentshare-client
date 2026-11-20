@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { ScreenScrollView as ScrollView } from "../../components/ui/ScreenScrollView";
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import { AsyncResult } from "effect/reactivity";
@@ -107,6 +109,7 @@ export function SettingsMicrophoneRouteScreen() {
 }
 
 function VoiceInputUnavailable() {
+  const uiText = useUiText();
   const insets = useSafeAreaInsets();
   return (
     <View collapsable={false} className="flex-1 bg-sheet">
@@ -117,8 +120,8 @@ function VoiceInputUnavailable() {
         contentContainerClassName="gap-3 px-5 pt-4"
         contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 18) + 18 }}
       >
-        <SettingsSection title="Voice input">
-          <ListRowLayout icon="mic" label="Not available on this device" />
+        <SettingsSection title={uiText("Voice input")}>
+          <ListRowLayout icon="mic" label={uiText("Not available on this device")} />
         </SettingsSection>
         <Text className="px-2 text-sm text-foreground-muted">{UNAVAILABLE_EXPLANATION}</Text>
       </ScrollView>
@@ -127,6 +130,7 @@ function VoiceInputUnavailable() {
 }
 
 function MicrophoneSettings() {
+  const uiText = useUiText();
   const insets = useSafeAreaInsets();
   const preferencesResult = useAtomValue(mobilePreferencesAtom);
   const savePreferences = useAtomSet(updateMobilePreferencesAtom);
@@ -184,10 +188,12 @@ function MicrophoneSettings() {
       >
         {permission === "ask" || permission === "denied" ? (
           <>
-            <SettingsSection title="Microphone access">
+            <SettingsSection title={uiText("Microphone access")}>
               <SettingsActionRow
                 icon="mic"
-                label={permission === "ask" ? "Allow microphone access" : "Open Settings"}
+                label={
+                  permission === "ask" ? uiText("Allow microphone access") : uiText("Open Settings")
+                }
                 onPress={
                   permission === "ask" ? requestPermission : () => void Linking.openSettings()
                 }
@@ -195,12 +201,16 @@ function MicrophoneSettings() {
             </SettingsSection>
             <Text className="px-2 text-sm text-foreground-muted">
               {permission === "ask"
-                ? "Voice input needs microphone access before it can record or list your microphones."
-                : "Microphone access is off for T3 Code. Turn it on in Settings to use voice input."}
+                ? uiText(
+                    "Voice input needs microphone access before it can record or list your microphones.",
+                  )
+                : uiText(
+                    "Microphone access is off for T3 Code. Turn it on in Settings to use voice input.",
+                  )}
             </Text>
           </>
         ) : null}
-        <SettingsSection title="Preferred order">
+        <SettingsSection title={uiText("Preferred order")}>
           {entries.map((entry, index) => {
             const key = microphoneEntryKey(entry);
             const shift =
@@ -235,11 +245,13 @@ function MicrophoneSettings() {
           })}
         </SettingsSection>
         <Text className="px-2 text-sm text-foreground-muted">
-          Voice input prefers the first connected microphone in this list. Wired and Bluetooth
-          devices are added by name after you use voice input with them connected; until then, the
-          Other row ranks them. Swipe a device left to forget it.
+          {uiText(
+            "Voice input prefers the first connected microphone in this list. Wired and Bluetooth devices are added by name after you use voice input with them connected; until then, the Other row ranks them. Swipe a device left to forget it.",
+          )}
           {Platform.OS === "android"
-            ? " Android may use another input when the preferred microphone cannot be routed."
+            ? uiText(
+                " Android may use another input when the preferred microphone cannot be routed.",
+              )
             : null}
         </Text>
       </ScrollView>
@@ -261,8 +273,9 @@ function MicrophoneRow(props: {
   readonly onStep: (direction: "up" | "down") => void;
   readonly onForget: (() => void) | undefined;
 }) {
+  const uiText = useUiText();
   const { lifted, offset, entry, onForget } = props;
-  const kind = KINDS[entry.kind];
+  const kind = translateUiLabels(KINDS, uiText)[entry.kind];
   const title = isMicrophoneDevice(entry) ? entry.name : kind.row;
   const { width: windowWidth } = useWindowDimensions();
   const style = useAnimatedStyle(() => ({
@@ -280,8 +293,13 @@ function MicrophoneRow(props: {
     <View className="flex-row items-center bg-grouped-card">
       <View
         accessible
-        accessibilityLabel={`${title}, ${kind.label}, ${props.position} of ${props.count}`}
-        accessibilityActions={onForget ? [{ name: "forget", label: "Forget" }] : undefined}
+        accessibilityLabel={uiText("{0}, {1}, {2} of {3}", [
+          title,
+          kind.label,
+          props.position,
+          props.count,
+        ])}
+        accessibilityActions={onForget ? [{ name: "forget", label: uiText("Forget") }] : undefined}
         onAccessibilityAction={({ nativeEvent }) => {
           if (nativeEvent.actionName === "forget") onForget?.();
         }}
@@ -322,10 +340,10 @@ function MicrophoneRow(props: {
           fullSwipeWidth={windowWidth - 40}
           onDelete={onForget}
           primaryAction={{
-            accessibilityLabel: `Forget ${title}`,
+            accessibilityLabel: uiText("Forget {0}", [title]),
             destructive: true,
             icon: "trash",
-            label: "Forget",
+            label: uiText("Forget"),
             onPress: onForget,
           }}
           secondaryAction={null}

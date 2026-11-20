@@ -12,6 +12,10 @@ import * as ElectronMenu from "../electron/ElectronMenu.ts";
 import * as DesktopEnvironment from "../app/DesktopEnvironment.ts";
 import * as DesktopUpdates from "../updates/DesktopUpdates.ts";
 import * as DesktopWindow from "./DesktopWindow.ts";
+import * as DesktopClientSettings from "../settings/DesktopClientSettings.ts";
+import { DEFAULT_CLIENT_SETTINGS } from "@t3tools/contracts/settings";
+import { translateUiMessage, uiTranslators } from "@t3tools/shared/uiMessages";
+import { localizeApplicationMenu } from "./menuLanguage.ts";
 
 export class DesktopApplicationMenuActionError extends Schema.TaggedError<DesktopApplicationMenuActionError>()(
   "DesktopApplicationMenuActionError",
@@ -35,7 +39,8 @@ export class DesktopApplicationMenu extends Context.Service<
 type DesktopApplicationMenuRuntimeServices =
   | DesktopUpdates.DesktopUpdates
   | DesktopWindow.DesktopWindow
-  | ElectronDialog.ElectronDialog;
+  | ElectronDialog.ElectronDialog
+  | DesktopClientSettings.DesktopClientSettings;
 
 const { logInfo: logUpdaterInfo } = makeComponentLogger("desktop-updater");
 
@@ -64,7 +69,16 @@ const runMainContentsCommand = Effect.fn("desktop.menu.runMainContentsCommand")(
   yield* desktopWindow.runMainContentsCommand(command);
 });
 
+const currentMenuTranslator = Effect.gen(function* () {
+  const service = yield* DesktopClientSettings.DesktopClientSettings;
+  const settings = yield* service.get.pipe(Effect.orElseSucceed(Option.none));
+  return uiTranslators[
+    Option.isSome(settings) ? settings.value.uiLanguage : DEFAULT_CLIENT_SETTINGS.uiLanguage
+  ];
+});
+
 const checkForUpdatesFromMenu = Effect.gen(function* () {
+  const uiText = yield* currentMenuTranslator;
   const updates = yield* DesktopUpdates.DesktopUpdates;
   const electronDialog = yield* ElectronDialog.ElectronDialog;
   const result = yield* updates.check("menu");
@@ -73,22 +87,25 @@ const checkForUpdatesFromMenu = Effect.gen(function* () {
   if (updateState.status === "up-to-date") {
     yield* electronDialog.showMessageBox({
       type: "info",
-      title: "You're up to date!",
-      message: `T3 Code ${updateState.currentVersion} is currently the newest version available.`,
-      buttons: ["OK"],
+      title: uiText("You're up to date!"),
+      message: uiText("T3 Code {0} is currently the newest version available.", [
+        updateState.currentVersion,
+      ]),
+      buttons: [uiText("OK")],
     });
   } else if (updateState.status === "error") {
     yield* electronDialog.showMessageBox({
       type: "warning",
-      title: "Update check failed",
-      message: "Could not check for updates.",
-      detail: updateState.message ?? "An unknown error occurred. Please try again later.",
-      buttons: ["OK"],
+      title: uiText("Update check failed"),
+      message: uiText("Could not check for updates."),
+      detail: updateState.message ?? uiText("An unknown error occurred. Please try again later."),
+      buttons: [uiText("OK")],
     });
   }
 }).pipe(Effect.withSpan("desktop.menu.checkForUpdates"));
 
 const handleCheckForUpdatesMenuClick = Effect.gen(function* () {
+  const uiText = yield* currentMenuTranslator;
   const updates = yield* DesktopUpdates.DesktopUpdates;
   const electronDialog = yield* ElectronDialog.ElectronDialog;
   const disabledReason = yield* updates.disabledReason;
@@ -98,10 +115,10 @@ const handleCheckForUpdatesMenuClick = Effect.gen(function* () {
     });
     yield* electronDialog.showMessageBox({
       type: "info",
-      title: "Updates unavailable",
-      message: "Automatic updates are not available right now.",
+      title: uiText("Updates unavailable"),
+      message: uiText("Automatic updates are not available right now."),
       detail: disabledReason.value,
-      buttons: ["OK"],
+      buttons: [uiText("OK")],
     });
     return;
   }
@@ -116,6 +133,7 @@ const handleCheckForUpdatesMenuClick = Effect.gen(function* () {
 export const make = Effect.gen(function* () {
   const electronMenu = yield* ElectronMenu.ElectronMenu;
   const environment = yield* DesktopEnvironment.DesktopEnvironment;
+  const clientSettings = yield* DesktopClientSettings.DesktopClientSettings;
   const context = yield* Effect.context<DesktopApplicationMenuRuntimeServices>();
   const runPromise = Effect.runPromiseWith(context);
 
@@ -136,6 +154,13 @@ export const make = Effect.gen(function* () {
   };
 
   const configure = Effect.gen(function* () {
+    const settings = yield* clientSettings.get.pipe(
+      Effect.tapError((error) => logMenuError("Could not read menu language", { error })),
+      Effect.orElseSucceed(Option.none),
+    );
+    const language = Option.isSome(settings)
+      ? settings.value.uiLanguage
+      : DEFAULT_CLIENT_SETTINGS.uiLanguage;
     const checkForUpdatesClick = () => {
       runMenuEffect("check-for-updates", handleCheckForUpdatesMenuClick);
     };
@@ -177,11 +202,17 @@ export const make = Effect.gen(function* () {
           { type: "separator" },
           { role: "services" },
           { type: "separator" },
-          { role: "hide", label: `Hide ${environment.displayName}` },
+          {
+            role: "hide",
+            label: translateUiMessage(language, "Hide {0}", [environment.displayName]),
+          },
           { role: "hideOthers" },
           { role: "unhide" },
           { type: "separator" },
-          { role: "quit", label: `Quit ${environment.displayName}` },
+          {
+            role: "quit",
+            label: translateUiMessage(language, "Quit {0}", [environment.displayName]),
+          },
         ],
       });
     }
@@ -314,7 +345,7 @@ export const make = Effect.gen(function* () {
       },
     );
 
-    yield* electronMenu.setApplicationMenu(template);
+    yield* electronMenu.setApplicationMenu(localizeApplicationMenu(template, language));
   }).pipe(Effect.withSpan("desktop.menu.configure"));
 
   return DesktopApplicationMenu.of({

@@ -1,6 +1,10 @@
 /** Settings pages a Settings row opens. */
 export const SETTINGS_PAGE_TARGETS = [
-  "SettingsAgentShare",
+  "SettingsAccount",
+  "SettingsWallet",
+  "SettingsLocalModels",
+  "SettingsModelSharing",
+  "SettingsCodingTools",
   "SettingsEnvironments",
   "SettingsNotifications",
   "SettingsThreads",

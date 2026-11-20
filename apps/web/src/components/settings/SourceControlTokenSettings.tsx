@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import {
   isSecretReference,
   type EnvironmentId,
@@ -34,11 +35,12 @@ export function SourceControlTokenSettings({
   readonly credentials: SourceControlHostCredentials;
   readonly onSaved: () => void;
 }) {
+  const uiText = useUiText();
   const { tokens } = useEnvironmentSettings(environmentId, (settings) =>
     readHostCredentialSettings(settings, definition.kind),
   );
   const updateSettings = useAtomCommand(serverEnvironment.updateSettings, {
-    label: `save ${definition.label} token`,
+    label: uiText("save {0} token", [definition.label]),
   });
   const defaultHost = definition.publicHost ?? "";
   const [host, setHost] = useState(defaultHost);
@@ -88,12 +90,15 @@ export function SourceControlTokenSettings({
       {/* Locked while saving: a successful save clears the draft, which would drop edits made mid-request. */}
       <fieldset disabled={saving} className="contents">
         <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
-          A token saved here is used before{" "}
+          {uiText("A token saved here is used before")}{" "}
           <code className="rounded bg-muted px-1 py-px text-2xs">{credentials.tokenEnvVar}</code>{" "}
-          and the{" "}
-          <code className="rounded bg-muted px-1 py-px text-2xs">{credentials.cliName}</code> login,
-          so {definition.label} works without the {credentials.cliLabel}. Give it{" "}
-          {credentials.tokenAccess}.{" "}
+          {uiText("and the")}{" "}
+          <code className="rounded bg-muted px-1 py-px text-2xs">{credentials.cliName}</code>
+          {uiText(" login, so ")}
+          {definition.label}
+          {uiText(" works without the ")}
+          {credentials.cliLabel}
+          {uiText(". Give it")} {credentials.tokenAccess}.{" "}
           {normalizedHost || defaultHost ? (
             <InlineButton
               render={
@@ -104,14 +109,16 @@ export function SourceControlTokenSettings({
                 />
               }
             >
-              Create a token
+              {uiText("Create a token")}
               <ExternalLinkIcon aria-hidden className="size-3" />
             </InlineButton>
           ) : null}
         </p>
         <div className="grid gap-3 sm:grid-cols-[12rem_1fr]">
           <div className="grid gap-1.5">
-            <Label htmlFor={`${definition.kind}-token-host-${environmentId}`}>Host</Label>
+            <Label htmlFor={`${definition.kind}-token-host-${environmentId}`}>
+              {uiText("Host")}
+            </Label>
             <Input
               id={`${definition.kind}-token-host-${environmentId}`}
               autoComplete="off"
@@ -122,11 +129,11 @@ export function SourceControlTokenSettings({
             />
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor={`${definition.kind}-token-${environmentId}`}>Token</Label>
+            <Label htmlFor={`${definition.kind}-token-${environmentId}`}>{uiText("Token")}</Label>
             <SecretSourceInput
               id={`${definition.kind}-token-${environmentId}`}
               size="sm"
-              aria-label={`${definition.label} token`}
+              aria-label={uiText("{0} token", [definition.label])}
               configured={isSaved && !isSecretReference(savedToken)}
               value={draft}
               sources={secretSources}
@@ -138,8 +145,11 @@ export function SourceControlTokenSettings({
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             {savedHosts.length === 0
-              ? `No token saved; the server uses ${credentials.tokenEnvVar} or the ${credentials.cliName} login.`
-              : `Saved for ${savedHosts.join(", ")}.`}
+              ? uiText("No token saved; the server uses {0} or the {1} login.", [
+                  credentials.tokenEnvVar,
+                  credentials.cliName,
+                ])
+              : uiText("Saved for {0}.", [savedHosts.join(", ")])}
           </p>
           <div className="flex shrink-0 gap-2">
             {isSaved ? (
@@ -149,7 +159,7 @@ export function SourceControlTokenSettings({
                 disabled={saving}
                 onClick={() => void save(normalizedHost, "")}
               >
-                Remove
+                {uiText("Remove")}
               </Button>
             ) : null}
             <Button
@@ -157,7 +167,7 @@ export function SourceControlTokenSettings({
               size="xs"
               disabled={!normalizedHost || submission === "" || saving}
             >
-              Save
+              {uiText("Save")}
             </Button>
           </div>
         </div>

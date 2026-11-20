@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import type { EnvironmentId, ScopedThreadRef } from "@t3tools/contracts";
 import { useAtomValue } from "@effect/atom-react";
 import { useNavigate } from "@tanstack/react-router";
@@ -60,6 +61,7 @@ export function useOpenChangeRequestLink(
   targetEnvironmentId?: EnvironmentId,
   onCommitUnavailable?: () => void,
 ) => boolean {
+  const uiText = useUiText();
   const navigate = useNavigate();
   const primaryEnvironmentId = usePrimaryEnvironmentId();
   const openInApp = useClientSettings((settings) => settings.pullRequestLinksOpenInApp);
@@ -202,7 +204,7 @@ export function useOpenChangeRequestLink(
             const toastId = toastManager.add(
               stackedThreadToast({
                 type: "info",
-                title: "This commit is not in the thread's workspace",
+                title: uiText("This commit is not in the thread's workspace"),
                 actionProps: {
                   children: "Open link",
                   onClick: () => {
@@ -230,6 +232,7 @@ export function useOpenChangeRequestLink(
 }
 
 export function useOpenPrLink(threadRef?: ScopedThreadRef) {
+  const uiText = useUiText();
   const openChangeRequest = useOpenChangeRequestLink(threadRef);
   const openLink = useOpenLink(threadRef);
   return (event: MouseEvent<HTMLElement>, prUrl: string, targetThreadRef?: ScopedThreadRef) => {
@@ -249,8 +252,8 @@ export function useOpenPrLink(threadRef?: ScopedThreadRef) {
       toastManager.add(
         stackedThreadToast({
           type: "error",
-          title: "Unable to open pull request link",
-          description: error instanceof Error ? error.message : "An error occurred.",
+          title: uiText("Unable to open pull request link"),
+          description: error instanceof Error ? error.message : uiText("An error occurred."),
         }),
       );
     });

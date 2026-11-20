@@ -1,20 +1,25 @@
-export function relativeTime(input: string, nowMs: number = Date.now()): string {
+import type { UiLanguage } from "@t3tools/shared/uiMessages";
+export function relativeTime(
+  input: string,
+  nowMs: number = Date.now(),
+  language: UiLanguage = "en",
+): string {
   const timestamp = Date.parse(input);
   if (Number.isNaN(timestamp)) {
-    return "<1m";
+    return language === "zh" ? "不足 1 分钟" : "<1m";
   }
 
   const deltaSeconds = Math.max(0, Math.floor((nowMs - timestamp) / 1000));
-  if (deltaSeconds < 60) return "<1m";
+  if (deltaSeconds < 60) return language === "zh" ? "不足 1 分钟" : "<1m";
 
   const deltaMinutes = Math.floor(deltaSeconds / 60);
-  if (deltaMinutes < 60) return `${deltaMinutes}m`;
+  if (deltaMinutes < 60) return language === "zh" ? `${deltaMinutes}分钟` : `${deltaMinutes}m`;
 
   const deltaHours = Math.floor(deltaMinutes / 60);
-  if (deltaHours < 24) return `${deltaHours}h`;
+  if (deltaHours < 24) return language === "zh" ? `${deltaHours}小时` : `${deltaHours}h`;
 
   const deltaDays = Math.floor(deltaHours / 24);
-  return `${deltaDays}d`;
+  return language === "zh" ? `${deltaDays}天` : `${deltaDays}d`;
 }
 
 /** Milliseconds until the relative-time label next changes. */

@@ -1,3 +1,4 @@
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
 import type {
   EnvironmentId,
   EnvironmentMachineKind,
@@ -33,12 +34,15 @@ function normalizeDisplayLabel(value: string | null | undefined): string | null 
   return trimmed && trimmed.length > 0 ? trimmed : null;
 }
 
-export function resolveEnvironmentOptionLabel(input: {
-  isPrimary: boolean;
-  environmentId: EnvironmentId;
-  runtimeLabel?: string | null;
-  savedLabel?: string | null;
-}): string {
+export function resolveEnvironmentOptionLabel(
+  input: {
+    isPrimary: boolean;
+    environmentId: EnvironmentId;
+    runtimeLabel?: string | null;
+    savedLabel?: string | null;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): string {
   const runtimeLabel = normalizeDisplayLabel(input.runtimeLabel);
   const savedLabel = normalizeDisplayLabel(input.savedLabel);
 
@@ -47,7 +51,7 @@ export function resolveEnvironmentOptionLabel(input: {
       if (!label) return false;
       return !GENERIC_LOCAL_ENVIRONMENT_LABELS.has(label.toLowerCase());
     });
-    return preferredLocalLabel ?? "This device";
+    return preferredLocalLabel ?? uiText("This device");
   }
 
   return runtimeLabel ?? savedLabel ?? input.environmentId;
@@ -89,8 +93,11 @@ export function resolveContextStripLabelsCompact(input: {
     : input.neededWidth > input.availableWidth;
 }
 
-export function resolveEnvModeLabel(mode: EnvMode): string {
-  return mode === "worktree" ? "New worktree" : "Current checkout";
+export function resolveEnvModeLabel(
+  mode: EnvMode,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
+  return mode === "worktree" ? uiText("New worktree") : uiText("Current checkout");
 }
 
 export const WORKTREE_SUBMODULES_LABELS: Record<WorktreeSubmodules, string> = {
@@ -99,16 +106,22 @@ export const WORKTREE_SUBMODULES_LABELS: Record<WorktreeSubmodules, string> = {
   none: "Skip",
 };
 
-export function resolveCurrentWorkspaceLabel(activeWorktreePath: string | null): string {
-  return activeWorktreePath ? "Current worktree" : resolveEnvModeLabel("local");
+export function resolveCurrentWorkspaceLabel(
+  activeWorktreePath: string | null,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
+  return activeWorktreePath ? uiText("Current worktree") : resolveEnvModeLabel("local", uiText);
 }
 
 export function resolveLockedWorkspaceLabel(
   activeWorktreePath: string | null,
   effectiveEnvMode: EnvMode,
+  uiText: UiTranslator = uiTranslators.en,
 ): string {
   if (activeWorktreePath) return "Worktree";
-  return effectiveEnvMode === "worktree" ? resolveEnvModeLabel("worktree") : "Local checkout";
+  return effectiveEnvMode === "worktree"
+    ? resolveEnvModeLabel("worktree", uiText)
+    : "Local checkout";
 }
 
 export interface PreviousWorktreeSeed {
@@ -149,8 +162,11 @@ export function resolvePreviousWorktreeSeed(input: {
   return latest === null ? null : { branch: latest.branch, worktreePath: latest.worktreePath };
 }
 
-export function resolvePreviousWorktreeLabel(seed: PreviousWorktreeSeed): string {
-  return seed.branch ? `Previous worktree (${seed.branch})` : "Previous worktree";
+export function resolvePreviousWorktreeLabel(
+  seed: PreviousWorktreeSeed,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
+  return seed.branch ? `Previous worktree (${seed.branch})` : uiText("Previous worktree");
 }
 
 export function resolveEffectiveEnvMode(input: {

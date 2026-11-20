@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { Toolbar } from "../../components/ui/Toolbar";
 import { ScreenScrollView as ScrollView } from "../../components/ui/ScreenScrollView";
 
@@ -14,6 +15,7 @@ import { PullRequestRoutingSettings } from "./PullRequestRoutingSettings";
 import { LinkedEnvironmentsSection } from "./LinkedEnvironmentsSection";
 
 export function ConnectionsRouteScreen() {
+  const uiText = useUiText();
   const {
     connectedEnvironments,
     onReconnectEnvironment,
@@ -33,11 +35,11 @@ export function ConnectionsRouteScreen() {
       {Platform.OS === "android" ? (
         <AppBar
           embedded
-          title="Environments"
+          title={uiText("Environments")}
           onBack={() => navigation.goBack()}
           actions={[
             {
-              accessibilityLabel: "Add environment",
+              accessibilityLabel: uiText("Add environment"),
               icon: "plus",
               onPress: () => navigation.navigate("ConnectionsNew"),
             },

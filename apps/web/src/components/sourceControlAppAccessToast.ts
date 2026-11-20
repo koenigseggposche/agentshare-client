@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { EnvironmentId } from "@t3tools/contracts";
 import { appSignInTargetForRemote } from "@t3tools/client-runtime/source-control-clients";
 import { runAtomCommand } from "@t3tools/client-runtime/state/runtime";
@@ -12,6 +14,7 @@ import { toastManager } from "./ui/toast";
 export async function suggestAppAccessForRemote(
   environmentId: EnvironmentId,
   remoteUrl: string,
+  uiText: UiTranslator = uiTranslators.en,
 ): Promise<void> {
   const target = appSignInTargetForRemote(remoteUrl);
   if (target === null) return;
@@ -19,16 +22,19 @@ export async function suggestAppAccessForRemote(
     appAtomRegistry,
     sourceControlEnvironment.checkAppAccess,
     { environmentId, input: target.input },
-    { label: "check app access", reportFailure: false, reportDefect: false },
+    { label: uiText("check app access"), reportFailure: false, reportDefect: false },
   );
   if (result._tag !== "Success" || result.value.status !== "not-covered") return;
   const owner = target.input.repository.split("/")[0] ?? target.input.repository;
   const id = toastManager.add({
     type: "info",
-    title: `Give ${target.appSignIn.appName} access to ${owner}`,
-    description: `It isn't installed there, so GitHub requests for ${target.input.repository} use your own login and its lower rate limit.`,
+    title: uiText("Give {0} access to {1}", [target.appSignIn.appName, owner]),
+    description: uiText(
+      "It isn't installed there, so GitHub requests for {0} use your own login and its lower rate limit.",
+      [target.input.repository],
+    ),
     actionProps: {
-      children: "Install",
+      children: uiText("Install"),
       onClick: () => {
         toastManager.close(id);
         window.open(target.appSignIn.installUrl, "_blank", "noopener,noreferrer");

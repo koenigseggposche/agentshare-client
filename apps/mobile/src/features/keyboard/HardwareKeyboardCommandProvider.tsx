@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { nativeAppLinkOrigin } from "../../lib/appLinkOrigin";
 import { StackActions, useNavigation } from "@react-navigation/native";
 import { Platform } from "react-native";
@@ -53,6 +54,7 @@ export function HardwareKeyboardCommandProvider({
   children,
   pathname,
 }: PropsWithChildren<{ readonly pathname: string }>) {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const closePalette = useCallback(() => setPaletteOpen(false), []);
@@ -149,7 +151,7 @@ export function HardwareKeyboardCommandProvider({
               : {
                   phase: "error",
                   label: copyTarget.failureTitle,
-                  description: "Try again.",
+                  description: uiText("Try again."),
                 },
           );
         });
@@ -184,7 +186,7 @@ export function HardwareKeyboardCommandProvider({
         navigation.navigate("ThreadReview", thread);
       }
     },
-    [copyTarget, navigation, pathname, showCopyFeedback],
+    [uiText, copyTarget, navigation, pathname, showCopyFeedback],
   );
 
   const palette = useMemo(

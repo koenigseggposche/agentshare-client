@@ -1,3 +1,5 @@
+import { readUiText } from "../i18n/uiText";
+import { useUiText } from "../i18n/uiText";
 import { settlePromise, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import * as Dialog from "../components/ui/Dialog";
 import type { MediaActionsSource } from "../lib/mediaActionsSource";
@@ -35,6 +37,7 @@ function canReadHostMedia(environmentId: EnvironmentId | null): boolean {
 }
 
 export function useMediaActions(source: MediaActionsSource | undefined, onOpenFile?: () => void) {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const hostEnvironmentId =
     source &&
@@ -87,8 +90,8 @@ export function useMediaActions(source: MediaActionsSource | undefined, onOpenFi
       .catch((error: unknown) => {
         if (!request.signal.aborted) {
           Dialog.alert(
-            "Could not share file",
-            error instanceof Error ? error.message : "Try again.",
+            readUiText("Could not share file"),
+            error instanceof Error ? error.message : readUiText("Try again."),
           );
         }
       })
@@ -110,7 +113,7 @@ export function useMediaActions(source: MediaActionsSource | undefined, onOpenFi
             ? [
                 {
                   id: "copy-full-path" as const,
-                  title: "Copy full path",
+                  title: uiText("Copy full path"),
                   run: () => copyTextWithHaptic(formatFilePathForClipboard(reference.path)),
                 },
               ]
@@ -119,7 +122,7 @@ export function useMediaActions(source: MediaActionsSource | undefined, onOpenFi
             ? [
                 {
                   id: "copy-relative-path" as const,
-                  title: "Copy relative path",
+                  title: uiText("Copy relative path"),
                   run: () =>
                     copyTextWithHaptic(formatFilePathForClipboard(relativePath, reference.path)),
                 },
@@ -129,7 +132,7 @@ export function useMediaActions(source: MediaActionsSource | undefined, onOpenFi
             ? [
                 {
                   id: "copy-url" as const,
-                  title: "Copy URL",
+                  title: uiText("Copy URL"),
                   run: () => copyTextWithHaptic(reference.url),
                 },
               ]
@@ -138,7 +141,7 @@ export function useMediaActions(source: MediaActionsSource | undefined, onOpenFi
             ? [
                 {
                   id: "open-file" as const,
-                  title: "Open in file viewer",
+                  title: uiText("Open in file viewer"),
                   disabled: !canReadMedia,
                   run: () => {
                     if (!canReadHostMedia(hostEnvironmentId)) return;
@@ -154,7 +157,7 @@ export function useMediaActions(source: MediaActionsSource | undefined, onOpenFi
             : []),
           {
             id: "save" as const,
-            title: sharing ? "Opening share sheet…" : "Save or share",
+            title: sharing ? uiText("Opening share sheet…") : uiText("Save or share"),
             run: share,
             disabled: sharing || !canReadMedia,
           },

@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { TaskChargesButton } from "./TaskChargesButton";
 import { shouldPreserveAssistantLineBreaks } from "@t3tools/shared/markdownPipeline";
 import { type RunId } from "@t3tools/contracts";
@@ -89,6 +90,7 @@ function AssistantForkButton({
 }: {
   readonly projectedItem: NonNullable<Extract<TimelineRow, { kind: "message" }>["projectedItem"]>;
 }) {
+  const uiText = useUiText();
   const ctx = use(TimelineRowCtx);
   const [busy, setBusy] = useState(false);
   const support = useV2ItemSupport({
@@ -120,13 +122,13 @@ function AssistantForkButton({
                 () => setBusy(false),
               );
             }}
-            aria-label="Fork from this response"
+            aria-label={uiText("Fork from this response")}
           />
         }
       >
         <GitForkIcon className={cn("size-3", busy && "animate-pulse")} />
       </TooltipTrigger>
-      <TooltipPopup side="top">Fork from this response</TooltipPopup>
+      <TooltipPopup side="top">{uiText("Fork from this response")}</TooltipPopup>
     </Tooltip>
   );
 }
@@ -165,6 +167,7 @@ function AssistantMessageMeta({
   copyStreaming: boolean;
   alwaysVisible?: boolean;
 }) {
+  const uiText = useUiText();
   const ctx = use(TimelineRowCtx);
 
   return (
@@ -196,10 +199,16 @@ function AssistantMessageMeta({
       {!message.streaming && (
         <Tooltip>
           <TooltipTrigger render={<p className="text-muted-foreground text-xs tabular-nums" />}>
-            {formatDayAwareTimestamp(message.updatedAt, ctx.timestampFormat)}
+            {formatDayAwareTimestamp(
+              message.updatedAt,
+              ctx.timestampFormat,
+              undefined,
+              undefined,
+              uiText.language,
+            )}
           </TooltipTrigger>
           <TooltipPopup>
-            {formatChatTimestampTooltip(message.updatedAt, ctx.timestampFormat)}
+            {formatChatTimestampTooltip(message.updatedAt, ctx.timestampFormat, uiText.language)}
           </TooltipPopup>
         </Tooltip>
       )}

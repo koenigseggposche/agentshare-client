@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
 import { createContext, use, useEffect, useState, type ReactNode } from "react";
 import { Animated, Platform, Pressable, View } from "react-native";
@@ -108,6 +111,7 @@ export function WorkspaceConnectionTitle(props: {
   readonly statusOffset?: number;
   readonly maxWidth?: number;
 }) {
+  const uiText = useUiText();
   const status = use(ConnectionStatusContext);
   const size = props.size ?? "navbar";
   const { scale } = useAndroidControlSizing();
@@ -125,7 +129,7 @@ export function WorkspaceConnectionTitle(props: {
   return (
     <StatusFadeIn animate={status.fadeIn} grow={props.grow} maxWidth={props.maxWidth}>
       <Pressable
-        accessibilityHint="Opens environment settings"
+        accessibilityHint={uiText("Opens environment settings")}
         accessibilityLabel={status.label}
         accessibilityRole="button"
         disabled={props.onPress === undefined}
@@ -162,16 +166,19 @@ export function WorkspaceConnectionTitle(props: {
   );
 }
 
-export function getConnectionAwareBrandHeaderOptions(opts: {
-  readonly headerWidth: number;
-  readonly trailingItemCount?: number;
-  readonly onOpenEnvironments: () => void;
-  readonly fallbackTitleStyle?: NativeStackNavigationOptions["headerTitleStyle"];
-}): NativeStackNavigationOptions {
+export function getConnectionAwareBrandHeaderOptions(
+  opts: {
+    readonly headerWidth: number;
+    readonly trailingItemCount?: number;
+    readonly onOpenEnvironments: () => void;
+    readonly fallbackTitleStyle?: NativeStackNavigationOptions["headerTitleStyle"];
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): NativeStackNavigationOptions {
   const maxWidth = Math.max(0, opts.headerWidth - 64 - 44 * (opts.trailingItemCount ?? 1));
 
   return {
-    ...getCompactBrandHeaderOptions(opts.fallbackTitleStyle),
+    ...getCompactBrandHeaderOptions(opts.fallbackTitleStyle, uiText),
     headerTitle: () => (
       <WorkspaceConnectionTitle
         brand={<CompactBrandTitle />}

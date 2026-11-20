@@ -1,3 +1,4 @@
+import { readUiTranslator } from "../../../i18n/uiText";
 // Adapted from opencode (MIT). Copyright (c) 2025 opencode. See LICENSE.opencode.
 import * as Schema from "effect/Schema";
 import {
@@ -71,30 +72,33 @@ type Lazy<T> = { value: T | undefined };
 /** The document this worker opened, once it has. */
 const opened: Lazy<Opened> = { value: undefined };
 
-serveWorker<WordMethods>({
-  open: async (input) => {
-    if (opened.value) throw new Error("The worker already holds a document");
+serveWorker<WordMethods>(
+  {
+    open: async (input) => {
+      if (opened.value) throw new Error("The worker already holds a document");
 
-    const loaded = await open(new Uint8Array(input.bytes));
+      const loaded = await open(new Uint8Array(input.bytes));
 
-    opened.value = loaded;
+      opened.value = loaded;
 
-    return { pages: loaded.pages().map(pageSize), loading: loaded.loading() };
+      return { pages: loaded.pages().map(pageSize), loading: loaded.loading() };
+    },
+    layout: () => required().step(),
+    paint: async (input, signal) => {
+      const bitmap = await required().paint(input.index, input.scale, input.ratio, signal);
+
+      return bitmap ? new Transfer(bitmap, [bitmap]) : undefined;
+    },
+    build: (input) => {
+      required().built(input.index);
+
+      return undefined;
+    },
+    text: (input) => required().text(input.index),
+    bookmark: (input) => required().target(input.name),
   },
-  layout: () => required().step(),
-  paint: async (input, signal) => {
-    const bitmap = await required().paint(input.index, input.scale, input.ratio, signal);
-
-    return bitmap ? new Transfer(bitmap, [bitmap]) : undefined;
-  },
-  build: (input) => {
-    required().built(input.index);
-
-    return undefined;
-  },
-  text: (input) => required().text(input.index),
-  bookmark: (input) => required().target(input.name),
-});
+  readUiTranslator(),
+);
 
 function required() {
   if (!opened.value) throw new Error("The worker holds no document");

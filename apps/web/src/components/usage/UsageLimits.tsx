@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import {
   AuthProvidersManageScope,
   type EnvironmentId,
@@ -56,21 +58,22 @@ export function barColor(driver: ServerProvider["driver"]): string {
 }
 
 export function PaceIcon({ pace }: { readonly pace: LimitPace }) {
-  const Icon = PACE[pace].icon;
+  const uiText = useUiText();
+  const Icon = translateUiLabels(PACE, uiText)[pace].icon;
   return (
     <Tooltip>
       <TooltipTrigger
         render={
           <span
             role="img"
-            aria-label={PACE[pace].label}
+            aria-label={translateUiLabels(PACE, uiText)[pace].label}
             className="inline-flex text-muted-foreground"
           />
         }
       >
         <Icon className="size-3.5" aria-hidden />
       </TooltipTrigger>
-      <TooltipPopup side="top">{PACE[pace].label}</TooltipPopup>
+      <TooltipPopup side="top">{translateUiLabels(PACE, uiText)[pace].label}</TooltipPopup>
     </Tooltip>
   );
 }
@@ -122,13 +125,14 @@ function WindowBar({
   readonly window: ServerProviderUsageWindow;
   readonly now: number;
 }) {
+  const uiText = useUiText();
   const timestampFormat = usePrimarySettings((settings) => settings.timestampFormat);
   const remaining = remainingPercent(window);
   const timeLeft = paceRemainingPercent(window, now);
   const [barRef, paceMark] = usePaceMark(timeLeft);
   const resetsIn = formatResetsIn(window, now);
   const resetsAt = window.resetsAt
-    ? formatUpcomingTimestamp(window.resetsAt, timestampFormat, now)
+    ? formatUpcomingTimestamp(window.resetsAt, timestampFormat, now, undefined, uiText.language)
     : null;
   const summary = `${window.label}: ${remaining}% left${
     timeLeft === null ? "" : `, ${timeLeft}% of the window left`
@@ -168,14 +172,19 @@ function WindowBar({
       <TooltipPopup side="top">
         <div className="flex flex-col gap-0.5">
           <span className="text-foreground">
-            {remaining}% left{timeLeft !== null ? ` · ${timeLeft}% of the window left` : ""}
+            {remaining}
+            {uiText("% left")}
+            {timeLeft !== null ? uiText(" · {0}% of the window left", [timeLeft]) : ""}
           </span>
           {timeLeft !== null ? (
-            <span className="text-muted-foreground">The line is where even spending would be.</span>
+            <span className="text-muted-foreground">
+              {uiText("The line is where even spending would be.")}
+            </span>
           ) : null}
           {resetsAt ? (
             <span className="text-muted-foreground">
-              Resets {resetsAt}
+              {uiText("Resets ")}
+              {resetsAt}
               {resetsIn ? ` · ${resetsIn}` : ""}
             </span>
           ) : null}
@@ -198,6 +207,7 @@ export function LimitWindows({
   readonly now: number;
   readonly compact?: boolean;
 }) {
+  const uiText = useUiText();
   const color = normalizeProviderAccentColor(accentColor) ?? barColor(driver);
   return (
     <div
@@ -215,7 +225,8 @@ export function LimitWindows({
             <span className="flex min-w-0 items-center gap-2 text-xs">
               <span className="truncate text-muted-foreground">{window.label}</span>
               <span className="ms-auto shrink-0 font-medium text-foreground tabular-nums">
-                {remainingPercent(window)}% left
+                {remainingPercent(window)}
+                {uiText("% left")}
               </span>
             </span>
             <WindowBar color={color} window={window} now={now} />
@@ -281,20 +292,24 @@ export function ResetCreditDialog({
   readonly onConfirm: () => void;
   readonly disabled?: boolean;
 }) {
+  const uiText = useUiText();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogPopup>
         <AlertDialogHeader>
-          <AlertDialogTitle>Use a reset credit?</AlertDialogTitle>
+          <AlertDialogTitle>{uiText("Use a reset credit?")}</AlertDialogTitle>
           <AlertDialogDescription>
-            This redeems one credit on your account and clears the current rate-limit windows. It
-            cannot be undone.
+            {uiText(
+              "This redeems one credit on your account and clears the current rate-limit windows. It cannot be undone.",
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
+          <AlertDialogClose render={<Button variant="outline" />}>
+            {uiText("Cancel")}
+          </AlertDialogClose>
           <Button disabled={disabled} onClick={onConfirm}>
-            Use credit
+            {uiText("Use credit")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogPopup>
@@ -329,6 +344,7 @@ export function ResetCredits({
   readonly credits: ServerProviderResetCredits;
   readonly now: number;
 }) {
+  const uiText = useUiText();
   const { canManageProviders, confirming, setConfirming, busy, status, redeem } = useResetCredit(
     environmentId,
     input,
@@ -346,7 +362,7 @@ export function ResetCredits({
             if (readEnvironmentScope(environmentId, AuthProvidersManageScope)) setConfirming(true);
           }}
         >
-          {busy ? "Using…" : "Use reset"}
+          {busy ? uiText("Using…") : uiText("Use reset")}
         </Button>
       ) : null}
       {status ? <span className="text-foreground">{status}</span> : null}

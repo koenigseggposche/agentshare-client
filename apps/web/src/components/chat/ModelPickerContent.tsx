@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { workbenchLabels } from "@t3tools/shared/workbenchLabels";
 import {
   ANTIGRAVITY_DEFAULT_MODEL,
@@ -207,6 +208,7 @@ function ModelPickerProviderNotices({
   onRequestClose: (() => void) | undefined;
   onOpenProviderSetup: ((instanceId: ProviderInstanceId) => void) | undefined;
 }) {
+  const uiText = useUiText();
   const navigate = useNavigate();
   return (
     <>
@@ -224,7 +226,9 @@ function ModelPickerProviderNotices({
                   onOpenProviderSetup?.(entry.instanceId);
                 }}
               >
-                {setupEntries.length > 1 ? `Set up ${entry.displayName}` : "Open provider setup"}
+                {setupEntries.length > 1
+                  ? uiText("Set up {0}", [entry.displayName])
+                  : uiText("Open provider setup")}
               </InlineButton>
             </div>
           ))}
@@ -244,7 +248,7 @@ function ModelPickerProviderNotices({
               void navigate({ to: "/settings/providers" });
             }}
           >
-            Provider settings
+            {uiText("Provider settings")}
           </InlineButton>
         </p>
       ))}
@@ -371,6 +375,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
   /** Closes the list column, inside the popup's fixed height. */
   listFooter?: ReactNode;
 }) {
+  const uiText = useUiText();
   const {
     searchInputRef,
     keybindings: providedKeybindings,
@@ -1026,7 +1031,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
                       className="group w-full cursor-pointer"
                     >
                       <span className="text-sm leading-snug text-muted-foreground group-hover:text-foreground group-data-highlighted:text-foreground">
-                        {legacySection.isExpanded ? "Show less" : "Show more"}
+                        {legacySection.isExpanded ? uiText("Show less") : uiText("Show more")}
                       </span>
                     </ComboboxItem>
                   );

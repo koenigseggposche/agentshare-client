@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { useAuth } from "@clerk/react";
 import type { EnvironmentId } from "@t3tools/contracts";
 import { Link } from "@tanstack/react-router";
@@ -18,6 +19,7 @@ import { WorkspacePageHeader } from "./WorkspacePageHeader";
 
 /** Home screen for the hosted app before any computer is added. */
 export function HostedEmptyState() {
+  const uiText = useUiText();
   const cloudEnabled = hasCloudPublicConfig();
   const localEnvironmentOff = isLocalEnvironmentDisabled();
 
@@ -35,20 +37,24 @@ export function HostedEmptyState() {
         <Empty className="flex-1">
           <EmptyHeader>
             <EmptyTitle>
-              {localEnvironmentOff ? "This computer is off" : "No computer connected"}
+              {localEnvironmentOff
+                ? uiText("This computer is off")
+                : uiText("No computer connected")}
             </EmptyTitle>
             <EmptyDescription>
               {localEnvironmentOff
-                ? "Turn it back on, or connect a different computer."
+                ? uiText("Turn it back on, or connect a different computer.")
                 : cloudEnabled
-                  ? "Your agents run on your computer."
-                  : "Your agents run on your computer. Start AgentShare Client there first."}
+                  ? uiText("Your agents run on your computer.")
+                  : uiText(
+                      "Your agents run on your computer. Start AgentShare Client there first.",
+                    )}
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             {localEnvironmentOff ? (
               <Button render={<Link to="/settings/connections" />} size="sm">
-                Open Environments
+                {uiText("Open Environments")}
               </Button>
             ) : (
               <ol className="w-full space-y-4 text-left">
@@ -63,6 +69,7 @@ export function HostedEmptyState() {
 }
 
 function T3ConnectSteps() {
+  const uiText = useUiText();
   const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   const { openAuthPrompt } = useT3ConnectAuthPrompt();
   // Adding the first computer unmounts this screen. Wait for all health checks
@@ -78,11 +85,11 @@ function T3ConnectSteps() {
         {isSignedIn ? (
           <p className="flex items-center gap-1.5 text-muted-foreground">
             <CheckIcon className="size-4" />
-            Signed in
+            {uiText("Signed in")}
           </p>
         ) : (
           <Button size="sm" disabled={!isLoaded} onClick={openAuthPrompt}>
-            Sign in
+            {uiText("Sign in")}
           </Button>
         )}
       </SetupStep>
@@ -105,7 +112,11 @@ function T3ConnectSteps() {
                     return next;
                   }),
               }}
-              empty={<p className="text-xs text-muted-foreground">Waiting for your computer…</p>}
+              empty={
+                <p className="text-xs text-muted-foreground">
+                  {uiText("Waiting for your computer…")}
+                </p>
+              }
             />
           </div>
         ) : null}
@@ -115,6 +126,7 @@ function T3ConnectSteps() {
 }
 
 function PairingSteps() {
+  const uiText = useUiText();
   return (
     <>
       <SetupStep number={1}>
@@ -122,7 +134,7 @@ function PairingSteps() {
       </SetupStep>
       <SetupStep number={2}>
         <Button render={<Link to="/settings/connections" />} size="sm">
-          Add pairing link
+          {uiText("Add pairing link")}
         </Button>
       </SetupStep>
     </>
@@ -145,10 +157,11 @@ function SetupStep({
 }
 
 function RunOnComputer() {
+  const uiText = useUiText();
   return (
     <>
-      <p>Open AgentShare Client on your execution computer.</p>
-      <p>In Settings → Sharing &amp; access, create a pairing link for this device.</p>
+      <p>{uiText("Open AgentShare Client on your execution computer.")}</p>
+      <p>{uiText("In Settings → Sharing & access, create a pairing link for this device.")}</p>
     </>
   );
 }

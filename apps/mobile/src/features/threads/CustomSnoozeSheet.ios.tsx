@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { SheetHeader } from "../../components/ui/SheetHeader";
 import {
   DatePicker,
@@ -53,6 +55,7 @@ export function CustomSnoozeSheet(props: {
   readonly onClose: () => void;
   readonly onSnooze: (snoozedUntil: string) => void;
 }) {
+  const uiText = useUiText();
   const { width, height } = useWindowDimensions();
   const [mode, setMode] = useState<CustomSnoozeInput["mode"]>("date");
   const [date, setDate] = useState(() => new Date(Date.now() + 3_600_000));
@@ -117,7 +120,7 @@ export function CustomSnoozeSheet(props: {
                 modifiers={[padding({ all: 16 }), foregroundStyle(colors["--color-foreground"])]}
               >
                 <Picker
-                  label="Snooze mode"
+                  label={uiText("Snooze mode")}
                   selection={mode}
                   onSelectionChange={(value: CustomSnoozeInput["mode"]) => {
                     setMode(value);
@@ -125,7 +128,7 @@ export function CustomSnoozeSheet(props: {
                   }}
                   modifiers={[pickerStyle("segmented")]}
                 >
-                  {modes.map((option) => (
+                  {translateUiLabels(modes, uiText).map((option) => (
                     <Text key={option.value} modifiers={[tag(option.value)]}>
                       {option.label}
                     </Text>
@@ -133,7 +136,7 @@ export function CustomSnoozeSheet(props: {
                 </Picker>
                 {mode === "date" ? (
                   <DatePicker
-                    title="Snooze until"
+                    title={uiText("Snooze until")}
                     selection={date}
                     displayedComponents={["date", "hourAndMinute"]}
                     onDateChange={updateDate}
@@ -146,7 +149,7 @@ export function CustomSnoozeSheet(props: {
                 ) : (
                   <HStack spacing={0}>
                     <Picker
-                      label="Duration amount"
+                      label={uiText("Duration amount")}
                       selection={amount}
                       onSelectionChange={(value: number) => {
                         setAmount(value);
@@ -169,7 +172,7 @@ export function CustomSnoozeSheet(props: {
                       ))}
                     </Picker>
                     <Picker
-                      label="Duration unit"
+                      label={uiText("Duration unit")}
                       selection={unit}
                       onSelectionChange={(value: typeof unit) => {
                         setUnit(value);
@@ -182,7 +185,7 @@ export function CustomSnoozeSheet(props: {
                         clipped(),
                       ]}
                     >
-                      {units.map((option) => (
+                      {translateUiLabels(units, uiText).map((option) => (
                         <Text
                           key={option.value}
                           modifiers={[
@@ -222,6 +225,7 @@ function SnoozePopoverNavigation(props: {
   readonly onSubmit: () => void;
   readonly children: ReactNode;
 }) {
+  const uiText = useUiText();
   const navigationTheme = useMobileNavigationTheme();
   const { themeVariables: colors } = useAppearancePreferences();
 
@@ -243,17 +247,17 @@ function SnoozePopoverNavigation(props: {
                   headerTintColor: colors["--color-foreground"],
                   headerTitleStyle: { fontSize: 17, fontWeight: "700" },
                   headerTransparent: NATIVE_LIQUID_GLASS_SUPPORTED,
-                  title: "Custom snooze",
+                  title: uiText("Custom snooze"),
                 }}
               >
                 <SnoozeStack.Screen name="CustomSnooze">
                   {() => (
                     <>
                       <SheetHeader
-                        title="Custom snooze"
+                        title={uiText("Custom snooze")}
                         onCancel={props.onClose}
-                        accessibilityLabel="Cancel custom snooze"
-                        confirm={{ label: "Snooze", onPress: props.onSubmit }}
+                        accessibilityLabel={uiText("Cancel custom snooze")}
+                        confirm={{ label: uiText("Snooze"), onPress: props.onSubmit }}
                       />
                       <ScrollView
                         contentInsetAdjustmentBehavior="automatic"

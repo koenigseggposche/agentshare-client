@@ -1,3 +1,6 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { useUiText } from "./i18n/uiText";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   EDITORS,
   type ContextMenuItem,
@@ -56,14 +59,17 @@ export interface FileContextMenuCapabilities {
   readonly editorIds: ReadonlyArray<EditorId>;
 }
 
-function buildFileContextMenuItems(input: {
-  readonly hasAbsolutePath: boolean;
-  readonly capabilities: FileContextMenuCapabilities;
-}): readonly ContextMenuItem<FileContextMenuAction>[] {
+function buildFileContextMenuItems(
+  input: {
+    readonly hasAbsolutePath: boolean;
+    readonly capabilities: FileContextMenuCapabilities;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): readonly ContextMenuItem<FileContextMenuAction>[] {
   if (!input.hasAbsolutePath) return [];
   const items: ContextMenuItem<FileContextMenuAction>[] = [];
   if (input.capabilities.canOpenDefault) {
-    items.push({ id: "open", label: "Open", icon: "pencil" });
+    items.push({ id: "open", label: uiText("Open"), icon: "pencil" });
   }
   if (input.capabilities.revealLabel !== undefined) {
     items.push({
@@ -76,7 +82,7 @@ function buildFileContextMenuItems(input: {
   if (editorIds.length > 0) {
     items.push({
       id: "open-with",
-      label: "Open with",
+      label: uiText("Open with"),
       children: editorIds.map((editorId) => ({
         id: `editor:${editorId}` as FileContextMenuAction,
         label: EDITOR_LABEL_BY_ID.get(editorId) ?? editorId,
@@ -87,6 +93,7 @@ function buildFileContextMenuItems(input: {
 }
 
 export function useFileContextMenu(environmentId: EnvironmentId | null) {
+  const uiText = useUiText();
   const openInEditor = useAtomCommand(shellEnvironment.openInEditor, { reportFailure: false });
   const serverConfig = useAtomValue(serverEnvironment.configValueAtom(environmentId));
 
@@ -128,10 +135,10 @@ export function useFileContextMenu(environmentId: EnvironmentId | null) {
       type: "error",
       title:
         action === "open"
-          ? "Could not open file"
+          ? uiText("Could not open file")
           : reveal
-            ? "Unable to reveal file"
-            : `Could not open in ${EDITOR_LABEL_BY_ID.get(editor) ?? editor}`,
+            ? uiText("Unable to reveal file")
+            : uiText("Could not open in {0}", [EDITOR_LABEL_BY_ID.get(editor) ?? editor]),
       description: absolutePath,
     });
   };
@@ -141,10 +148,13 @@ export function useFileContextMenu(environmentId: EnvironmentId | null) {
     position?: { x: number; y: number },
   ): Promise<void> => {
     const api = readLocalApi();
-    const items = buildFileContextMenuItems({
-      hasAbsolutePath: resolveFileContextMenuAbsolutePath(target) !== null,
-      capabilities,
-    });
+    const items = buildFileContextMenuItems(
+      {
+        hasAbsolutePath: resolveFileContextMenuAbsolutePath(target) !== null,
+        capabilities,
+      },
+      uiText,
+    );
     if (items.length === 0 || api === undefined) return;
     const clicked = await api.contextMenu.show(items, position);
     if (clicked === null) return;
@@ -153,10 +163,13 @@ export function useFileContextMenu(environmentId: EnvironmentId | null) {
 
   return {
     buildItems: (target: FileContextMenuTarget) =>
-      buildFileContextMenuItems({
-        hasAbsolutePath: resolveFileContextMenuAbsolutePath(target) !== null,
-        capabilities,
-      }),
+      buildFileContextMenuItems(
+        {
+          hasAbsolutePath: resolveFileContextMenuAbsolutePath(target) !== null,
+          capabilities,
+        },
+        uiText,
+      ),
     capabilities,
     activate,
     show,

@@ -1,3 +1,4 @@
+import { useUiText } from "../i18n/uiText";
 import { SymbolView } from "./ui/AppSymbol";
 import { AppText } from "./ui/AppText";
 import { Image } from "expo-image";
@@ -145,6 +146,7 @@ function ProjectFaviconImage(props: {
   readonly projectTitle: string;
   readonly size: number;
 }) {
+  const uiText = useUiText();
   const faviconRequest = createProjectFaviconRequest(props.cacheKey, props.faviconUrl);
   // Registers with the module-level loader before the Image's native onLoad/onError can fire,
   // so stale loads for a superseded URL under the same cacheKey are ignored.
@@ -193,7 +195,7 @@ function ProjectFaviconImage(props: {
           }
           cachePolicy={faviconRequest.faviconUrl.startsWith("data:") ? "memory" : "memory-disk"}
           recyclingKey={faviconRequest.cacheKey}
-          accessibilityLabel={`${props.projectTitle} favicon`}
+          accessibilityLabel={uiText("{0} favicon", [props.projectTitle])}
           style={{
             width: props.size,
             height: props.size,

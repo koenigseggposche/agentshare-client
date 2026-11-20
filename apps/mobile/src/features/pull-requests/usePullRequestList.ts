@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { RegistryContext, useAtomMount, useAtomSubscribe, useAtomValue } from "@effect/atom-react";
 import { executeAtomQuery, squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime";
 import type { EnvironmentId, PullRequestDiffStat, PullRequestListInput } from "@t3tools/contracts";
@@ -155,6 +156,7 @@ const settledError = (result: AsyncResult.AsyncResult<string | null, never>) =>
   AsyncResult.isSuccess(result) && !result.waiting ? result.value : null;
 
 export function usePullRequestList(targets: readonly ListTarget[]) {
+  const uiText = useUiText();
   const registry = use(RegistryContext);
   const scopeKey = JSON.stringify(targets);
   const sources = useAtomValue(sourcesFamily(scopeKey));
@@ -308,11 +310,12 @@ export function usePullRequestList(targets: readonly ListTarget[]) {
           {
             environmentId: target.environmentId,
             projectTitle: "",
-            message: cause instanceof Error ? cause.message : "Couldn't load pull requests.",
+            message:
+              cause instanceof Error ? cause.message : uiText("Couldn't load pull requests."),
           },
         ];
       }),
-    [sources],
+    [sources, uiText],
   );
   const listing = useMemo(
     () => ({ ...data, entries, errors: [...data.errors, ...errors] }),

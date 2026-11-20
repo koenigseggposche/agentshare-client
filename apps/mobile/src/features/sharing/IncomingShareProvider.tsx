@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import Constants from "expo-constants";
 import * as Crypto from "expo-crypto";
@@ -235,9 +236,9 @@ function reportRefreshFailure(cause: unknown) {
     cause instanceof Error ? cause.cause : null,
   );
   const error = cause instanceof Error ? cause : new Error("Could not import shared content.");
-  Dialog.alert("Could not import shared content", error.message, [
-    { text: "Dismiss", style: "cancel" },
-    { text: "Retry", onPress: () => void refreshIncomingShares() },
+  Dialog.alert(readUiText("Could not import shared content"), error.message, [
+    { text: readUiText("Dismiss"), style: "cancel" },
+    { text: readUiText("Retry"), onPress: () => void refreshIncomingShares() },
   ]);
 }
 
@@ -318,30 +319,35 @@ export const incomingShareImports = makeIncomingShareImports({
     }),
   releaseUnusedAttachments: scheduleUnusedComposerAttachmentCleanup,
   onWarnings: (warnings) => {
-    Dialog.alert("Some shared content was skipped", warnings.join("\n"));
+    Dialog.alert(readUiText("Some shared content was skipped"), warnings.join("\n"));
   },
   onImportFailure: (target, error) => {
     Dialog.alert(
-      "Could not import shared content",
-      error instanceof Error ? error.message : "The shared content could not be saved.",
+      readUiText("Could not import shared content"),
+      error instanceof Error ? error.message : readUiText("The shared content could not be saved."),
       [
         {
-          text: "Cancel import",
+          text: readUiText("Cancel import"),
           style: "cancel",
           onPress: () => void incomingShareImports.cancel(target),
         },
-        { text: "Retry", onPress: () => incomingShareImports.retry(target) },
+        { text: readUiText("Retry"), onPress: () => incomingShareImports.retry(target) },
       ],
       { cancelable: false },
     );
   },
   onCancelFailure: (target, error) => {
     Dialog.alert(
-      "Could not cancel import",
-      error instanceof Error ? error.message : "The shared content could not be restored safely.",
+      readUiText("Could not cancel import"),
+      error instanceof Error
+        ? error.message
+        : readUiText("The shared content could not be restored safely."),
       [
-        { text: "Retry import", onPress: () => incomingShareImports.retry(target) },
-        { text: "Retry cancel", onPress: () => void incomingShareImports.cancel(target) },
+        { text: readUiText("Retry import"), onPress: () => incomingShareImports.retry(target) },
+        {
+          text: readUiText("Retry cancel"),
+          onPress: () => void incomingShareImports.cancel(target),
+        },
       ],
       { cancelable: false },
     );

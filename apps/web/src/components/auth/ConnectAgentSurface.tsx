@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import {
   type AuthMcpApprovalDecision,
   type AuthMcpApprovalDetails,
@@ -90,6 +92,7 @@ function oneClickApproves(details: AuthMcpApprovalDetails, access: AuthMcpClient
 }
 
 export function ConnectAgentSurface() {
+  const uiText = useUiText();
   const [authorization] = useState(readAuthorizationRequest);
   const [loaded, setLoaded] = useState<Loaded>({ status: "loading" });
   const [access, setAccess] = useState<AuthMcpClientAccess>("read-only");
@@ -145,8 +148,8 @@ export function ConnectAgentSurface() {
     return (
       <StandalonePage>
         <ConnectAgentHeading
-          title="Checking the sign-in request"
-          description="One moment while this environment verifies the agent's request."
+          title={uiText("Checking the sign-in request")}
+          description={uiText("One moment while this environment verifies the agent's request.")}
         />
         <Spinner className="mt-6" size="lg" tone="muted" />
       </StandalonePage>
@@ -156,9 +159,12 @@ export function ConnectAgentSurface() {
   if (loaded.status === "invalid") {
     return (
       <StandalonePage>
-        <ConnectAgentHeading title="This sign-in cannot continue" description={loaded.message} />
+        <ConnectAgentHeading
+          title={uiText("This sign-in cannot continue")}
+          description={loaded.message}
+        />
         <p className="mt-4 text-sm text-muted-foreground">
-          Close this page and start the sign-in again from your agent.
+          {uiText("Close this page and start the sign-in again from your agent.")}
         </p>
       </StandalonePage>
     );
@@ -171,10 +177,10 @@ export function ConnectAgentSurface() {
   return (
     <StandalonePage>
       <ConnectAgentHeading
-        title={`Connect ${details.clientName}`}
+        title={uiText("Connect {0}", [details.clientName])}
         description={
           <>
-            This agent wants to use the threads in every project on{" "}
+            {uiText("This agent wants to use the threads in every project on")}{" "}
             <span className="font-medium text-foreground">{details.environmentHost}</span>.
           </>
         }
@@ -182,14 +188,17 @@ export function ConnectAgentSurface() {
       <p className="mt-2 text-xs text-muted-foreground">
         {redirectsToThisComputer(details.redirectHost) ? (
           <>
-            The name is chosen by the agent. Approval returns to {details.redirectHost} on the
-            computer that opened this page. Only approve a sign-in you just started.
+            {uiText("The name is chosen by the agent. Approval returns to ")}
+            {details.redirectHost}
+            {uiText(
+              " on the computer that opened this page. Only approve a sign-in you just started.",
+            )}
           </>
         ) : (
           <>
-            The name is chosen by the agent. Approval gives access to whoever runs{" "}
-            <span className="font-medium text-foreground">{details.redirectHost}</span>. Only
-            approve a sign-in you just started there.
+            {uiText("The name is chosen by the agent. Approval gives access to whoever runs")}{" "}
+            <span className="font-medium text-foreground">{details.redirectHost}</span>
+            {uiText(". Only approve a sign-in you just started there.")}
           </>
         )}
       </p>
@@ -203,7 +212,7 @@ export function ConnectAgentSurface() {
       >
         <div className="space-y-2">
           <span id="connect-agent-access-label" className="text-sm font-medium">
-            What it may do
+            {uiText("What it may do")}
           </span>
           <RadioGroup
             aria-labelledby="connect-agent-access-label"
@@ -220,15 +229,16 @@ export function ConnectAgentSurface() {
             ))}
           </RadioGroup>
           <p className="text-xs text-muted-foreground">
-            Beyond read only, it can start, message and stop threads, and none of them can run with
-            more than the mode you pick.
+            {uiText(
+              "Beyond read only, it can start, message and stop threads, and none of them can run with more than the mode you pick.",
+            )}
           </p>
         </div>
 
         {oneClick ? null : (
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="connect-agent-pairing-code">
-              Pairing code
+              {uiText("Pairing code")}
             </label>
             <Input
               id="connect-agent-pairing-code"
@@ -238,13 +248,13 @@ export function ConnectAgentSurface() {
               disabled={pending !== null}
               nativeInput
               onChange={(event) => setPairingCode(event.currentTarget.value)}
-              placeholder="Paste a one-time pairing code"
+              placeholder={uiText("Paste a one-time pairing code")}
               spellCheck={false}
               value={pairingCode}
             />
             <p className="text-xs text-muted-foreground">
-              Create one in Settings → Sharing & access, or run <code>t3 auth pairing create</code>{" "}
-              on this machine.
+              {uiText("Create one in Settings → Sharing & access, or run ")}
+              <code>t3 auth pairing create</code> {uiText("on this machine.")}
             </p>
           </div>
         )}
@@ -257,7 +267,7 @@ export function ConnectAgentSurface() {
 
         <div className="flex flex-wrap gap-2">
           <Button disabled={!canApprove} type="submit">
-            {pending === "approve" ? "Approving…" : "Approve"}
+            {pending === "approve" ? uiText("Approving…") : uiText("Approve")}
           </Button>
           <Button
             disabled={pending !== null}
@@ -265,7 +275,7 @@ export function ConnectAgentSurface() {
             type="button"
             variant="outline"
           >
-            {pending === "deny" ? "Denying…" : "Deny"}
+            {pending === "deny" ? uiText("Denying…") : uiText("Deny")}
           </Button>
         </div>
       </form>
@@ -302,7 +312,8 @@ function AccessOption({
   readonly selected: boolean;
   readonly managedReason: string | undefined;
 }) {
-  const { label, description, icon: Icon } = accessConfig[access];
+  const uiText = useUiText();
+  const { label, description, icon: Icon } = translateUiLabels(accessConfig, uiText)[access];
   return (
     <RadioPrimitive.Root
       value={access}

@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   normalizeProviderAccentColor,
   resolveProviderInstanceDisplayName,
@@ -193,6 +195,7 @@ export function describeUnavailableModelSelection(
   config: T3ServerConfig | null | undefined,
   selection: ModelSelection,
   projectId: ProjectId | null,
+  uiText: UiTranslator = uiTranslators.en,
 ): { readonly title: string; readonly detail: string } {
   const provider = config?.providers.find(
     (candidate) => candidate.instanceId === selection.instanceId,
@@ -207,17 +210,17 @@ export function describeUnavailableModelSelection(
       instanceId: selection.instanceId,
     });
     return {
-      title: "Provider not allowed",
+      title: uiText("Provider not allowed"),
       detail: `${disallowedProviderMessage(config?.managedPolicy?.organization, label)} Choose another model.`,
     };
   }
   return isDisabledForProject(config, provider, selection.instanceId, projectId)
     ? {
-        title: "Model turned off for this project",
+        title: uiText("Model turned off for this project"),
         detail: "Turn it back on from web or desktop, or choose another model.",
       }
     : {
-        title: "Antigravity model unavailable",
+        title: uiText("Antigravity model unavailable"),
         detail: "Set up Antigravity on web or desktop, or choose another model.",
       };
 }

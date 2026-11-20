@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import * as Dialog from "../../components/ui/Dialog";
 import { useCallback } from "react";
 
@@ -40,33 +41,39 @@ export function usePendingTaskListActions(
 
   const confirmDeletePendingTask = useCallback((pendingTask: PendingNewTask) => {
     if (pendingTask.kind === "draft") {
-      Dialog.alert("Discard draft?", `“${pendingTask.title}” will be removed.`, [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Discard",
-          style: "destructive",
-          onPress: () => {
-            void withThreadDismissal(
-              pendingTask.key,
-              async () =>
-                clearComposerDraftContent(pendingTask.draftKey, {
-                  clearModelSelection: true,
-                  clearWorkspaceSelection: true,
-                }),
-              () => true,
-            );
+      Dialog.alert(
+        readUiText("Discard draft?"),
+        readUiText("“{0}” will be removed.", [pendingTask.title]),
+        [
+          { text: readUiText("Cancel"), style: "cancel" },
+          {
+            text: readUiText("Discard"),
+            style: "destructive",
+            onPress: () => {
+              void withThreadDismissal(
+                pendingTask.key,
+                async () =>
+                  clearComposerDraftContent(pendingTask.draftKey, {
+                    clearModelSelection: true,
+                    clearWorkspaceSelection: true,
+                  }),
+                () => true,
+              );
+            },
           },
-        },
-      ]);
+        ],
+      );
       return;
     }
     Dialog.alert(
-      "Delete pending task?",
-      `“${pendingTask.title}” has not been sent yet and will be removed from the outbox.`,
+      readUiText("Delete pending task?"),
+      readUiText("“{0}” has not been sent yet and will be removed from the outbox.", [
+        pendingTask.title,
+      ]),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: readUiText("Cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: readUiText("Delete"),
           style: "destructive",
           onPress: () => {
             // Hold delivery from confirmation so reconnects cannot send a task during removal.

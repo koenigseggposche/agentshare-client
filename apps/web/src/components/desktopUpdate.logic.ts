@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type { DesktopUpdateActionResult, DesktopUpdateState } from "@t3tools/contracts";
 
 export type DesktopUpdateButtonAction = "download" | "install" | "none";
@@ -158,9 +160,10 @@ export function getDesktopUpdateDisabledReason(
 export function getDesktopUpdateIdleTooltip(
   state: Pick<DesktopUpdateState, "enabled" | "status" | "message"> | null,
   managedDenial?: string,
+  uiText: UiTranslator = uiTranslators.en,
 ) {
   const disabledReason = getDesktopUpdateDisabledReason(state, managedDenial);
   return disabledReason
-    ? { title: "Updates unavailable", detail: disabledReason }
-    : { title: "Check for updates", detail: null };
+    ? { title: uiText("Updates unavailable"), detail: disabledReason }
+    : { title: uiText("Check for updates"), detail: null };
 }

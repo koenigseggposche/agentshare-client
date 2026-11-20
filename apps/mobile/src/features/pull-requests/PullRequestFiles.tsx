@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { renderNativeScrollView } from "../../native/NativeScrollViewMarker";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import { AnimatedLegendList } from "@legendapp/list/reanimated";
@@ -99,11 +100,17 @@ function FileRow(props: {
   readonly directory?: string;
   readonly onPress: () => void;
 }) {
+  const uiText = useUiText();
   const { file } = props;
   return (
     <RowPressable
       accessibilityRole="button"
-      accessibilityLabel={`View diff for ${file.path}, ${file.additions} additions, ${file.deletions} deletions${props.viewed ? ", viewed" : ""}`}
+      accessibilityLabel={uiText("View diff for {0}, {1} additions, {2} deletions{3}", [
+        file.path,
+        file.additions,
+        file.deletions,
+        props.viewed ? ", viewed" : "",
+      ])}
       onPress={props.onPress}
       className="min-h-14 flex-row items-center gap-3 border-b border-border-subtle py-3 active:opacity-70"
     >
@@ -119,7 +126,8 @@ function FileRow(props: {
         ) : null}
         {file.previousPath ? (
           <Text textRole="caption" className="text-foreground-muted" numberOfLines={1}>
-            Renamed from {file.previousPath}
+            {uiText("Renamed from ")}
+            {file.previousPath}
           </Text>
         ) : null}
       </View>
@@ -157,13 +165,14 @@ function FileRowSkeleton(props: { readonly index: number }) {
 }
 
 function FileFilterMenu({ filter }: { readonly filter: ChangedFiles["filter"] }) {
+  const uiText = useUiText();
   return (
     <Menu
-      title="Review files"
+      title={uiText("Review files")}
       actions={[
         {
           id: "hide-tests",
-          title: "Hide test files",
+          title: uiText("Hide test files"),
           image: "line.3.horizontal.decrease",
           state: filter.hideTestFiles ? "on" : "off",
         },
@@ -173,7 +182,7 @@ function FileFilterMenu({ filter }: { readonly filter: ChangedFiles["filter"] })
       <View pointerEvents="none">
         <IconButton
           icon="line.3.horizontal.decrease"
-          accessibilityLabel="Filter review files"
+          accessibilityLabel={uiText("Filter review files")}
           selected={filter.hideTestFiles}
         />
       </View>
@@ -182,31 +191,39 @@ function FileFilterMenu({ filter }: { readonly filter: ChangedFiles["filter"] })
 }
 
 function NoVisibleFiles({ files }: { readonly files: ChangedFiles }) {
+  const uiText = useUiText();
   const { diff, filter, parsed } = files;
   if (parsed.kind === "files") {
     return parsed.files.length === 0 && filter.hiddenCount > 0 ? (
       <EmptyState
-        title={diff.nextCursor ? "No non-test files loaded yet" : "Only test files changed"}
+        title={
+          diff.nextCursor
+            ? uiText("No non-test files loaded yet")
+            : uiText("Only test files changed")
+        }
         detail="Test files are hidden from this review."
-        action={<Button label="Show test files" tone="contrast" onPress={filter.showAll} />}
+        action={
+          <Button label={uiText("Show test files")} tone="contrast" onPress={filter.showAll} />
+        }
         variant="plain"
       />
     ) : null;
   }
   return !diff.isPending && !diff.error ? (
     <Text textRole="footnote" className="py-6 text-foreground-muted">
-      No text changes available.
+      {uiText("No text changes available.")}
     </Text>
   ) : null;
 }
 
 function FilesFooter({ files }: { readonly files: ChangedFiles }) {
+  const uiText = useUiText();
   const { diff, viewed, parsed } = files;
   return (
     <>
       {diff.nextCursor ? (
         <Button
-          label={diff.error ? "Retry loading files" : "Load more files"}
+          label={diff.error ? uiText("Retry loading files") : uiText("Load more files")}
           tone="secondary"
           onPress={diff.error ? diff.refresh : diff.loadMore}
           loading={diff.isPending}
@@ -230,13 +247,14 @@ function FilesFooter({ files }: { readonly files: ChangedFiles }) {
 function ChangeBreakdownLine(props: {
   readonly breakdown: NonNullable<PullRequestChangeBreakdown>;
 }) {
+  const uiText = useUiText();
   const parts = (Object.keys(BREAKDOWN_LABELS) as Array<keyof typeof BREAKDOWN_LABELS>).flatMap(
     (kind) => {
       const { additions, deletions } = props.breakdown[kind];
       return additions === 0 && deletions === 0
         ? []
         : [
-            `${BREAKDOWN_LABELS[kind]} +${additions.toLocaleString()} −${deletions.toLocaleString()}`,
+            `${BREAKDOWN_LABELS[kind]} +${additions.toLocaleString(uiText.language)} −${deletions.toLocaleString(uiText.language)}`,
           ];
     },
   );
@@ -252,6 +270,7 @@ function ChangeBreakdownLine(props: {
  * so the section supplies its header, rows, and footer instead of rendering a list of its own.
  */
 export function usePullRequestFilesSection(params: PullRequestParams) {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const files = useChangedFiles(params);
   const { diff, filter, viewed, pr, parsed, loading } = files;
@@ -266,15 +285,15 @@ export function usePullRequestFilesSection(params: PullRequestParams) {
         <PullRequestReadStatus pending={false} error={diff.error} terminology={files.terminology} />
         {loading ? (
           <View
-            accessibilityLabel="Loading changed files"
+            accessibilityLabel={uiText("Loading changed files")}
             accessibilityState={{ busy: true }}
             className="min-h-17 flex-row items-center gap-2 py-3"
           >
             <View className="min-w-0 flex-1 gap-1">
-              <PullRequestSectionHeading>Changed files</PullRequestSectionHeading>
+              <PullRequestSectionHeading>{uiText("Changed files")}</PullRequestSectionHeading>
               {pr ? (
                 <Text textRole="caption" className="text-foreground-muted">
-                  {pr.changedFiles} {pr.changedFiles === 1 ? "file" : "files"}
+                  {pr.changedFiles} {pr.changedFiles === 1 ? uiText("file") : uiText("files")}
                 </Text>
               ) : (
                 <View className="h-2.5 w-28 rounded bg-subtle-strong" />
@@ -298,7 +317,7 @@ export function usePullRequestFilesSection(params: PullRequestParams) {
         ) : parsed.kind === "files" ? (
           <View className="min-h-17 flex-row items-center gap-2 py-3">
             <View className="min-w-0 flex-1 gap-1">
-              <PullRequestSectionHeading>Changed files</PullRequestSectionHeading>
+              <PullRequestSectionHeading>{uiText("Changed files")}</PullRequestSectionHeading>
               <Text textRole="caption" className="text-foreground-muted">
                 {describeFiles(parsed, files)}
               </Text>
@@ -397,6 +416,7 @@ function DirectoryRow(props: {
 
 /** The `PullRequestFiles` sheet: a changed-file picker presented over a file diff. */
 export function PullRequestFilesSheet({ route }: StaticScreenProps<PullRequestDiffParams>) {
+  const uiText = useUiText();
   const params = route.params;
   const navigation = useNavigation();
   const jumpScope = pullRequestFileJumpScope(params);
@@ -414,7 +434,7 @@ export function PullRequestFilesSheet({ route }: StaticScreenProps<PullRequestDi
     <View collapsable={false} className="flex-1 bg-sheet">
       <SheetHeader
         presentation={Platform.OS === "android" ? "inline" : "native"}
-        title="Changed files"
+        title={uiText("Changed files")}
         subtitle={`#${params.number} · ${params.commit?.slice(0, 7) ?? params.repository}`}
         onClose={() => navigation.goBack()}
         // iOS gets the native menu below; SheetHeader would render this as a custom bar item.
@@ -422,8 +442,8 @@ export function PullRequestFilesSheet({ route }: StaticScreenProps<PullRequestDi
       />
       <Toolbar placement="right">
         <Toolbar.Menu
-          title="Review files"
-          accessibilityLabel="Filter review files"
+          title={uiText("Review files")}
+          accessibilityLabel={uiText("Filter review files")}
           icon="line.3.horizontal.decrease"
         >
           <Toolbar.MenuAction
@@ -431,7 +451,7 @@ export function PullRequestFilesSheet({ route }: StaticScreenProps<PullRequestDi
             isOn={filter.hideTestFiles}
             onPress={filter.toggle}
           >
-            <Toolbar.Label>Hide test files</Toolbar.Label>
+            <Toolbar.Label>{uiText("Hide test files")}</Toolbar.Label>
           </Toolbar.MenuAction>
         </Toolbar.Menu>
       </Toolbar>
@@ -502,7 +522,7 @@ export function PullRequestFilesSheet({ route }: StaticScreenProps<PullRequestDi
             loading ? (
               <View
                 accessible
-                accessibilityLabel="Loading changed files"
+                accessibilityLabel={uiText("Loading changed files")}
                 accessibilityState={{ busy: true }}
               >
                 {Array.from({ length: loadingRowCount(files) }, (_, index) => (

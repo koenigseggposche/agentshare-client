@@ -1,3 +1,6 @@
+import { SettingsDisclosure } from "./components/SettingsDisclosure";
+import { Menu } from "../../components/ui/Menu";
+import { ListRowLayout } from "../../components/ui/ListRowLayout";
 import { AgentShareRemoteFunds } from "./AgentShareFunds";
 import { AgentShareDevices } from "./AgentShareDevices";
 import { useState } from "react";
@@ -29,16 +32,20 @@ export function AgentShareWalletSection({
   owner,
   language,
   taskId,
+  mode = "wallet",
 }: {
   environmentId: EnvironmentId;
   owner: string;
   language: "zh" | "en";
   taskId?: string;
+  mode?: "wallet" | "devices";
 }) {
   const [selection, setSelection] = useState<AgentShareWalletReadInput>(
-    taskId === undefined
-      ? { action: "overview", owner }
-      : { action: "history", owner, kind: "spending", cursor: "", workbench_task_id: taskId },
+    mode === "devices"
+      ? { action: "devices", owner }
+      : taskId === undefined
+        ? { action: "overview", owner }
+        : { action: "history", owner, kind: "spending", cursor: "", workbench_task_id: taskId },
   );
   const query = useEnvironmentQuery(
     agentShareEnvironment.wallet({ environmentId, input: selection }),
@@ -49,6 +56,7 @@ export function AgentShareWalletSection({
   );
   return (
     <AgentShareWalletView
+      mode={mode}
       owner={owner}
       language={language}
       selection={selection}
@@ -80,6 +88,7 @@ export function AgentShareWalletView({
   taskId,
   onSelect: setSelection,
   query,
+  mode = "wallet",
   personal = false,
   canCommand = false,
   onCommand,
@@ -89,6 +98,7 @@ export function AgentShareWalletView({
   language: "zh" | "en";
   funds?: React.ReactNode;
   personal?: boolean;
+  mode?: "wallet" | "devices";
   canCommand?: boolean;
   onCommand?: (input: AgentShareWalletCommandInput) => Promise<boolean>;
   selection: AgentShareWalletReadInput;
@@ -157,10 +167,15 @@ export function AgentShareWalletView({
   return (
     <SettingsSection
       {...(taskId === undefined
-        ? { title: t("账号钱包与设备", "Account wallet and devices") }
+        ? {
+            title:
+              mode === "devices"
+                ? t("已授权设备", "Authorized devices")
+                : t("钱包与账单", "Wallet and records"),
+          }
         : {})}
     >
-      {taskId === undefined ? (
+      {mode === "wallet" && taskId === undefined ? (
         <Text className="px-5 py-2" textRole="body">
           {t(
             personal
@@ -174,19 +189,17 @@ export function AgentShareWalletView({
       ) : null}
       <ListActionRow
         label={
-          taskId === undefined ? t("刷新钱包", "Refresh wallet") : t("刷新账单", "Refresh charges")
+          mode === "devices"
+            ? t("刷新设备", "Refresh devices")
+            : taskId === undefined
+              ? t("刷新钱包", "Refresh wallet")
+              : t("刷新账单", "Refresh charges")
         }
         onPress={() => {
           setCommandUnconfirmed(false);
           query.refresh();
         }}
       />
-      {taskId === undefined ? (
-        <ListActionRow
-          label={t("已登录设备", "Signed-in devices")}
-          onPress={() => setSelection({ action: "devices", owner })}
-        />
-      ) : null}
       {commandUnconfirmed ? (
         <Text className="px-5 py-2" textRole="body" accessibilityRole="alert">
           {t(
@@ -195,7 +208,8 @@ export function AgentShareWalletView({
           )}
         </Text>
       ) : null}
-      {(taskId === undefined ? selection.action !== "overview" : selection.action === "detail") ? (
+      {mode === "wallet" &&
+      (taskId === undefined ? selection.action !== "overview" : selection.action === "detail") ? (
         <ListActionRow
           label={
             taskId !== undefined
@@ -238,23 +252,36 @@ export function AgentShareWalletView({
       ) : null}
       {query.isPending && !value ? (
         <Text className="px-5 py-2" textRole="body">
-          {t("正在读取钱包…", "Loading wallet…")}
+          {mode === "devices"
+            ? t("正在读取设备…", "Loading devices…")
+            : t("正在读取钱包…", "Loading wallet…")}
         </Text>
       ) : null}
       {overview?.wallets.map((wallet) => (
-        <Text key={wallet.currency} className="px-5 py-2" textRole="body">
-          {[
-            `${t("可用余额", "Available balance")}: ${money(wallet.available_micros, wallet.currency)}`,
-            `${t("冻结余额", "Held balance")}: ${money(wallet.held_micros, wallet.currency)}`,
-            `${t("待结算收益", "Pending earnings")}: ${money(wallet.pending_earnings_micros, wallet.currency)}`,
-            `${t("可用收益", "Available earnings")}: ${money(wallet.available_earnings_micros, wallet.currency)}`,
-            `${t("提现处理中", "Withdrawal hold")}: ${money(wallet.withdrawal_held_micros, wallet.currency)}`,
-          ].join("\n")}
-        </Text>
+        <SettingsSection key={wallet.currency} title={t("余额", "Balances")}>
+          <Text className="px-5 py-2">
+            {t("可用余额", "Available balance")}: {money(wallet.available_micros, wallet.currency)}
+          </Text>
+          <Text className="px-5 py-2">
+            {t("可用收益", "Available earnings")}:{" "}
+            {money(wallet.available_earnings_micros, wallet.currency)}
+          </Text>
+          <SettingsDisclosure title={t("资金明细", "Balance details")}>
+            <Text className="px-5 py-2">
+              {[
+                `${t("冻结余额", "Held balance")}: ${money(wallet.held_micros, wallet.currency)}`,
+                `${t("待结算收益", "Pending earnings")}: ${money(wallet.pending_earnings_micros, wallet.currency)}`,
+                `${t("提现处理中", "Withdrawal hold")}: ${money(wallet.withdrawal_held_micros, wallet.currency)}`,
+              ].join("\n")}
+            </Text>
+          </SettingsDisclosure>
+        </SettingsSection>
       ))}
       {overview ? (
         <>
-          {funds}
+          <SettingsDisclosure title={t("充值与提现", "Top up and withdraw")}>
+            {funds}
+          </SettingsDisclosure>
           <Text className="px-5 py-2" textRole="body">
             {t("累计消费", "Total spending")}:{" "}
             {money(overview.summary.spent_micros, overview.currency)}
@@ -263,43 +290,45 @@ export function AgentShareWalletView({
             {t("累计收益", "Total earnings")}:{" "}
             {money(overview.summary.earned_micros, overview.currency)}
           </Text>
-          <Text className="px-5 py-2" textRole="body">
-            {t("收益优先支付", "Pay from earnings first")}:{" "}
-            {overview.payment_preference.earnings_first ? t("已开启", "On") : t("已关闭", "Off")}
-          </Text>
-          <ListActionRow
-            label={
-              overview.payment_preference.earnings_first
-                ? t("关闭收益优先支付", "Turn off earnings-first payments")
-                : t("开启收益优先支付", "Turn on earnings-first payments")
-            }
-            description={t(
-              "优先使用可用收益支付新请求；已开始的请求保持原付款方式。",
-              "Use available earnings first for new requests. Requests already started keep their payment method.",
-            )}
-            disabled={
-              !canCommand || !onCommand || commandPending || commandUnconfirmed || query.isPending
-            }
-            onPress={async () => {
-              if (!onCommand) return;
-              setCommandPending(true);
-              try {
-                if (
-                  await onCommand({
-                    action: "paymentPreference",
-                    owner,
-                    currency: overview.payment_preference.currency,
-                    earnings_first: !overview.payment_preference.earnings_first,
-                  })
-                )
-                  query.refresh();
-                else setCommandUnconfirmed(true);
-              } catch {
-                setCommandUnconfirmed(true);
+          <SettingsDisclosure title={t("支付偏好", "Payment preferences")}>
+            <Text className="px-5 py-2" textRole="body">
+              {t("收益优先支付", "Pay from earnings first")}:{" "}
+              {overview.payment_preference.earnings_first ? t("已开启", "On") : t("已关闭", "Off")}
+            </Text>
+            <ListActionRow
+              label={
+                overview.payment_preference.earnings_first
+                  ? t("关闭收益优先支付", "Turn off earnings-first payments")
+                  : t("开启收益优先支付", "Turn on earnings-first payments")
               }
-              setCommandPending(false);
-            }}
-          />
+              description={t(
+                "优先使用可用收益支付新请求；已开始的请求保持原付款方式。",
+                "Use available earnings first for new requests. Requests already started keep their payment method.",
+              )}
+              disabled={
+                !canCommand || !onCommand || commandPending || commandUnconfirmed || query.isPending
+              }
+              onPress={async () => {
+                if (!onCommand) return;
+                setCommandPending(true);
+                try {
+                  if (
+                    await onCommand({
+                      action: "paymentPreference",
+                      owner,
+                      currency: overview.payment_preference.currency,
+                      earnings_first: !overview.payment_preference.earnings_first,
+                    })
+                  )
+                    query.refresh();
+                  else setCommandUnconfirmed(true);
+                } catch {
+                  setCommandUnconfirmed(true);
+                }
+                setCommandPending(false);
+              }}
+            />
+          </SettingsDisclosure>
           {overview.spending.slice(0, 6).map(record)}
         </>
       ) : null}
@@ -324,14 +353,31 @@ export function AgentShareWalletView({
           }}
         />
       ) : null}
-      {taskId === undefined &&
-        kinds.map(([kind, label]) => (
-          <ListActionRow
-            key={kind}
-            label={label}
-            onPress={() => setSelection({ action: "history", owner, kind, cursor: "" })}
+      {mode === "wallet" && taskId === undefined ? (
+        <Menu
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={t("记录类型", "Record type")}
+          actions={kinds.map(([kind, label]) => ({
+            id: kind,
+            title: label,
+            state: selection.action === "history" && selection.kind === kind ? "on" : "off",
+          }))}
+          onPressAction={({ nativeEvent }) => {
+            const kind = kinds.find(([kind]) => kind === nativeEvent.event)?.[0];
+            if (kind) setSelection({ action: "history", owner, kind, cursor: "" });
+          }}
+        >
+          <ListRowLayout
+            label={t("记录类型", "Record type")}
+            detail={
+              selection.action === "history"
+                ? kinds.find(([kind]) => kind === selection.kind)?.[1]
+                : t("最近消费", "Recent spending")
+            }
           />
-        ))}
+        </Menu>
+      ) : null}
       {value?.action === "history" ? (
         <>
           {value.data.items.length === 0 ? (

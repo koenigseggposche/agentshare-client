@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { T3CHAT_PLAN_TUNNEL_LIMITS } from "@t3tools/contracts/relay";
 import { TriangleAlertIcon } from "lucide-react";
 import type { ReactNode } from "react";
@@ -36,19 +37,23 @@ export function TunnelUsageMeter({
   readonly action?: ReactNode;
   readonly className?: string;
 }) {
+  const uiText = useUiText();
   const full = used >= limit;
   const fill = full ? "bg-warning" : "bg-foreground/72";
   return (
     <div className={cn("flex max-w-sm flex-col gap-1.5", className)}>
       <div className="flex items-baseline justify-between gap-3 text-xs">
         <span className={cn("tabular-nums", full ? "text-warning-foreground" : "text-foreground")}>
-          {used} of {limit} tunnels in use
+          {used}
+          {uiText(" of ")}
+          {limit}
+          {uiText(" tunnels in use")}
         </span>
         {action}
       </div>
       <div
         role="meter"
-        aria-label="T3 Connect tunnels in use"
+        aria-label={uiText("T3 Connect tunnels in use")}
         aria-valuemin={0}
         aria-valuemax={limit}
         aria-valuenow={used}
@@ -84,33 +89,36 @@ export function TunnelLimitAlert({
   readonly onLinkT3Chat: (() => void) | null;
   readonly onManageTunnels: (() => void) | null;
 }) {
+  const uiText = useUiText();
   const action =
     upgrade === "link" && onLinkT3Chat ? (
       <Button size="sm" onClick={onLinkT3Chat}>
-        Link T3 Chat
+        {uiText("Link T3 Chat")}
       </Button>
     ) : upgrade === "pro" || upgrade === "premier" ? (
       <Button
         size="sm"
         render={<a href={T3CHAT_SUBSCRIPTION_URL} target="_blank" rel="noopener noreferrer" />}
       >
-        Upgrade on T3 Chat
+        {uiText("Upgrade on T3 Chat")}
       </Button>
     ) : onManageTunnels ? (
       <Button size="sm" variant="outline" onClick={onManageTunnels}>
-        Manage tunnels
+        {uiText("Manage tunnels")}
       </Button>
     ) : null;
   return (
     <Alert variant="warning">
       <TriangleAlertIcon />
-      <AlertTitle>You&apos;re out of tunnels (they cost us money).</AlertTitle>
+      <AlertTitle>{uiText("You're out of tunnels (they cost us money).")}</AlertTitle>
       <AlertDescription>
         {upgrade === "link"
-          ? "Switch to Tailscale or get more tunnels by linking your T3 Chat sub (sorry!)"
+          ? uiText("Switch to Tailscale or get more tunnels by linking your T3 Chat sub (sorry!)")
           : upgrade
-            ? "Switch to Tailscale or get more tunnels by upgrading your T3 Chat sub (sorry!)"
-            : "Switch to Tailscale or deregister an environment you no longer use (sorry!)"}
+            ? uiText(
+                "Switch to Tailscale or get more tunnels by upgrading your T3 Chat sub (sorry!)",
+              )
+            : uiText("Switch to Tailscale or deregister an environment you no longer use (sorry!)")}
       </AlertDescription>
       {action ? <AlertAction>{action}</AlertAction> : null}
     </Alert>

@@ -1,3 +1,5 @@
+import { translateUiLabels } from "@t3tools/shared/uiMessages";
+import { useUiText } from "../../i18n/uiText";
 import { AuthMcpClientAccess } from "@t3tools/contracts";
 import { useId } from "react";
 
@@ -14,12 +16,13 @@ export function LinkAccessPicker({
   readonly onChange: (access: AuthMcpClientAccess) => void;
   readonly disabled?: boolean;
 }) {
+  const uiText = useUiText();
   const labelId = useId();
-  const selected = accessConfig[value];
+  const selected = translateUiLabels(accessConfig, uiText)[value];
   return (
     <div className="space-y-1.5">
       <span id={labelId} className="block text-xs font-medium">
-        What agents here may do there
+        {uiText("What agents here may do there")}
       </span>
       <Select
         value={value}
@@ -38,7 +41,11 @@ export function LinkAccessPicker({
         </SelectTrigger>
         <SelectPopup alignItemWithTrigger={false}>
           {AuthMcpClientAccess.literals.map((option) => {
-            const { label, description, icon: Icon } = accessConfig[option];
+            const {
+              label,
+              description,
+              icon: Icon,
+            } = translateUiLabels(accessConfig, uiText)[option];
             return (
               <SelectItem key={option} value={option} hideIndicator>
                 <span className="grid min-w-0 gap-0.5 py-0.5">
@@ -54,9 +61,10 @@ export function LinkAccessPicker({
         </SelectPopup>
       </Select>
       <p className="text-xs text-muted-foreground">
-        {selected.description} An agent never gets more access there than its own mode here. Below
-        full access, it can change only threads this link started, not that machine's own threads,
-        projects or settings.
+        {selected.description}
+        {uiText(
+          " An agent never gets more access there than its own mode here. Below full access, it can change only threads this link started, not that machine's own threads, projects or settings.",
+        )}
       </p>
     </div>
   );

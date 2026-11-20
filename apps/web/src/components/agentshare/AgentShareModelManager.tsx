@@ -1,3 +1,6 @@
+import { Link } from "@tanstack/react-router";
+import { useUiText } from "../../i18n/uiText";
+import { SettingsDisclosure } from "../settings/SettingsDisclosure";
 import { isWindowsPlatform, randomUUID } from "../../lib/utils";
 import { useState } from "react";
 import { useAtomValue } from "@effect/atom-react";
@@ -33,6 +36,7 @@ export function AgentShareModelManager({
   owner: string;
   language: "zh" | "en";
 }) {
+  const uiText = useUiText();
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const query = useEnvironmentQuery(
     agentShareEnvironment.modelManager({ environmentId, input: { owner } }),
@@ -48,6 +52,7 @@ export function AgentShareModelManager({
   );
   const [submissionUnknown, setSubmissionUnknown] = useState(false);
   const [message, setMessage] = useState<{ zh: string; en: string } | null>(null);
+  const [showCatalog, setShowCatalog] = useState(false);
   const [importId, setImportId] = useState("");
   const [importPath, setImportPath] = useState("");
   const [libraryPath, setLibraryPath] = useState("");
@@ -134,6 +139,9 @@ export function AgentShareModelManager({
     !operations?.some((operation) => operation.id === submitted.id);
   const libraryBlocked = blocked || operations === undefined || libraryBusy || unresolved;
   const entries = data ? modelManagerEntries(data, language) : [];
+  const visibleEntries = entries.filter((entry) =>
+    showCatalog ? !entry.installed : entry.installed,
+  );
   const hw = hardware.error ? null : hardware.data;
   return (
     <SettingsSection
@@ -160,9 +168,11 @@ export function AgentShareModelManager({
         </p>
         {hw ? (
           <p className="text-sm">
-            {hw.os} · {hw.arch} · {hw.version} · RAM {formatModelBytes(hw.ram_bytes)}
+            {hw.os} · {hw.arch} · {hw.version}
+            {uiText(" · RAM ")}
+            {formatModelBytes(hw.ram_bytes)}
             {hw.gpu ? ` · ${hw.gpu}` : ""}
-            {hw.vram_bytes ? ` · VRAM ${formatModelBytes(hw.vram_bytes)}` : ""}
+            {hw.vram_bytes ? uiText(" · VRAM {0}", [formatModelBytes(hw.vram_bytes)]) : ""}
           </p>
         ) : null}
         {query.error ? (
@@ -250,15 +260,38 @@ export function AgentShareModelManager({
                 )}
               </p>
             ) : null}
-            {entries.length === 0 ? (
+            <p>
+              <Link to="/settings/model-sharing" className="text-sm underline">
+                {t("管理模型分享", "Manage model sharing")}
+              </Link>
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant={showCatalog ? "outline" : "secondary"}
+                onClick={() => setShowCatalog(false)}
+              >
+                {t("已安装与下载中", "Installed and downloading")}
+              </Button>
+              <Button
+                variant={showCatalog ? "secondary" : "outline"}
+                onClick={() => setShowCatalog(true)}
+              >
+                {t("下载模型", "Download models")}
+              </Button>
+            </div>
+            {visibleEntries.length === 0 ? (
               <p>
                 {t(
-                  "尚无模型，先刷新目录或导入离线包。",
-                  "No models yet. Refresh the catalog or import an offline bundle.",
+                  showCatalog
+                    ? "没有可下载的模型，请刷新目录。"
+                    : "尚未安装模型，请选择下载模型或导入离线包。",
+                  showCatalog
+                    ? "No models to download. Refresh the catalog."
+                    : "No installed models. Choose Download models or import an offline bundle.",
                 )}
               </p>
             ) : null}
-            {entries.map((entry) => (
+            {visibleEntries.map((entry) => (
               <div key={entry.id} className="space-y-2 rounded-lg border p-3">
                 <h3 className="font-medium">{entry.name}</h3>
                 <p className="text-sm text-muted-foreground">
@@ -290,105 +323,114 @@ export function AgentShareModelManager({
                 </div>
               </div>
             ))}
-            <ResourceBudget
-              key={`${data.state.budget.ram_bytes}:${data.state.budget.vram_bytes}:${data.state.budget.max_concurrent}`}
-              budget={data.state.budget}
-              language={language}
-              blocked={blocked}
-              run={run}
-            />
-            <div className="space-y-2">
-              <h3 className="font-medium">{t("离线导入", "Offline import")}</h3>
-              <label className="block space-y-1 text-sm">
-                <span>{t("模型 ID", "Model ID")}</span>
-                <Input
-                  value={importId}
-                  onChange={(event) => setImportId(event.target.value)}
-                  disabled={blocked}
-                />
-              </label>
-              <label className="block space-y-1 text-sm">
-                <span>
-                  {t(
-                    "离线包目录（执行电脑上的绝对路径）",
-                    "Bundle directory (absolute path on the host)",
-                  )}
-                </span>
-                <Input
-                  value={importPath}
-                  onChange={(event) => setImportPath(event.target.value)}
-                  disabled={blocked}
-                />
-              </label>
-              {canPickDirectory ? (
+            <SettingsDisclosure
+              title={t("高级：资源、导入与存储", "Advanced: resources, imports and storage")}
+            >
+              <ResourceBudget
+                key={`${data.state.budget.ram_bytes}:${data.state.budget.vram_bytes}:${data.state.budget.max_concurrent}`}
+                budget={data.state.budget}
+                language={language}
+                blocked={blocked}
+                run={run}
+              />
+              <div className="space-y-2">
+                <h3 className="font-medium">{t("离线导入", "Offline import")}</h3>
+                <label className="block space-y-1 text-sm">
+                  <span>{t("模型 ID", "Model ID")}</span>
+                  <Input
+                    value={importId}
+                    onChange={(event) => setImportId(event.target.value)}
+                    disabled={blocked}
+                  />
+                </label>
+                <label className="block space-y-1 text-sm">
+                  <span>
+                    {t(
+                      "离线包目录（执行电脑上的绝对路径）",
+                      "Bundle directory (absolute path on the host)",
+                    )}
+                  </span>
+                  <Input
+                    value={importPath}
+                    onChange={(event) => setImportPath(event.target.value)}
+                    disabled={blocked}
+                  />
+                </label>
+                {canPickDirectory ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={libraryBlocked || pickingDirectory}
+                    onClick={() => pickDirectory(importPath, setImportPath)}
+                  >
+                    {t("选择目录", "Choose folder")}
+                  </Button>
+                ) : null}
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={libraryBlocked || pickingDirectory}
-                  onClick={() => pickDirectory(importPath, setImportPath)}
+                  disabled={libraryBlocked || !importId.trim() || !importPath.trim()}
+                  onClick={() =>
+                    void run({
+                      operation: "importModel",
+                      body: {
+                        id: randomUUID(),
+                        owner,
+                        kind: "import",
+                        model_id: importId.trim(),
+                        path: importPath.trim(),
+                      },
+                    })
+                  }
                 >
-                  {t("选择目录", "Choose folder")}
+                  {t("校验并导入", "Verify and import")}
                 </Button>
-              ) : null}
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={libraryBlocked || !importId.trim() || !importPath.trim()}
-                onClick={() =>
-                  void run({
-                    operation: "importModel",
-                    body: {
-                      id: randomUUID(),
-                      owner,
-                      kind: "import",
-                      model_id: importId.trim(),
-                      path: importPath.trim(),
-                    },
-                  })
-                }
-              >
-                {t("校验并导入", "Verify and import")}
-              </Button>
-            </div>
-            <div className="space-y-2">
-              <h3 className="font-medium">{t("模型库位置", "Model library location")}</h3>
-              <p className="break-all text-sm">{data.library_path}</p>
-              <label className="block space-y-1 text-sm">
-                <span>
-                  {t("新位置（执行电脑上的绝对路径）", "New location (absolute path on the host)")}
-                </span>
-                <Input
-                  value={libraryPath}
-                  onChange={(event) => setLibraryPath(event.target.value)}
-                  disabled={blocked}
-                />
-              </label>
-              {canPickDirectory ? (
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-medium">{t("模型库位置", "Model library location")}</h3>
+                <p className="break-all text-sm">{data.library_path}</p>
+                <label className="block space-y-1 text-sm">
+                  <span>
+                    {t(
+                      "新位置（执行电脑上的绝对路径）",
+                      "New location (absolute path on the host)",
+                    )}
+                  </span>
+                  <Input
+                    value={libraryPath}
+                    onChange={(event) => setLibraryPath(event.target.value)}
+                    disabled={blocked}
+                  />
+                </label>
+                {canPickDirectory ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={libraryBlocked || pickingDirectory}
+                    onClick={() => pickDirectory(libraryPath, setLibraryPath)}
+                  >
+                    {t("选择目录", "Choose folder")}
+                  </Button>
+                ) : null}
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={libraryBlocked || pickingDirectory}
-                  onClick={() => pickDirectory(libraryPath, setLibraryPath)}
+                  disabled={
+                    libraryBlocked ||
+                    !libraryPath.trim() ||
+                    libraryPath.trim() === data.library_path
+                  }
+                  onClick={() =>
+                    void run({
+                      operation: "moveLibrary",
+                      body: { id: randomUUID(), owner, kind: "move", path: libraryPath.trim() },
+                    })
+                  }
                 >
-                  {t("选择目录", "Choose folder")}
+                  {t("迁移模型库", "Move model library")}
                 </Button>
-              ) : null}
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={
-                  libraryBlocked || !libraryPath.trim() || libraryPath.trim() === data.library_path
-                }
-                onClick={() =>
-                  void run({
-                    operation: "moveLibrary",
-                    body: { id: randomUUID(), owner, kind: "move", path: libraryPath.trim() },
-                  })
-                }
-              >
-                {t("迁移模型库", "Move model library")}
-              </Button>
-            </div>
+              </div>
+            </SettingsDisclosure>
           </>
         ) : null}
       </div>
@@ -407,6 +449,7 @@ function ResourceBudget({
   blocked: boolean;
   run: (input: AgentShareCommandInput) => Promise<void>;
 }) {
+  const uiText = useUiText();
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
   const [ram, setRam] = useState((budget.ram_bytes / 1024 ** 3).toFixed(3));
   const [vram, setVram] = useState(((budget.vram_bytes ?? 0) / 1024 ** 3).toFixed(3));
@@ -423,8 +466,8 @@ function ResourceBudget({
       </p>
       <div className="grid gap-2 sm:grid-cols-3">
         {[
-          { label: "RAM (GiB)", value: ram, change: setRam },
-          { label: "VRAM (GiB)", value: vram, change: setVram },
+          { label: uiText("RAM (GiB)"), value: ram, change: setRam },
+          { label: uiText("VRAM (GiB)"), value: vram, change: setVram },
           {
             label: t("并发（1–8）", "Concurrency (1–8)"),
             value: concurrency,

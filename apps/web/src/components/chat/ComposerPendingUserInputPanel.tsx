@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { type RuntimeRequestId, type ScopedThreadRef } from "@t3tools/contracts";
 import { markdownProseDirection, textDirection } from "~/textDirection";
 import { memo, use, useEffect, useEffectEvent, useRef, useState } from "react";
@@ -83,6 +84,7 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
   onAdvance: () => void;
   onDismiss: (requestId: RuntimeRequestId) => void;
 }) {
+  const uiText = useUiText();
   // Message-mode requests remain answerable after their provider turn ends.
   const canRespond = prompt.responseCapability !== "not_resumable";
   const responseDisabled = disabled || isResponding || !canRespond;
@@ -202,7 +204,9 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
       <CollapsibleTrigger
         render={<ComposerBanner.Row render={<button type="button" />} />}
         title={
-          isCollapsed ? "Show the question and its options" : "Hide the question and its options"
+          isCollapsed
+            ? uiText("Show the question and its options")
+            : uiText("Hide the question and its options")
         }
         data-pending-user-input-toggle={isCollapsed ? "collapsed" : "expanded"}
         className="px-4 pt-1.5"
@@ -236,8 +240,8 @@ const ComposerPendingUserInputCard = memo(function ComposerPendingUserInputCard(
           {prompt.dismissible ? (
             <ComposerBanner.Dismiss
               render={<span role="button" tabIndex={0} />}
-              aria-label="Dismiss question without answering"
-              title="Dismiss question without answering"
+              aria-label={uiText("Dismiss question without answering")}
+              title={uiText("Dismiss question without answering")}
               disabled={isResponding}
               data-pending-user-input-dismiss
               onClick={(event) => {

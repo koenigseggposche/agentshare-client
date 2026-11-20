@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useNavigation } from "@react-navigation/native";
 import { useAtomValue } from "@effect/atom-react";
 import { AsyncResult } from "effect/reactivity";
@@ -8,10 +9,11 @@ import { SheetCloseButton } from "../../components/ui/SheetHeader";
 import { mobilePreferencesAtom } from "../../state/preferences";
 
 export function SettingsDataUseCloseHeaderButton() {
+  const uiText = useUiText();
   const navigation = useNavigation();
   return (
     <SheetCloseButton
-      accessibilityLabel="Close data explanation"
+      accessibilityLabel={uiText("Close data explanation")}
       onClose={() => navigation.goBack()}
     />
   );

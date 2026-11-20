@@ -195,3 +195,15 @@ describe("thread menu permissions", () => {
     expect(onFind).toHaveBeenCalledExactlyOnceWith(target);
   });
 });
+
+// Permission tests invoke mocked hooks directly; localization has its own mounted-client tests.
+vi.mock("../i18n/uiText", async () => {
+  const { uiTranslators } = await import("@t3tools/shared/uiMessages");
+  return {
+    useUiText: () => uiTranslators.en,
+    readUiTranslator: () => uiTranslators.en,
+    readUiText: uiTranslators.en,
+    liveUiText: uiTranslators.en,
+    setUiLanguage: () => {},
+  };
+});

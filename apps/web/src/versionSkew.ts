@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import type {
   EnvironmentId,
   ServerConfig,
@@ -48,6 +50,7 @@ function versionCore(version: string): string {
 export function resolveVersionMismatch(
   serverVersion: string | null | undefined,
   clientVersion: string = APP_VERSION,
+  uiText: UiTranslator = uiTranslators.en,
 ): VersionMismatch | null {
   const normalizedClientVersion = normalizeVersion(clientVersion);
   const normalizedServerVersion = normalizeVersion(serverVersion);
@@ -74,14 +77,17 @@ export function resolveVersionMismatch(
   return {
     clientVersion: normalizedClientVersion,
     serverVersion: normalizedServerVersion,
-    hint: "Version mismatch. Try syncing the client and server to the same AgentShare Client version.",
+    hint: uiText(
+      "Version mismatch. Try syncing the client and server to the same AgentShare Client version.",
+    ),
   };
 }
 
 export function resolveServerConfigVersionMismatch(
   serverConfig: Pick<ServerConfig, "environment"> | null | undefined,
+  uiText: UiTranslator = uiTranslators.en,
 ): VersionMismatch | null {
-  return resolveVersionMismatch(serverConfig?.environment.serverVersion);
+  return resolveVersionMismatch(serverConfig?.environment.serverVersion, undefined, uiText);
 }
 
 export function resolveServerSelfUpdateCapability(

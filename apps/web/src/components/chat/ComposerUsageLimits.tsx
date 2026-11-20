@@ -1,3 +1,7 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { readUiTranslator } from "../../i18n/uiText";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
+import { readUiText, useUiText } from "../../i18n/uiText";
 import type { EnvironmentId, UsageLimitsReport } from "@t3tools/contracts";
 import type { TimestampFormat } from "@t3tools/contracts/settings";
 import { limitsNotice } from "@t3tools/shared/usageLimits";
@@ -49,6 +53,7 @@ export function usageLimitsBannerItem(
   report: UsageLimitsReport,
   environmentId: EnvironmentId,
   onDismiss: () => void,
+  uiText: UiTranslator = uiTranslators.en,
 ): ComposerBannerStackItem {
   const [first] = report.accounts;
   const single = report.accounts.length === 1 && first ? first : null;
@@ -61,7 +66,7 @@ export function usageLimitsBannerItem(
     id,
     variant: "info",
     icon: <GaugeIcon />,
-    title: "Usage limits",
+    title: uiText("Usage limits"),
     description: summary,
     dismissLabel: "Dismiss usage limits",
     onDismiss,
@@ -90,11 +95,17 @@ export function modelFallbackBannerItem({
     id: "fallback-model",
     variant: "info",
     icon: <GaugeIcon />,
-    title: `Using ${fallbackModelName}`,
-    description: `${defaultProviderName} is out of usage${resetsAt ? ` · resets ${formatUpcomingTimestamp(resetsAt, timestampFormat)}` : ""}`,
+    title: readUiText("Using {0}", [fallbackModelName]),
+    description: readUiText("{0} is out of usage{1}", [
+      defaultProviderName,
+      resetsAt
+        ? ` · resets ${formatUpcomingTimestamp(resetsAt, timestampFormat, undefined, undefined, readUiTranslator().language)}`
+        : "",
+    ]),
     actions: (
       <Button size="xs" variant="ghost" onClick={onUseDefault}>
-        Use {defaultModelName}
+        {readUiText("Use ")}
+        {defaultModelName}
       </Button>
     ),
     dismissLabel: "Dismiss fallback model notice",
@@ -109,6 +120,7 @@ function UsageLimitsBannerBody({
   readonly report: UsageLimitsReport;
   readonly environmentId: EnvironmentId;
 }) {
+  const uiText = useUiText();
   const now = Date.parse(report.createdAt);
   return (
     <ComposerBanner.Scroll>
@@ -144,7 +156,7 @@ function UsageLimitsBannerBody({
                   className="self-start"
                   onClick={() => void ensureLocalApi().shell.openExternal(externalUsage.url)}
                 >
-                  Manage usage
+                  {uiText("Manage usage")}
                 </Button>
               ) : null}
               {resetCreditInput && account.limits.resetCredits ? (

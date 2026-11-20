@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import type { EnvironmentId, RunId, ThreadId } from "@t3tools/contracts";
 import { useState } from "react";
@@ -13,6 +14,7 @@ import { toastManager } from "../ui/toast";
 
 /** Force stop for an agent that no longer answers Stop; shared by every place that offers it. */
 export function useForceStopThread(environmentId: EnvironmentId) {
+  const uiText = useUiText();
   const forceStop = useAtomCommand(orchestrationEnvironment.forceStopThread);
   const permitted = useAtomValue(
     orchestrationEnvironment.forceStopThread.permissionAtom(environmentId),
@@ -35,7 +37,7 @@ export function useForceStopThread(environmentId: EnvironmentId) {
       const error = squashAtomCommandFailure(result);
       toastManager.add({
         type: "error",
-        title: "Could not force stop the agent",
+        title: uiText("Could not force stop the agent"),
         description: error instanceof Error ? error.message : undefined,
       });
       return;
@@ -44,14 +46,17 @@ export function useForceStopThread(environmentId: EnvironmentId) {
     if (result.value.outcome === "releasing") {
       toastManager.add({
         type: "info",
-        title: "Turn stopped; the agent is still shutting down",
+        title: uiText("Turn stopped; the agent is still shutting down"),
       });
     }
     if (result.value.outcome === "shared") {
       toastManager.add({
         type: "info",
-        title: "Turn stopped; the agent process kept running",
-        description: `It is shared with ${others === 0 ? "other" : others} working ${others === 1 ? "thread" : "threads"}. Stop those to free it.`,
+        title: uiText("Turn stopped; the agent process kept running"),
+        description: uiText("It is shared with {0} working {1}. Stop those to free it.", [
+          others === 0 ? "other" : others,
+          others === 1 ? "thread" : "threads",
+        ]),
       });
     }
   };

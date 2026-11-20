@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { pullRequestFilterProjects } from "@t3tools/client-runtime/pull-request-project-filter";
 import { parsePullRequestQuery } from "@t3tools/client-runtime/pull-request-query";
 import {
@@ -464,31 +466,32 @@ export function filterPullRequestList<
 
 export function pullRequestListReviewStatus(
   entry: Pick<PullRequestListEntry, "reviewDecision" | "viewerReviewRequested">,
+  uiText: UiTranslator = uiTranslators.en,
 ) {
   if (entry.reviewDecision === "changes-requested")
     return {
-      label: "Changes",
+      label: uiText("Changes"),
       accessibleLabel: "Changes requested",
       icon: "person.fill.xmark",
       tint: "accent-danger-foreground",
     } as const;
   if (entry.reviewDecision === "approved")
     return {
-      label: "Approved",
+      label: uiText("Approved"),
       accessibleLabel: "Reviews approved",
       icon: "person.fill.checkmark",
       tint: "accent-adaptive-emerald-600-400",
     } as const;
   if (entry.viewerReviewRequested)
     return {
-      label: "Your review",
+      label: uiText("Your review"),
       accessibleLabel: "Your review requested",
       icon: "person.badge.clock",
       tint: "accent-warning-foreground",
     } as const;
   if (entry.reviewDecision === "review-required")
     return {
-      label: "Review",
+      label: uiText("Review"),
       accessibleLabel: "Review required",
       icon: "person.badge.clock",
       tint: "accent-icon-muted",

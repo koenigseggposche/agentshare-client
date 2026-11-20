@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { useAtomValue } from "@effect/atom-react";
 import { type ReactNode, useSyncExternalStore } from "react";
 
@@ -66,12 +67,13 @@ export function SidebarUpdateCapsule({
   readonly icon: ReactNode;
   readonly onRestart?: () => Promise<void>;
 }) {
+  const uiText = useUiText();
   const machines = useUpdateRunMachineViews(run);
   const hasActiveMachine = machines.some(
     ({ status }) => status !== "done" && status !== "failed" && status !== "waiting",
   );
   const now = useNow(run.phase === "countdown" ? 1_000 : hasActiveMachine ? 30_000 : null);
-  const view = describeUpdateCapsule(run, machines, local, now);
+  const view = describeUpdateCapsule(run, machines, local, now, uiText);
   const updateServer = useServerUpdate();
   const failed = machines.some(({ status }) => status === "failed");
   const settled = !hasActiveMachine && run.localVersion === null;
@@ -130,16 +132,16 @@ export function SidebarUpdateCapsule({
         <div className="flex flex-col gap-1 text-xs">
           {run.localVersion !== null ? (
             <div className="flex items-center justify-between gap-3">
-              <span>This app</span>
+              <span>{uiText("This app")}</span>
               <span className="text-muted-foreground tabular-nums">
                 {localStatusLabel(run, local, now)}
               </span>
             </div>
           ) : onRestart ? (
             <div className="flex items-center justify-between gap-3">
-              <span>This app</span>
+              <span>{uiText("This app")}</span>
               <Button size="xs" variant="outline" onClick={() => void onRestart()}>
-                Restart to update
+                {uiText("Restart to update")}
               </Button>
             </div>
           ) : null}
@@ -168,11 +170,11 @@ export function SidebarUpdateCapsule({
             <div className="mt-1 flex justify-end gap-1">
               {view.action === "retry" ? (
                 <Button size="xs" variant="outline" onClick={runAction}>
-                  Retry
+                  {uiText("Retry")}
                 </Button>
               ) : null}
               <Button size="xs" variant="ghost" onClick={dismissSettledUpdateRunMachines}>
-                Dismiss
+                {uiText("Dismiss")}
               </Button>
             </div>
           ) : null}

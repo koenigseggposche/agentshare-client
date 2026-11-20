@@ -1,3 +1,5 @@
+import type { UiTranslator } from "@t3tools/shared/uiMessages";
+import { uiTranslators } from "@t3tools/shared/uiMessages";
 import { type EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
 
 export type ThreadContentPresentation =
@@ -9,26 +11,29 @@ export type ThreadContentPresentation =
       readonly detail: string;
     };
 
-export function projectThreadContentPresentation(input: {
-  readonly hasDetail: boolean;
-  readonly detailError: string | null;
-  readonly detailDeleted: boolean;
-  readonly connectionState: EnvironmentConnectionPhase;
-}): ThreadContentPresentation {
+export function projectThreadContentPresentation(
+  input: {
+    readonly hasDetail: boolean;
+    readonly detailError: string | null;
+    readonly detailDeleted: boolean;
+    readonly connectionState: EnvironmentConnectionPhase;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): ThreadContentPresentation {
   if (input.hasDetail) {
     return { kind: "ready" };
   }
   if (input.detailDeleted) {
     return {
       kind: "unavailable",
-      title: "Thread unavailable",
+      title: uiText("Thread unavailable"),
       detail: "This thread was deleted or is no longer available.",
     };
   }
   if (input.detailError !== null) {
     return {
       kind: "unavailable",
-      title: "Could not load conversation",
+      title: uiText("Could not load conversation"),
       detail: input.detailError,
     };
   }
@@ -41,7 +46,7 @@ export function projectThreadContentPresentation(input: {
   }
   return {
     kind: "unavailable",
-    title: "Messages not cached",
+    title: uiText("Messages not cached"),
     detail: "Reconnect this environment to load the conversation.",
   };
 }

@@ -1,3 +1,4 @@
+import { readUiText } from "../../i18n/uiText";
 import {
   CommandId,
   type EnvironmentId,
@@ -108,8 +109,8 @@ export async function startFanoutThread(input: {
     const failureToastId = toastManager.add(
       stackedThreadToast({
         type: "error",
-        title: `Could not start ${input.model}`,
-        description: error instanceof Error ? error.message : "Failed to send message.",
+        title: readUiText("Could not start {0}", [input.model]),
+        description: error instanceof Error ? error.message : readUiText("Failed to send message."),
         ...(retainedThreadId
           ? {
               timeout: 0,

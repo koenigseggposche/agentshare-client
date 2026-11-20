@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import { SheetHeader } from "../../components/ui/SheetHeader";
 import { AsyncResult } from "effect/reactivity";
 import { AppActivityIndicator } from "../../components/ui/AppActivityIndicator";
@@ -43,6 +44,7 @@ function ReviewerScrollView(props: ScrollViewProps) {
 }
 
 export function PullRequestReviewersScreen({ route }: StaticScreenProps<PullRequestParams>) {
+  const uiText = useUiText();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const listRef = useRef<FlatList<PullRequestReviewerCandidate>>(null);
@@ -125,7 +127,7 @@ export function PullRequestReviewersScreen({ route }: StaticScreenProps<PullRequ
   };
   const listCandidates = pr?.capabilities.reviewers.listCandidates === true;
   const searchOptions = {
-    placeholder: "Search reviewers",
+    placeholder: uiText("Search reviewers"),
     autoCapitalize: "none" as const,
     onChangeText: (event: { nativeEvent: { text: string } }) => search(event.nativeEvent.text),
     onCancelButtonPress: () => search(""),
@@ -138,10 +140,10 @@ export function PullRequestReviewersScreen({ route }: StaticScreenProps<PullRequ
   return (
     <View className="flex-1 bg-sheet">
       <SheetHeader
-        title="Request review"
+        title={uiText("Request review")}
         subtitle={`#${route.params.number} · ${route.params.repository}`}
         onClose={() => navigation.goBack()}
-        accessibilityLabel="Close request review"
+        accessibilityLabel={uiText("Close request review")}
       />
       <NativeStackScreenOptions
         options={{
@@ -149,12 +151,15 @@ export function PullRequestReviewersScreen({ route }: StaticScreenProps<PullRequ
           unstable_headerToolbarItems: () =>
             listCandidates && integratedSearch
               ? [
-                  createNativeMailSearchToolbarItem({
-                    placeholder: "Search reviewers",
-                    onSearchTextChange: search,
-                    showsSearchDismissButton: true,
-                    searchTextChangeId: "pr-reviewer-search",
-                  }),
+                  createNativeMailSearchToolbarItem(
+                    {
+                      placeholder: uiText("Search reviewers"),
+                      onSearchTextChange: search,
+                      showsSearchDismissButton: true,
+                      searchTextChangeId: "pr-reviewer-search",
+                    },
+                    uiText,
+                  ),
                 ]
               : [],
         }}
@@ -175,12 +180,14 @@ export function PullRequestReviewersScreen({ route }: StaticScreenProps<PullRequ
           ListHeaderComponent={
             <View className="gap-3 px-4 py-4">
               <Text className="text-xs text-foreground-muted">
-                Tap someone to request a review. Tap a requested reviewer to remove the request.
+                {uiText(
+                  "Tap someone to request a review. Tap a requested reviewer to remove the request.",
+                )}
               </Text>
               {Platform.OS === "android" ? (
                 <TextInput
-                  accessibilityLabel="Search reviewers"
-                  placeholder="Search reviewers"
+                  accessibilityLabel={uiText("Search reviewers")}
+                  placeholder={uiText("Search reviewers")}
                   placeholderTextColorClassName="accent-foreground-muted"
                   value={query}
                   onChangeText={search}
@@ -190,7 +197,8 @@ export function PullRequestReviewersScreen({ route }: StaticScreenProps<PullRequ
               ) : null}
               {!allowed ? (
                 <Text className="text-xs text-foreground-muted">
-                  Requesting reviews requires write access and an open {singular}.
+                  {uiText("Requesting reviews requires write access and an open ")}
+                  {singular}.
                 </Text>
               ) : null}
               {error ? (
@@ -218,14 +226,14 @@ export function PullRequestReviewersScreen({ route }: StaticScreenProps<PullRequ
                   </Text>
                   <Text className="text-xs text-foreground-muted" numberOfLines={1}>
                     {item.login}
-                    {item.kind === "team" ? " · Team" : ""}
+                    {item.kind === "team" ? uiText(" · Team") : ""}
                   </Text>
                 </View>
                 {pending === id ? (
                   <AppActivityIndicator />
                 ) : item.isRequested ? (
                   <View className="flex-row items-center gap-1.5">
-                    <Text className="text-xs text-foreground-muted">Requested</Text>
+                    <Text className="text-xs text-foreground-muted">{uiText("Requested")}</Text>
                     <SymbolView name="checkmark" size={14} tintColorClassName="accent-icon" />
                   </View>
                 ) : (
@@ -242,23 +250,24 @@ export function PullRequestReviewersScreen({ route }: StaticScreenProps<PullRequ
                 <EmptyState
                   title={
                     result.error
-                      ? "Couldn't load reviewers"
+                      ? uiText("Couldn't load reviewers")
                       : query.trim()
-                        ? "No matching reviewers"
-                        : "No reviewers available"
+                        ? uiText("No matching reviewers")
+                        : uiText("No reviewers available")
                   }
                   detail={result.error ?? "Search people and teams with access to this repository."}
                   variant="plain"
                 />
-                {result.error ? <Button label="Retry" onPress={result.refresh} /> : null}
+                {result.error ? <Button label={uiText("Retry")} onPress={result.refresh} /> : null}
               </View>
             )
           }
           ListFooterComponent={
             result.data?.truncated ? (
               <Text className="px-4 py-4 text-xs text-foreground-muted">
-                The provider has more reviewers than it returned. Find additional reviewers on the
-                provider.
+                {uiText(
+                  "The provider has more reviewers than it returned. Find additional reviewers on the provider.",
+                )}
               </Text>
             ) : undefined
           }
@@ -275,17 +284,17 @@ export function PullRequestReviewersScreen({ route }: StaticScreenProps<PullRequ
               <AppActivityIndicator />
             ) : (
               <Text className="text-danger-foreground">
-                {detail.error ?? `Couldn't load this ${singular}.`}
+                {detail.error ?? uiText("Couldn't load this {0}.", [singular])}
               </Text>
             )
           ) : (
             <>
               <Text className="text-sm text-foreground-muted">
-                This provider accepts a reviewer ID but cannot list candidates.
+                {uiText("This provider accepts a reviewer ID but cannot list candidates.")}
               </Text>
               <TextInput
-                accessibilityLabel="Reviewer ID"
-                placeholder="Reviewer login or ID"
+                accessibilityLabel={uiText("Reviewer ID")}
+                placeholder={uiText("Reviewer login or ID")}
                 placeholderTextColorClassName="accent-foreground-muted"
                 value={query}
                 onChangeText={search}
@@ -294,13 +303,13 @@ export function PullRequestReviewersScreen({ route }: StaticScreenProps<PullRequ
                 className="min-h-12 rounded-xl bg-grouped-card px-3 text-base"
               />
               <Button
-                label="Request review"
+                label={uiText("Request review")}
                 fullWidth
                 disabled={!allowed || !query.trim() || pending !== null}
                 onPress={() => void update({ id: query.trim(), kind: "user", isRequested: false })}
               />
               <Button
-                label="Remove review request"
+                label={uiText("Remove review request")}
                 fullWidth
                 tone="text"
                 disabled={!allowed || !query.trim() || pending !== null}

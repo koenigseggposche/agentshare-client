@@ -1,3 +1,5 @@
+import { readUiText } from "../../i18n/uiText";
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   capitalizeTerm,
   sourceControlClients,
@@ -319,8 +321,11 @@ export function classifyPullRequestChecks(
   return "passing";
 }
 
-export function describePullRequestChecks(checks: ReadonlyArray<PullRequestCheck>): string {
-  if (checks.length === 0) return "No checks reported";
+export function describePullRequestChecks(
+  checks: ReadonlyArray<PullRequestCheck>,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
+  if (checks.length === 0) return uiText("No checks reported");
   const failed = checks.filter(
     (check) => check.status === "failure" || check.status === "cancelled",
   ).length;
@@ -521,7 +526,7 @@ function commentTimelineEvent(comment: PullRequestComment): PullRequestTimelineE
     id: comment.id,
     at: comment.createdAt,
     kind: comment.kind === "review" ? "review" : "comment",
-    title: comment.kind === "review" ? "reviewed" : "commented",
+    title: comment.kind === "review" ? readUiText("reviewed") : readUiText("commented"),
     body: visibleBody(comment.body),
     markdown: true,
     url: comment.url,
@@ -669,7 +674,7 @@ export function buildPullRequestTimeline(
       id: "created",
       at: detail.createdAt,
       kind: "opened" as const,
-      title: `opened this ${term}`,
+      title: readUiText("opened this {0}", [term]),
       body: null,
       markdown: false,
       url: null,
@@ -685,7 +690,7 @@ export function buildPullRequestTimeline(
       id: commit.oid,
       at: commit.committedDate,
       kind: "commit" as const,
-      title: `Commit ${commit.oid.slice(0, 7)}`,
+      title: readUiText("Commit {0}", [commit.oid.slice(0, 7)]),
       body: commit.messageHeadline || null,
       markdown: false,
       url: null,
@@ -719,7 +724,7 @@ export function buildPullRequestTimeline(
             id: "merged",
             at: detail.mergedAt,
             kind: "merged" as const,
-            title: `${capitalizeTerm(term)} merged`,
+            title: readUiText("{0} merged", [capitalizeTerm(term)]),
             body: null,
             markdown: false,
             url: null,
@@ -739,7 +744,7 @@ export function buildPullRequestTimeline(
             id: "closed",
             at: detail.closedAt,
             kind: "closed" as const,
-            title: `${capitalizeTerm(term)} closed`,
+            title: readUiText("{0} closed", [capitalizeTerm(term)]),
             body: null,
             markdown: false,
             url: null,

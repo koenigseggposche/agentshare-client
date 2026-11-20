@@ -1,3 +1,5 @@
+import { readUiTranslator } from "../i18n/uiText";
+import { type UiTranslator, uiTranslators } from "@t3tools/shared/uiMessages";
 import {
   capitalizeTerm,
   sourceControlClients,
@@ -112,14 +114,17 @@ export function pullRequestContextKindLabel(comment: ReviewCommentPresentation):
   return `${capitalizeTerm(state)} ${term}`;
 }
 
-export function previewAnnotationContextLabel(annotation: PreviewAnnotationPayload): string {
+export function previewAnnotationContextLabel(
+  annotation: PreviewAnnotationPayload,
+  uiText: UiTranslator = uiTranslators.en,
+): string {
   const comment = annotation.comment.trim().replace(/\s+/g, " ");
   if (comment) {
     return comment.length > PREVIEW_LABEL_MAX_CHARS
       ? `${comment.slice(0, PREVIEW_LABEL_MAX_CHARS - 1)}…`
       : comment;
   }
-  return annotation.pageTitle?.trim() || "Preview annotation";
+  return annotation.pageTitle?.trim() || uiText("Preview annotation");
 }
 
 export function terminalContextReference(context: TerminalContextDraft): ComposerContextReference {
@@ -154,7 +159,7 @@ export function previewAnnotationContextReference(
   return {
     kind: "preview-annotation",
     contextId: previewAnnotationContextId(annotation.id),
-    label: previewAnnotationContextLabel(annotation),
+    label: previewAnnotationContextLabel(annotation, readUiTranslator()),
   };
 }
 
@@ -233,6 +238,7 @@ function previewAnnotationTargetSummary(annotation: PreviewAnnotationPayload): s
 export function previewAnnotationContextRecord(
   annotation: PreviewAnnotationPayload,
   options?: { screenshotContextId?: string | undefined },
+  uiText: UiTranslator = uiTranslators.en,
 ): PreviewAnnotationContextRecord {
   const targets = annotation.elements.flatMap((target) => {
     const element = normalizeElementContextSelection(target.element);
@@ -243,7 +249,7 @@ export function previewAnnotationContextRecord(
     contextId: previewAnnotationContextId(annotation.id),
     kind: "preview-annotation",
     label: sanitizeComposerContextLabel(
-      previewAnnotationContextLabel(annotation),
+      previewAnnotationContextLabel(annotation, uiText),
       "preview-annotation",
     ),
     annotationId: annotation.id,
@@ -320,14 +326,17 @@ export function attachmentContextRecord(
   return attachment.type === "image" ? { ...base, kind: "image" } : { ...base, kind: "file" };
 }
 
-export function buildMessageContext(input: {
-  terminalContexts: ReadonlyArray<TerminalContextDraft>;
-  reviewComments: ReadonlyArray<ReviewCommentContext>;
-  previewAnnotations: ReadonlyArray<PreviewAnnotationPayload>;
-  threadContexts?: ReadonlyArray<ThreadContextRecord>;
-  environmentContexts?: ReadonlyArray<EnvironmentContextRecord>;
-  attachments?: ReadonlyArray<BoundComposerAttachment>;
-}): OrchestrationMessageContext | undefined {
+export function buildMessageContext(
+  input: {
+    terminalContexts: ReadonlyArray<TerminalContextDraft>;
+    reviewComments: ReadonlyArray<ReviewCommentContext>;
+    previewAnnotations: ReadonlyArray<PreviewAnnotationPayload>;
+    threadContexts?: ReadonlyArray<ThreadContextRecord>;
+    environmentContexts?: ReadonlyArray<EnvironmentContextRecord>;
+    attachments?: ReadonlyArray<BoundComposerAttachment>;
+  },
+  uiText: UiTranslator = uiTranslators.en,
+): OrchestrationMessageContext | undefined {
   const screenshotAttachmentIds = new Set(
     (input.attachments ?? []).flatMap(({ attachment }) =>
       attachment.type === "image" ? [attachment.id] : [],
@@ -339,9 +348,15 @@ export function buildMessageContext(input: {
     ...(input.threadContexts ?? []),
     ...(input.environmentContexts ?? []),
     ...input.previewAnnotations.map((annotation) =>
-      previewAnnotationContextRecord(annotation, {
-        screenshotContextId: screenshotAttachmentIds.has(annotation.id) ? annotation.id : undefined,
-      }),
+      previewAnnotationContextRecord(
+        annotation,
+        {
+          screenshotContextId: screenshotAttachmentIds.has(annotation.id)
+            ? annotation.id
+            : undefined,
+        },
+        uiText,
+      ),
     ),
     ...(input.attachments ?? []).map(attachmentContextRecord),
   ];

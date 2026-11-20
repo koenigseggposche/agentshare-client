@@ -1,3 +1,4 @@
+import { useUiText } from "../../i18n/uiText";
 import type { DesktopBridge, DesktopUpdateState } from "@t3tools/contracts";
 import { ExternalLinkIcon } from "lucide-react";
 
@@ -40,13 +41,14 @@ function ReleaseLink({
   readonly releaseUrl: string;
   readonly shell: DesktopUpdateShell | undefined;
 }) {
+  const uiText = useUiText();
   return (
     <a
       className="mt-1 inline-flex items-center gap-1 rounded-sm text-xs leading-5 text-muted-foreground underline-offset-2 outline-none transition-colors hover:text-foreground hover:underline focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       href={releaseUrl}
       onClick={(event) => {
         event.preventDefault();
-        void openDesktopUpdateReleaseNotes(shell, releaseUrl);
+        void openDesktopUpdateReleaseNotes(shell, releaseUrl, uiText);
       }}
     >
       {children}
@@ -64,6 +66,7 @@ export function SidebarUpdateReleaseNotes({
   readonly state: DesktopUpdateState;
   readonly tooltip: string;
 }) {
+  const uiText = useUiText();
   if (state.releaseNotes.length === 0) {
     return <>{tooltip}</>;
   }
@@ -77,7 +80,7 @@ export function SidebarUpdateReleaseNotes({
         {state.status === "available" ? (
           <div>
             <div className="whitespace-nowrap text-sm leading-5 font-medium">
-              Update ready to download
+              {uiText("Update ready to download")}
             </div>
             {state.availableVersion ? (
               <div className="mt-0.5 text-xs leading-4 text-muted-foreground">
@@ -114,7 +117,9 @@ export function SidebarUpdateReleaseNotes({
                 )
               ) : (
                 <h3 className="mb-2 text-foreground text-xs leading-4 font-semibold">
-                  {index === 0 ? "What's changed" : `Changes in ${releaseNote.version}`}
+                  {index === 0
+                    ? uiText("What's changed")
+                    : uiText("Changes in {0}", [releaseNote.version])}
                 </h3>
               )}
               {releaseNote.intro ? (
@@ -153,7 +158,10 @@ export function SidebarUpdateReleaseNotes({
         {state.omittedReleaseCount > 0 ? (
           <div className="mt-3">
             <ReleaseLink releaseUrl={getDesktopUpdateReleaseHistoryUrl()} shell={shell}>
-              {`${state.omittedReleaseCount} older ${state.omittedReleaseCount === 1 ? "release" : "releases"} on GitHub`}
+              {uiText("{0} older {1} on GitHub", [
+                state.omittedReleaseCount,
+                state.omittedReleaseCount === 1 ? "release" : "releases",
+              ])}
             </ReleaseLink>
           </div>
         ) : null}
