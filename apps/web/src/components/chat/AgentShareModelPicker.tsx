@@ -37,6 +37,8 @@ type Item = ReturnType<typeof agentSharePickerItems>[number];
 type Tab = "favorites" | "local" | "community";
 type Navigation = { tab: Tab; local?: string; community?: string };
 const navigation = new Map<string, Navigation>();
+const panelClassName =
+  "flex h-[min(34rem,calc(100dvh-1.5rem))] w-[min(35rem,calc(100vw-1.5rem))] flex-col overflow-hidden";
 
 function CatalogGroupIcon({ icon }: { icon: string }) {
   if (icon === "claude") return <ClaudeAI className="size-5 shrink-0 text-[#d97757]" />;
@@ -57,7 +59,7 @@ export function AgentShareModelPickerRouter(props: PickerProps & { fallback: Rea
   if (!props.environmentId || (state.error && !state.data)) return props.fallback;
   if (!state.data)
     return (
-      <div className="w-80 p-4 text-sm text-muted-foreground" role="status">
+      <div className={cn(panelClassName, "p-4 text-sm text-muted-foreground")} role="status">
         {workbenchLabels[language].loadingModelCatalog}
       </div>
     );
@@ -265,7 +267,7 @@ export function AgentShareModelPicker(
       ref={panel}
       data-model-picker-content="true"
       data-agentshare-model-picker="true"
-      className="flex max-h-[min(34rem,var(--available-height))] w-[min(35rem,calc(100vw-1.5rem))] flex-col overflow-hidden"
+      className={panelClassName}
       onKeyDown={(event) => {
         if (event.nativeEvent.isComposing) return;
         if (event.key === "Escape") {
@@ -301,7 +303,7 @@ export function AgentShareModelPicker(
         event.stopPropagation();
       }}
     >
-      <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border/60 px-4 py-3">
         <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
         <input
           ref={searchInputRef}
@@ -366,7 +368,7 @@ export function AgentShareModelPicker(
       <div
         id="agentshare-picker-panel"
         role="tabpanel"
-        className="flex min-h-52 min-w-0 flex-1 overflow-hidden"
+        className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
       >
         {!flat && (
           <div
