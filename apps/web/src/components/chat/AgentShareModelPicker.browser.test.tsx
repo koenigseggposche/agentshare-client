@@ -1,5 +1,6 @@
 import {
   EnvironmentId,
+  ThreadId,
   ProviderDriverKind,
   ProviderInstanceId,
   type AgentShareModelInfo,
@@ -9,14 +10,16 @@ import {
 } from "@t3tools/contracts";
 import { expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
-import { createRef } from "react";
+import { createRef, useState } from "react";
 import { render } from "../../../test/render";
 import { deriveProviderInstanceEntries } from "../../providerInstances";
 import { AgentShareModelPicker } from "./AgentShareModelPicker";
+import { ComposerControlsBar } from "./ComposerControlsBar";
 import "~/index.css";
 
 const state = vi.hoisted(() => ({
   language: "zh" as "zh" | "en",
+  owner: "",
   configure: vi.fn(),
   toggle: vi.fn(),
   refresh: vi.fn(),
@@ -37,7 +40,7 @@ vi.mock(import("../../hooks/useSettings"), async (original) => ({
 vi.mock(import("../../state/query"), async (original) => ({
   ...(await original()),
   useEnvironmentQuery: (() => ({
-    data: { models, catalog },
+    data: { models, catalog, host: { owner: state.owner } },
     error: null,
     isPending: false,
     refresh: state.refresh,
@@ -104,6 +107,7 @@ const models: AgentShareModelInfo[] = (["local", "community"] as const).flatMap(
   })),
 );
 function setup(owner: string) {
+  state.owner = owner;
   state.language = "zh";
   state.configure.mockReset();
   state.toggle.mockReset();
@@ -285,4 +289,80 @@ it("cancels pending selection and supports tab navigation in a narrow window", a
   await page.getByRole("searchbox").click();
   await userEvent.keyboard("{Escape}");
   expect(close).toHaveBeenCalledOnce();
+});
+
+it("finishes the first model choice when the composer gains its first ready provider", async () => {
+  const owner = "picker-first-provider-owner";
+  const fallbackId = setup(owner);
+  state.instances = {};
+  const nextId = ProviderInstanceId.make("first-community-connection");
+  const selected = vi.fn();
+  state.configure.mockResolvedValue({ _tag: "Success", value: { instanceId: nextId } });
+  const readyEntry = entry(nextId);
+  function Controls({ ready }: { ready: boolean }) {
+    const [open, setOpen] = useState(true);
+    return (
+      <ComposerControlsBar
+        environmentId={EnvironmentId.make("picker-first-provider")}
+        routeKind="draft"
+        routeThreadRef={{
+          environmentId: EnvironmentId.make("picker-first-provider"),
+          threadId: ThreadId.make("generated-draft"),
+        }}
+        draftId={null}
+        selectedProvider={ProviderDriverKind.make("codex")}
+        selectedInstanceId={fallbackId}
+        selectedModel="a"
+        selectedProviderModels={[]}
+        composerModelOptions={{}}
+        reportedModelSelection={null}
+        promptUltrathink="none"
+        onPromptEdit={() => {}}
+        planModeEnabled={false}
+        planModeUiEnabled={false}
+        effortDisplay="label"
+        permissionsShownInStrip={true}
+        interactionMode="default"
+        compatibleRuntimeMode="full-access"
+        defaultRuntimeMode="full-access"
+        compatibleRuntimeModeOptions={[]}
+        toggleInteractionMode={() => {}}
+        handleRuntimeModeChange={() => {}}
+        composerControlsCollapsed={false}
+        composerControlsHidden={false}
+        restingHiddenBlockCount={0}
+        iconOnlyBlockCount={0}
+        showProviderUnavailable={!ready}
+        providerSetupInstanceId={undefined}
+        onOpenProviderSetup={() => {}}
+        providerCatalogPending={false}
+        isSendBusy={false}
+        multipleModelsEnabled={false}
+        multipleModelSelections={null}
+        onMultipleModelSelectionsChange={() => {}}
+        selectedModelSelection={{ instanceId: fallbackId, model: "a" }}
+        onProviderModelSelect={selected}
+        activeThreadModelSelection={null}
+        selectedModelForPickerWithCustomFallback="a"
+        lockedProvider={null}
+        lockedContinuationGroupKey={null}
+        providerInstanceEntries={ready ? [readyEntry] : []}
+        keybindings={[]}
+        modelOptionsByInstance={ready ? new Map([[nextId, readyEntry.models]]) : new Map()}
+        terminalOpen={false}
+        modelPickerOpen={open}
+        onModelPickerOpenChange={setOpen}
+        modelPickerIconClassName={undefined}
+        getModelDisabledReason={() => null}
+      />
+    );
+  }
+  await using screen = await render(<Controls ready={false} />);
+  await page.getByRole("tab", { name: "社区", exact: true }).click();
+  await page.getByRole("button", { name: /Ops First.*社区/ }).click();
+  await expect.element(page.getByText("正在准备模型连接…", { exact: true })).toBeVisible();
+  expect(selected).not.toHaveBeenCalled();
+  await screen.rerender(<Controls ready />);
+  await vi.waitFor(() => expect(selected).toHaveBeenCalledExactlyOnceWith(nextId, "b"));
+  await expect.element(page.getByRole("searchbox")).not.toBeInTheDocument();
 });
