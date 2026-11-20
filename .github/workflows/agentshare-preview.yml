@@ -67,7 +67,6 @@ jobs:
           WINDOWS_DISTRIBUTION: ${{ inputs.windows_distribution }}
           WINDOWS_SIGNING_CONFIGURED: ${{ secrets.AZURE_TENANT_ID != '' && secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_CLIENT_SECRET != '' && secrets.AZURE_TRUSTED_SIGNING_ENDPOINT != '' && secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME != '' && secrets.AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME != '' && secrets.AZURE_TRUSTED_SIGNING_PUBLISHER_NAME != '' }}
           MACOS_SIGNING_CONFIGURED: ${{ secrets.CSC_LINK != '' && secrets.CSC_KEY_PASSWORD != '' && secrets.APPLE_API_KEY != '' && secrets.APPLE_API_KEY_ID != '' && secrets.APPLE_API_ISSUER != '' }}
-          MACOS_DEVELOPMENT_CONFIGURED: ${{ secrets.AGENTSHARE_MACOS_DEVELOPMENT_P12 != '' && secrets.AGENTSHARE_MACOS_DEVELOPMENT_PASSWORD != '' && secrets.AGENTSHARE_MACOS_DEVELOPMENT_IDENTITY != '' && secrets.AGENTSHARE_MACOS_DEVELOPMENT_TEAM_ID != '' }}
           CORE_READ_KEY_CONFIGURED: ${{ secrets.AGENTSHARE_CORE_READ_KEY != '' }}
         run: |
           python3 - <<'PY'
@@ -98,8 +97,6 @@ jobs:
               if os.environ['WINDOWS_SIGNING_CONFIGURED'] != 'true':
                   raise SystemExit('Signed Windows builds require the Azure Artifact Signing credentials, endpoint, account, certificate profile, and publisher.')
               platforms.add('win')
-          if not platforms and os.environ['MACOS_DEVELOPMENT_CONFIGURED'] != 'true':
-              raise SystemExit('Dev previews require the retained Apple Development signing archive, password, identity and Team ID.')
           signed_platforms = platforms.copy()
           # A complete distribution rehearsal also needs both Linux AppImages.
           if platforms == {'mac', 'win'}:
@@ -291,40 +288,12 @@ jobs:
           if (process.arch !== process.env.DESKTOP_ARCH) throw new Error('Runner architecture differs from the artifact target.');
           JS
       - name: Build desktop preview
-        if: ${{ !matrix.distribution_signing && matrix.platform != 'mac' }}
+        if: ${{ !matrix.distribution_signing }}
         run: |
           node scripts/build-desktop-artifact.ts \
             --platform "$DESKTOP_PLATFORM" --arch "$DESKTOP_ARCH" --target "$DESKTOP_TARGET" \
             --build-version "$CLIENT_VERSION" --output-dir "$RUNNER_TEMP/client-artifacts" \
             --core-manifest "$RUNNER_TEMP/core-artifact/manifest.json"
-      - name: Build Apple Development-signed desktop preview
-        if: ${{ !matrix.distribution_signing && matrix.platform == 'mac' }}
-        env:
-          MACOS_DEVELOPMENT_P12: ${{ secrets.AGENTSHARE_MACOS_DEVELOPMENT_P12 }}
-          MACOS_DEVELOPMENT_PASSWORD: ${{ secrets.AGENTSHARE_MACOS_DEVELOPMENT_PASSWORD }}
-          MACOS_DEVELOPMENT_IDENTITY: ${{ secrets.AGENTSHARE_MACOS_DEVELOPMENT_IDENTITY }}
-          MACOS_DEVELOPMENT_TEAM_ID: ${{ secrets.AGENTSHARE_MACOS_DEVELOPMENT_TEAM_ID }}
-        run: |
-          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts -p test_macos_test_signing.py
-          python3 - <<'PY'
-          import base64, json, os, pathlib, subprocess, tempfile
-          os.umask(0o077)
-          env = dict(os.environ)
-          material = {key: env.pop(key) for key in ('MACOS_DEVELOPMENT_P12', 'MACOS_DEVELOPMENT_PASSWORD', 'MACOS_DEVELOPMENT_IDENTITY', 'MACOS_DEVELOPMENT_TEAM_ID')}
-          with tempfile.TemporaryDirectory(dir=env['RUNNER_TEMP']) as temporary:
-              root = pathlib.Path(temporary)
-              archive = root / 'development.p12'
-              archive.write_bytes(base64.b64decode(material['MACOS_DEVELOPMENT_P12'], validate=True))
-              config = root / 'signing.json'
-              config.write_text(json.dumps(dict(certificate_file=str(archive), password=material['MACOS_DEVELOPMENT_PASSWORD'], identity_sha1=material['MACOS_DEVELOPMENT_IDENTITY'], team_id=material['MACOS_DEVELOPMENT_TEAM_ID'])))
-              env['AGENTSHARE_MACOS_DEVELOPMENT_CONFIG'] = str(config)
-              subprocess.run([
-                  'python3', 'scripts/with-macos-test-signing.py', 'node', 'scripts/build-desktop-artifact.ts',
-                  '--platform', env['DESKTOP_PLATFORM'], '--arch', env['DESKTOP_ARCH'], '--target', env['DESKTOP_TARGET'],
-                  '--build-version', env['CLIENT_VERSION'], '--output-dir', env['RUNNER_TEMP'] + '/client-artifacts',
-                  '--core-manifest', env['RUNNER_TEMP'] + '/core-artifact/manifest.json',
-              ], env=env, check=True)
-          PY
       - name: Build signed and notarized desktop preview
         if: matrix.distribution_signing && matrix.platform == 'mac'
         env:

@@ -60,8 +60,7 @@ def signing_environment(config):
             require_identity(security("find-identity", "-v", "-p", "codesigning", keychain), config["identity_sha1"])
             environment = dict(os.environ, AGENTSHARE_TEST_SIGNING_IDENTITY=config["identity_sha1"],
                                AGENTSHARE_TEST_SIGNING_KEYCHAIN=keychain, AGENTSHARE_TEST_SIGNING_TEAM_ID=config["team_id"])
-            for key in ("AGENTSHARE_MACOS_DEVELOPMENT_CONFIG", "MACOS_DEVELOPMENT_P12", "MACOS_DEVELOPMENT_PASSWORD"):
-                environment.pop(key, None)
+            environment.pop("AGENTSHARE_MACOS_DEVELOPMENT_CONFIG", None)
             yield environment
         finally:
             try:
