@@ -1,9 +1,19 @@
+// @effect-diagnostics nodeBuiltinImport:off - electron-builder invokes this Promise-based hook outside the Effect CLI runtime.
 import { sign as signApplication, type SignOptions } from "@electron/osx-sign";
+import * as NodeChildProcess from "node:child_process";
+import * as NodeUtil from "node:util";
 
 export default async function sign(options: SignOptions): Promise<void> {
   const identity = process.env.AGENTSHARE_TEST_SIGNING_IDENTITY;
   const keychain = process.env.AGENTSHARE_TEST_SIGNING_KEYCHAIN;
-  if (!identity || !/^[a-f0-9]{40}$/i.test(identity) || !keychain) {
+  const teamId = process.env.AGENTSHARE_TEST_SIGNING_TEAM_ID;
+  if (
+    !identity ||
+    !/^[a-f0-9]{40}$/i.test(identity) ||
+    !keychain ||
+    !teamId ||
+    !/^[A-Z0-9]{10}$/.test(teamId)
+  ) {
     throw new Error("Run local test signing through scripts/with-macos-test-signing.py.");
   }
   await signApplication({
@@ -18,4 +28,11 @@ export default async function sign(options: SignOptions): Promise<void> {
     }),
     batchCodesignCalls: true,
   });
+  await NodeUtil.promisify(NodeChildProcess.execFile)("codesign", [
+    "--verify",
+    "--deep",
+    "--strict",
+    `-R=anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.1] exists and certificate leaf[field.1.2.840.113635.100.6.1.12] exists and certificate leaf[subject.OU] = "${teamId}"`,
+    options.app,
+  ]);
 }
