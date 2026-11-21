@@ -42,6 +42,11 @@ const state = vi.hoisted(() => ({
   sessionLookupFails: false,
 }));
 
+vi.mock(import("../i18n/uiText"), async (original) => {
+  const uiText = await original();
+  return { ...uiText, useUiText: uiText.readUiTranslator };
+});
+
 vi.mock("react", () => ({
   useCallback: (callback: unknown) => callback,
   useMemo: (factory: () => unknown) => factory(),

@@ -27,6 +27,11 @@ vi.mock("../state/session", async (original) => ({
   ...(await original<typeof import("../state/session")>()),
   readEnvironmentScope: () => true,
 }));
+vi.mock(import("../i18n/uiText"), async (original) => {
+  const uiText = await original();
+  return { ...uiText, useUiText: uiText.readUiTranslator };
+});
+
 vi.mock("react", async (original) => ({
   ...(await original<typeof import("react")>()),
   useCallback: (callback: unknown) => callback,

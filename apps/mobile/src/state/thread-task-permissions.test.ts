@@ -58,6 +58,11 @@ const state = vi.hoisted(() => ({
   },
 }));
 
+vi.mock(import("../i18n/uiText"), async (original) => {
+  const uiText = await original();
+  return { ...uiText, useUiText: uiText.readUiTranslator };
+});
+
 vi.mock("react", () => ({
   useCallback: <A>(callback: A) => callback,
   useEffect: () => {},

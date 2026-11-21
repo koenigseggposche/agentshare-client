@@ -26,7 +26,19 @@ it("initializes React refresh before a shared UI chunk runs in bundled dev", asy
   try {
     await NodeFSP.mkdir(NodePath.join(root, "src/lib"), { recursive: true });
     await NodeFSP.writeFile(NodePath.join(root, "package.json"), '{"type":"module"}');
-    for (const file of ["index.html", "src/bootstrap.ts", "src/lib/bootError.ts"]) {
+    await NodeFSP.mkdir(NodePath.join(root, "src/i18n"), { recursive: true });
+    await NodeFSP.symlink(
+      NodeURL.fileURLToPath(new URL("../node_modules", import.meta.url)),
+      NodePath.join(root, "node_modules"),
+      "junction",
+    );
+    for (const file of [
+      "index.html",
+      "src/bootstrap.ts",
+      "src/lib/bootError.ts",
+      "src/i18n/uiText.tsx",
+      "src/i18n/clientSettingsStore.ts",
+    ]) {
       await NodeFSP.copyFile(new URL(`../${file}`, import.meta.url), NodePath.join(root, file));
     }
     await NodeFSP.writeFile(
