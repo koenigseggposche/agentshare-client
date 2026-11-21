@@ -188,7 +188,10 @@ export const make = Effect.gen(function* () {
       template.push({
         label: environment.displayName,
         submenu: [
-          { role: "about", label: `About ${environment.displayName}` },
+          {
+            role: "about",
+            label: translateUiMessage(language, "About {0}", [environment.displayName]),
+          },
           {
             label: "Check for Updates...",
             click: checkForUpdatesClick,

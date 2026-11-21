@@ -1,3 +1,4 @@
+import { useAtomValue } from "@effect/atom-react";
 import { type StaticScreenProps } from "@react-navigation/native";
 import { EnvironmentId, ThreadId } from "@t3tools/contracts";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
@@ -21,11 +22,20 @@ export function ProjectCodingTerminalRouteScreen({
     (entry) => entry.environmentId === environmentId && entry.id === thread?.projectId,
   );
   const directory = thread?.worktreePath ?? project?.workspaceRoot;
-  const state = useEnvironmentQuery(agentShareEnvironment.state({ environmentId, input: {} }));
+  const allowed = useAtomValue(agentShareEnvironment.prepareTerminal.permissionAtom(environmentId));
+  const state = useEnvironmentQuery(
+    allowed ? agentShareEnvironment.state({ environmentId, input: {} }) : null,
+  );
   const host = state.error ? undefined : state.data?.host;
   return (
     <ScreenScrollView>
-      {host?.paired && directory ? (
+      {!allowed ? (
+        <Text>
+          {language === "zh"
+            ? "此连接无权启动编程终端。"
+            : "This connection cannot start coding terminals."}
+        </Text>
+      ) : host?.paired && directory ? (
         <AgentShareManagedTerminal
           key={`${environmentId}:${host.owner}:${directory}`}
           environmentId={environmentId}

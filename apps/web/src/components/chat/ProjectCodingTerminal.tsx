@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { AuthAccessWriteScope, type EnvironmentId } from "@t3tools/contracts";
+import { useAtomValue } from "@effect/atom-react";
+import type { EnvironmentId } from "@t3tools/contracts";
 import { AgentShareManagedTerminal } from "../agentshare/AgentShareManagedTerminal";
 import { agentShareEnvironment } from "../../state/agentShare";
 import { useEnvironmentQuery } from "../../state/query";
-import { useEnvironmentScope } from "../../state/session";
 import { useClientSettings } from "../../hooks/useSettings";
 import { Button } from "../ui/button";
 import {
@@ -24,7 +24,7 @@ export function ProjectCodingTerminal({
 }) {
   const [open, setOpen] = useState(false);
   const language = useClientSettings((settings) => settings.uiLanguage);
-  const allowed = useEnvironmentScope(environmentId, AuthAccessWriteScope);
+  const allowed = useAtomValue(agentShareEnvironment.prepareTerminal.permissionAtom(environmentId));
   const state = useEnvironmentQuery(
     open && allowed ? agentShareEnvironment.state({ environmentId, input: {} }) : null,
   );

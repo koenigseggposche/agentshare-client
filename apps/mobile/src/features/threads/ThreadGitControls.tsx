@@ -1,3 +1,5 @@
+import { useAtomValue } from "@effect/atom-react";
+import { agentShareEnvironment } from "../../state/agentShare";
 import { readUiText } from "../../i18n/uiText";
 import type { UiTranslator } from "@t3tools/shared/uiMessages";
 import { uiTranslators } from "@t3tools/shared/uiMessages";
@@ -293,6 +295,9 @@ function useThreadGitHeaderActionItems(props: ThreadGitControlsProps): ThreadGit
   const navigation = useNavigation();
   const language = useWorkbenchLanguage();
   const codingLabel = language === "zh" ? "编程终端" : "Coding terminal";
+  const canStartCodingTerminal = useAtomValue(
+    agentShareEnvironment.prepareTerminal.permissionAtom(EnvironmentId.make(props.environmentId)),
+  );
   const openCodingTerminal = () =>
     navigation.navigate("ProjectCodingTerminal", {
       environmentId: String(props.environmentId),
@@ -310,6 +315,7 @@ function useThreadGitHeaderActionItems(props: ThreadGitControlsProps): ThreadGit
         items: [
           {
             label: codingLabel,
+            disabled: !canStartCodingTerminal,
             icon: { name: "terminal", type: "sfSymbol" },
             onPress: openCodingTerminal,
             type: "action",
@@ -460,6 +466,9 @@ export function ThreadGitControls(props: ThreadGitControlsProps) {
   const navigation = useNavigation();
   const language = useWorkbenchLanguage();
   const codingLabel = language === "zh" ? "编程终端" : "Coding terminal";
+  const canStartCodingTerminal = useAtomValue(
+    agentShareEnvironment.prepareTerminal.permissionAtom(EnvironmentId.make(props.environmentId)),
+  );
   const openCodingTerminal = () =>
     navigation.navigate("ProjectCodingTerminal", {
       environmentId: String(props.environmentId),
@@ -488,7 +497,11 @@ export function ThreadGitControls(props: ThreadGitControlsProps) {
           disabled={!props.canOpenTerminal}
           separateBackground
         >
-          <Toolbar.MenuAction icon="terminal" onPress={openCodingTerminal}>
+          <Toolbar.MenuAction
+            icon="terminal"
+            disabled={!canStartCodingTerminal}
+            onPress={openCodingTerminal}
+          >
             <Toolbar.Label>{codingLabel}</Toolbar.Label>
           </Toolbar.MenuAction>
           {props.projectScripts.length > 0 ? (
