@@ -31,7 +31,7 @@ export function InterfaceLanguageSetting() {
             }}
           >
             <SelectTrigger aria-label={t("界面语言", "Interface language")}>
-              <SelectValue />
+              <SelectValue>{language === "zh" ? "简体中文" : "English"}</SelectValue>
             </SelectTrigger>
             <SelectPopup>
               <SelectItem value="zh">简体中文</SelectItem>

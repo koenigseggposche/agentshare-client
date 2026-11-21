@@ -892,13 +892,13 @@ export function GeneralSettingsPanel() {
                 aria-label={uiText("Project order")}
               >
                 <SelectValue>
-                  {SIDEBAR_PROJECT_SORT_ORDER_LABELS[settings.sidebarProjectSortOrder]}
+                  {uiText(SIDEBAR_PROJECT_SORT_ORDER_LABELS[settings.sidebarProjectSortOrder])}
                 </SelectValue>
               </SelectTrigger>
               <SelectPopup align="end" alignItemWithTrigger={false}>
                 {SidebarProjectSortOrder.literals.map((sortOrder) => (
                   <SelectItem hideIndicator key={sortOrder} value={sortOrder}>
-                    {SIDEBAR_PROJECT_SORT_ORDER_LABELS[sortOrder]}
+                    {uiText(SIDEBAR_PROJECT_SORT_ORDER_LABELS[sortOrder])}
                   </SelectItem>
                 ))}
               </SelectPopup>
@@ -1086,17 +1086,19 @@ export function GeneralSettingsPanel() {
                 className="w-full sm:w-40"
                 aria-label={uiText("Timestamp format")}
               >
-                <SelectValue>{TIMESTAMP_FORMAT_LABELS[settings.timestampFormat]}</SelectValue>
+                <SelectValue>
+                  {uiText(TIMESTAMP_FORMAT_LABELS[settings.timestampFormat])}
+                </SelectValue>
               </SelectTrigger>
               <SelectPopup align="end" alignItemWithTrigger={false}>
                 <SelectItem hideIndicator value="locale">
-                  {TIMESTAMP_FORMAT_LABELS.locale}
+                  {uiText(TIMESTAMP_FORMAT_LABELS.locale)}
                 </SelectItem>
                 <SelectItem hideIndicator value="12-hour">
-                  {TIMESTAMP_FORMAT_LABELS["12-hour"]}
+                  {uiText(TIMESTAMP_FORMAT_LABELS["12-hour"])}
                 </SelectItem>
                 <SelectItem hideIndicator value="24-hour">
-                  {TIMESTAMP_FORMAT_LABELS["24-hour"]}
+                  {uiText(TIMESTAMP_FORMAT_LABELS["24-hour"])}
                 </SelectItem>
               </SelectPopup>
             </Select>

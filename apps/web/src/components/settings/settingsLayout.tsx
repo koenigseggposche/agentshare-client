@@ -1,4 +1,6 @@
 import { useUiText } from "../../i18n/uiText";
+import { settingsLabel } from "./settingsLabels";
+import { isSearchableSettingTitle } from "./settingsSearch";
 import { SettingsGroup } from "./SettingsGroup";
 import { AuthSettingsWriteScope } from "@t3tools/contracts";
 import { usePrimaryEnvironmentId, usePrimaryEnvironment } from "../../state/environments";
@@ -338,6 +340,10 @@ export function SettingsRow({
   children?: ReactNode;
 }) {
   const uiText = useUiText();
+  const displayTitle =
+    typeof title === "string" && isSearchableSettingTitle(rowProps.id, title)
+      ? settingsLabel(title, uiText.language)
+      : title;
   const targetRef = useSettingsSearchTarget<HTMLDivElement>(rowProps.id);
   const primarySettingsAvailable = usePrimarySettingsAvailable();
   const context = useOptionalSettingsScope();
@@ -401,7 +407,7 @@ export function SettingsRow({
       scopedKeys.length > 0 ? (
       source === "project" || source === "mixed" ? (
         <SettingResetButton
-          label={typeof title === "string" ? title : uiText("override")}
+          label={typeof displayTitle === "string" ? displayTitle : uiText("override")}
           tooltip={uiText("Reset to inherited value")}
           onClick={() => (onResetOverride ? onResetOverride() : clearOverrides(scopedKeys))}
         />
@@ -508,7 +514,7 @@ export function SettingsRow({
       <div className="flex flex-col gap-3 @min-[32rem]/settings-row:grid @min-[32rem]/settings-row:grid-cols-[minmax(0,1fr)_minmax(10rem,auto)] @min-[32rem]/settings-row:items-center @min-[32rem]/settings-row:gap-8">
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex min-h-5 items-center gap-1.5">
-            <h3 className="text-sm font-medium text-foreground">{title}</h3>
+            <h3 className="text-sm font-medium text-foreground">{displayTitle}</h3>
             {renderedInheritance ? (
               <span
                 className={cn(

@@ -2478,7 +2478,7 @@ export default function ChatView(props: ChatViewProps) {
   const compactDisabled = compactThreadUnavailable;
   const compactDisabledReason = compactDisabled
     ? !canOperateThread
-      ? "This connection cannot change threads."
+      ? uiText("This connection cannot change threads.")
       : !activeProject
         ? "Choose a project before compacting"
         : !manualCompactionProviderAvailable
@@ -3631,17 +3631,17 @@ export default function ChatView(props: ChatViewProps) {
                               isRevertingCheckpoint={isRevertingCheckpoint}
                               sendDisabledReason={
                                 !canOperateThread
-                                  ? "This connection cannot change threads."
+                                  ? uiText("This connection cannot change threads.")
                                   : isEnvironmentChanging
-                                    ? "Preparing machine"
+                                    ? uiText("Preparing machine")
                                     : isRevertingCheckpoint
-                                      ? "Rewinding conversation"
+                                      ? uiText("Rewinding conversation")
                                       : feedbackUploading
-                                        ? "Sending feedback"
+                                        ? uiText("Sending feedback")
                                         : threadDetailLoading
-                                          ? "Messages loading"
+                                          ? uiText("Messages loading")
                                           : worktreeSetupBlocksSend
-                                            ? "Preparing worktree"
+                                            ? uiText("Preparing worktree")
                                             : projectCloneSendBlockReason
                               }
                               isPreparingWorktree={isPreparingWorktree && !sendQueuesBehindSetup}

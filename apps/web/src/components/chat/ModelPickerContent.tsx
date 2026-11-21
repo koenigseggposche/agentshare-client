@@ -1032,10 +1032,7 @@ export const ModelPickerContent = memo(function ModelPickerContent(props: {
               onRequestClose?.();
               void navigate({
                 to: "/settings/providers",
-                search: {
-                  ...(props.environmentId ? { machine: props.environmentId } : {}),
-                  section: "models",
-                },
+                search: props.environmentId ? { machine: props.environmentId } : {},
               });
             }}
           >

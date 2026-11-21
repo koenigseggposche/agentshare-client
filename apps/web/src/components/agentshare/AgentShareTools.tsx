@@ -37,12 +37,11 @@ export function AgentShareTools({
   language: "zh" | "en";
 }) {
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
-  const open = true;
   const query = useEnvironmentQuery(
-    open ? agentShareEnvironment.tools({ environmentId, input: { owner } }) : null,
+    agentShareEnvironment.tools({ environmentId, input: { owner } }),
   );
   const jobs = useEnvironmentQuery(
-    open && operationsSupported
+    operationsSupported
       ? agentShareEnvironment.toolOperations({ environmentId, input: { owner } })
       : null,
   );
@@ -148,13 +147,16 @@ export function AgentShareTools({
             "Choose Codex and Claude on the selected host. New conversations use the selection; existing conversations keep their version until their process is released.",
           )}
         </p>
-        {open && !supported ? (
+        {!supported ? (
           <p className="text-sm text-muted-foreground">
             {t(
               "请先更新这台执行电脑上的 AgentShare，再切换工具版本。",
               "Update AgentShare on this host before switching tool versions.",
             )}
           </p>
+        ) : null}
+        {query.isPending && !data ? (
+          <p role="status">{t("正在读取工具状态…", "Loading tool status…")}</p>
         ) : null}
         {query.error ? (
           <p role="alert">
@@ -165,7 +167,7 @@ export function AgentShareTools({
           </p>
         ) : null}
         {message ? <p role="status">{message[language]}</p> : null}
-        {open && operationsSupported ? (
+        {operationsSupported ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
               {t(

@@ -1386,6 +1386,13 @@ export function isSettingsSearchScopeAvailable(
   }
 }
 
+export function isSearchableSettingTitle(id: string | undefined, title: string): boolean {
+  return (
+    typeof id === "string" &&
+    (SEARCH_ITEMS_BY_ID as ReadonlyMap<string, SettingsSearchItem>).get(id)?.title === title
+  );
+}
+
 export function searchableSetting(id: SettingsSearchItemId): {
   readonly id: string;
   readonly title: string;

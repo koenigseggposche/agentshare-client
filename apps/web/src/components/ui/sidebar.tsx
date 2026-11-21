@@ -439,8 +439,9 @@ function SidebarRail({
   const suppressClickRef = React.useRef(false);
   const resolvedResizable = sidebarInstance?.resizable ?? null;
   const canResize = resolvedResizable !== null && open;
-  const railLabel = canResize ? "Resize Sidebar" : "Toggle Sidebar";
-  const railTitle = canResize ? "Drag to resize sidebar" : "Toggle Sidebar";
+  const uiText = useUiText();
+  const railLabel = canResize ? uiText("Resize Sidebar") : uiText("Toggle Sidebar");
+  const railTitle = canResize ? uiText("Drag to resize sidebar") : uiText("Toggle Sidebar");
   const resize = useResizeDrag<HTMLButtonElement>((event) => {
     const options = resolvedResizable;
     if (!options || !open) return null;

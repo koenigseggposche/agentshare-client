@@ -38,12 +38,11 @@ export function AgentShareTools({
   language: "zh" | "en";
 }) {
   const t = (zh: string, en: string) => (language === "zh" ? zh : en);
-  const open = true;
   const query = useEnvironmentQuery(
-    open ? agentShareEnvironment.tools({ environmentId, input: { owner } }) : null,
+    agentShareEnvironment.tools({ environmentId, input: { owner } }),
   );
   const jobs = useEnvironmentQuery(
-    open && operationsSupported
+    operationsSupported
       ? agentShareEnvironment.toolOperations({ environmentId, input: { owner } })
       : null,
   );
@@ -141,12 +140,17 @@ export function AgentShareTools({
           jobs.refresh();
         }}
       />
-      {open && !supported ? (
+      {!supported ? (
         <Text className="px-5 py-3">
           {t(
             "请先更新这台执行电脑上的 AgentShare，再切换工具版本。",
             "Update AgentShare on this host before switching tool versions.",
           )}
+        </Text>
+      ) : null}
+      {query.isPending && !data ? (
+        <Text className="px-5 py-3" accessibilityLiveRegion="polite">
+          {t("正在读取工具状态…", "Loading tool status…")}
         </Text>
       ) : null}
       {query.error ? (
@@ -162,7 +166,7 @@ export function AgentShareTools({
           {message[language]}
         </Text>
       ) : null}
-      {open && operationsSupported ? (
+      {operationsSupported ? (
         <>
           <Text className="px-5 py-3" textRole="footnote">
             {t(
